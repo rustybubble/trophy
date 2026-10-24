@@ -1,8 +1,8 @@
 # Trophy: three-agent plan for the Cal Hacks 13.0 demo weekend
 
-*Planning lead, revised 2026-10-24 for the **Cal Hacks 13.0 prize tracks** and a **demo-weekend cut**. Cal Hacks runs Fri 10/23 to Sun 10/25. **The exact submission and judging times are not confirmed** (the schedule page wouldn't load them). Fill in `DEADLINE` below and plan backwards from it. Wire formats: [interfaces-v1.md](interfaces-v1.md). Prompts: [`docs/plan/prompts/`](prompts/). Replay and courtcam reuse: [replay-source-review-2026-10-23.md](../research/replay-source-review-2026-10-23.md).*
+*Planning lead, revised 2026-10-24 for the **Cal Hacks 13.0 prize tracks** and a **demo-weekend cut**. Cal Hacks runs Fri 10/23 to Sun 10/25. **The exact submission and judging times are not confirmed** (the schedule page wouldn't load them). There is no fixed deadline (see below). Wire formats: [interfaces-v1.md](interfaces-v1.md). Prompts: [`docs/plan/prompts/`](prompts/). Replay and courtcam reuse: [replay-source-review-2026-10-23.md](../research/replay-source-review-2026-10-23.md).*
 
-> **DEADLINE (submission):** `____` (Sun 10/25, time TBC). **Feature freeze = DEADLINE − 4 h. Demo video locked = DEADLINE − 2 h.**
+> **DEADLINE:** none fixed. The user decided on 2026-10-24 that **we stop when the features are done**. Read "DEADLINE − n h" elsewhere as "once the MUSTs pass C3": then feature freeze, rehearsals, the video and the writeup.
 
 ---
 
@@ -160,7 +160,7 @@ Accuracy numbers come **only from labelled clips or staged hits**, with n and a 
 ## 7. Open decisions
 | Id | Item | Default | Decider |
 |---|---|---|---|
-| OPEN-2 | Domain (GoDaddy Registry vs. .Tech) | Whichever the user registers; Caddy + DNS-01 → the Mac's LAN IP | User + A1, in P0 |
+| OPEN-2 | Domain | **Decided: `trophy.photo`** (the user registered it on 2026-10-24, at Porkbun, with Porkbun DNS). Caddy + DNS-01 through the Porkbun API → the demo machine's LAN IP. Check whether `.photo` qualifies for the MLH GoDaddy Registry prize | User + A1 |
 | OPEN-3 | Ball tracker: classical, BlurBall MPS, or BlurBall on Vultr | The one at ≥ 25 fps with better recall | A2, end of P0 |
 | OPEN-4 | BlurBall weights license (unstated) | Use it in the demo only if the user accepts that risk, otherwise use the classical tracker | User |
 | OPEN-6 | Serve-toss rule values | **Height > 6 in (0.1524 m); path from hand to hit within 30° of vertical** (house rules from the user). An `ittf_strict` variant (16 cm, "within a few degrees") is a pack param | User |
