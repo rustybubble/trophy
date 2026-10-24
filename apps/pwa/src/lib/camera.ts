@@ -22,18 +22,28 @@ function pick(devices: MediaDeviceInfo[]): MediaDeviceInfo | undefined {
 
 export async function openRearCamera(w = 1280, h = 720, fps = 30): Promise<CameraInfo> {
   // 1) permission (labels are empty before it), 2) pick a physical lens, 3) stop and reacquire once
-  const first = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+  const first = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: "environment" } },
+    audio: false,
+  });
   const devices = await navigator.mediaDevices.enumerateDevices();
   const chosen = pick(devices);
   let stream = first;
   if (chosen) {
     first.getTracks().forEach((t) => t.stop());
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: chosen.deviceId }, width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps } },
+      video: {
+        deviceId: { exact: chosen.deviceId },
+        width: { ideal: w },
+        height: { ideal: h },
+        frameRate: { ideal: fps },
+      },
       audio: false,
     });
   } else {
-    await first.getVideoTracks()[0]?.applyConstraints({ width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps } });
+    await first
+      .getVideoTracks()[0]
+      ?.applyConstraints({ width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps } });
   }
   const track = stream.getVideoTracks()[0]!;
   return { stream, label: track.label, settings: track.getSettings(), fake: false };

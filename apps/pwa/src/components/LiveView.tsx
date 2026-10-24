@@ -46,7 +46,11 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
   const [toast, setToast] = useState<string>();
   const [answer, setAnswer] = useState<{ q: string; a?: AskAnswer; err?: string }>();
   const [calibrating, setCalibrating] = useState(false);
-  const [showStats, setShowStats] = useState(params.get("test") === "1");
+  const [calibratedHere, setCalibratedHere] = useState(false);
+  const [sheet, setSheet] = useState<"menu" | "judge" | "stats" | undefined>(
+    params.get("test") === "1" ? "stats" : undefined,
+  );
+  const [hiddenGuide, setHiddenGuide] = useState<string>();
   const videoRef = useRef<HTMLVideoElement>(null);
   const g = useGame(session, { voice, ctl, readEverything: readAll, mock });
 
@@ -67,9 +71,9 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
     let lock: { release: () => Promise<void> } | undefined;
     const want = async () => {
       try {
-        lock = await (navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<typeof lock> } }).wakeLock?.request(
-          "screen",
-        );
+        lock = await (
+          navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<typeof lock> } }
+        ).wakeLock?.request("screen");
       } catch {
         /* not supported */
       }
@@ -92,7 +96,10 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
     let stopped = false;
     (async () => {
       try {
-        const info = params.get("fake") === "1" ? fakeCamera() : await openRearCamera(session.frame.w, session.frame.h, session.frame.fps);
+        const info =
+          params.get("fake") === "1"
+            ? fakeCamera()
+            : await openRearCamera(session.frame.w, session.frame.h, session.frame.fps);
         if (stopped) return;
         setCam(info);
         const v = videoRef.current!;
@@ -161,7 +168,9 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
         if (!isJudge) return void voice?.speak("Only the judge can undo a call.", { voice: "ref" });
         return run("Undo", () => api.ctl("undo_last_call"));
       case "score": {
-        const line = g.scores.length ? `${g.scores.map((s) => `${s.team_id} ${s.points}`).join(", ")}.` : "No score yet.";
+        const line = g.scores.length
+          ? `${g.scores.map((s) => `${s.team_id} ${s.points}`).join(", ")}.`
+          : "No score yet.";
         return void voice?.speak(line, { voice: "ref" });
       }
       case "house_rule":
@@ -184,92 +193,115 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
     ? (g.game?.teams.find((t) => t.team_id === g.flash)?.color ?? (g.flash.startsWith("#") ? g.flash : "#f59e0b"))
     : undefined;
 
+  // what this phone should do next, in plain words
+  const me = g.cameras.find((c) => c.cam_id === session.camId);
+  const tableSet = calibratedHere || !!me?.calibration;
+  const needsDecision = g.challenges.some((c) => c.status === "open") || g.houseRules.some((h) => h.status === "ready");
+  let guide: { title: string; body?: string; action?: { label: string; run: () => void } } | undefined;
+  if (!mock && !sync.connected) {
+    guide = {
+      title: "Connecting to the referee…",
+      body: "This phone must be on the same Wi-Fi as the referee laptop.",
+    };
+  } else if (isCam && !stats?.connected) {
+    guide = { title: "Starting the camera…", body: "Allow camera and microphone access if asked." };
+  } else if (isCam && !tableSet) {
+    guide = {
+      title: "Set up the table",
+      body: "Turn the phone sideways at the net line, about 2 m back, with the whole table in view. Then mark its corners.",
+      action: { label: "Set up table", run: () => setCalibrating(true) },
+    };
+  } else if (g.game?.status === "lobby") {
+    guide = isJudge
+      ? {
+          title: "Ready to play",
+          action: {
+            label: "Start game",
+            run: () => void run("Start", () => api.ctl("start_game", { first_server: "A" })),
+          },
+        }
+      : { title: "Ready to play", body: "Waiting for the judge to start the game." };
+  }
+  if (guide && hiddenGuide === guide.title) guide = undefined;
+
+  const status = mock
+    ? { cls: "ok", text: "Demo" }
+    : !sync.connected
+      ? { cls: "bad", text: "Offline" }
+      : isCam && stats
+        ? { cls: stats.sentFps >= 25 ? "ok" : "warn", text: `Live · ${stats.sentFps.toFixed(0)} fps` }
+        : { cls: "ok", text: "Live" };
+
+  const leave = () => {
+    forgetSession(session.gameId);
+    onLeave?.();
+  };
+
   return (
     <div className={isCam ? "live cam" : "live"}>
-      {g.synthetic && <div className="synthetic">{g.label ?? "SYNTHETIC demo data"}</div>}
-      <header className="bar">
-        {isCam ? <Scoreboard game={g.game} scores={g.scores} compact /> : <strong className="brand">Trophy</strong>}
-        <div className="chips">
-          {!mock && <span className={sync.connected ? "chip ok" : "chip bad"}>{sync.connected ? "linked" : "offline"}</span>}
-          {isCam && stats && <span className={stats.sentFps >= 25 ? "chip ok" : "chip warn"}>{stats.sentFps.toFixed(0)} fps</span>}
-          {sync.syncErrMs !== null && <span className="chip">±{sync.syncErrMs.toFixed(0)} ms</span>}
-          {g.error && <span className="chip bad">state: {g.error}</span>}
-        </div>
-      </header>
+      {isCam && <video ref={videoRef} className="preview" muted playsInline autoPlay />}
 
-      <section className="stage">
-        {isCam ? (
-          <video ref={videoRef} className="preview" muted playsInline autoPlay />
-        ) : (
-          <div className="board">
-            <Scoreboard game={g.game} scores={g.scores} />
-            <ol className="feed" aria-label="Recent calls">
-              {g.calls.slice(0, 4).map((c) => (
-                <li key={c.id} className={`tier-${c.tier.toLowerCase()}`}>
-                  <span className="tier">{c.tier === "PLAYERS" ? "PLAYERS" : c.tier}</span> {c.text}
-                  {c.status !== "final" && <em> · {c.status}</em>}
-                </li>
-              ))}
-            </ol>
+      <header className="top">
+        <Scoreboard game={g.game} scores={g.scores} compact />
+        <button className={`status ${status.cls}`} onClick={() => setSheet("stats")} aria-label="Connection details">
+          <span className="dot" /> {status.text}
+        </button>
+      </header>
+      {g.synthetic && <div className="synthetic">{g.label ?? "SYNTHETIC demo data"}</div>}
+
+      {!isCam && (
+        <section className="board">
+          <Scoreboard game={g.game} scores={g.scores} />
+          <ol className="feed" aria-label="Recent calls">
+            {g.calls.slice(0, 4).map((c) => (
+              <li key={c.id} className={`tier-${c.tier.toLowerCase()}`}>
+                <span className="tier">{c.tier === "PLAYERS" ? "PLAYERS" : c.tier}</span> {c.text}
+                {c.status !== "final" && <em> · {c.status}</em>}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {guide && !g.banner && (
+        <div className="guide" role="status">
+          <strong>{guide.title}</strong>
+          {guide.body && <p>{guide.body}</p>}
+          <div className="row">
+            {guide.action && (
+              <button className="primary" onClick={guide.action.run}>
+                {guide.action.label}
+              </button>
+            )}
+            <button className="ghost" onClick={() => setHiddenGuide(guide.title)}>
+              Hide
+            </button>
           </div>
-        )}
-        {g.banner && (
-          <div className={`banner tier-${g.banner.tier.toLowerCase()}`} role="status" aria-live="assertive">
-            <span className="tier">{g.banner.tier === "PLAYERS" ? "PLAYERS DECIDE" : g.banner.tier}</span>
-            <span className="text">{g.banner.text}</span>
-            {g.banner.tier !== "AUTO" && <span className="p">p = {g.banner.p.toFixed(2)}</span>}
-          </div>
-        )}
-      </section>
+        </div>
+      )}
+
+      {g.banner && (
+        <div className={`banner tier-${g.banner.tier.toLowerCase()}`} role="status" aria-live="assertive">
+          <span className="tier">{g.banner.tier === "PLAYERS" ? "PLAYERS DECIDE" : g.banner.tier}</span>
+          <span className="text">{g.banner.text}</span>
+          {g.banner.tier !== "AUTO" && <span className="p">{Math.round(g.banner.p * 100)}% sure</span>}
+        </div>
+      )}
 
       {flashColor && <div className="flash" style={{ background: flashColor }} />}
 
-      <footer className="controls">
-        {!mock && <PushToTalk voice={voice} onTranscript={onTranscript} onError={say} />}
-        <button className="challenge" disabled={!latestChallengeable} onClick={() => void challenge()}>
-          Challenge{latestChallengeable ? ` (${Math.round(latestChallengeable.p * 100)}%)` : ""}
-        </button>
-        {isCam && (
-          <button onClick={() => setCalibrating(true)} disabled={!stats?.connected}>
-            Calibrate
+      <footer className="bottom">
+        {!mock ? <PushToTalk voice={voice} onTranscript={onTranscript} onError={say} /> : <span />}
+        {latestChallengeable ? (
+          <button className="challenge" onClick={() => void challenge()}>
+            Challenge · {Math.round(latestChallengeable.p * 100)}%
           </button>
+        ) : (
+          <span />
         )}
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={speakOn}
-            onChange={(e) => {
-              setSpeakOn(e.target.checked);
-              savePref("speak", e.target.checked);
-            }}
-          />
-          Speak calls
-        </label>
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={readAll}
-            onChange={(e) => {
-              setReadAll(e.target.checked);
-              savePref("readall", e.target.checked);
-            }}
-          />
-          Read everything
-        </label>
-        <button className="ghost" onClick={() => setShowStats((s) => !s)}>
-          {showStats ? "Hide" : "Device"} stats
+        <button className="menu-btn" aria-label="Menu" onClick={() => setSheet("menu")}>
+          ☰ Menu
         </button>
-        {onLeave && (
-          <button
-            className="ghost"
-            onClick={() => {
-              forgetSession(session.gameId);
-              onLeave();
-            }}
-          >
-            Leave
-          </button>
-        )}
       </footer>
 
       {answer && (
@@ -291,7 +323,8 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
                 ))}
               </ul>
               <p className="muted small">
-                {answer.a.latency_ms.toFixed(0)} ms{answer.a.moss_ms !== undefined ? ` · Moss ${answer.a.moss_ms.toFixed(0)} ms` : ""}
+                {answer.a.latency_ms.toFixed(0)} ms
+                {answer.a.moss_ms !== undefined ? ` · Moss ${answer.a.moss_ms.toFixed(0)} ms` : ""}
               </p>
             </>
           ) : (
@@ -300,41 +333,108 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
         </aside>
       )}
 
-      {isJudge && <JudgePanel api={mock ? undefined : api} g={g} onError={say} startOpen={false} />}
+      {sheet === "menu" && (
+        <div className="sheet-wrap" onClick={() => setSheet(undefined)}>
+          <nav className="sheet" aria-label="Menu" onClick={(e) => e.stopPropagation()}>
+            {isCam && (
+              <button
+                onClick={() => {
+                  setSheet(undefined);
+                  setCalibrating(true);
+                }}
+              >
+                Set up table{tableSet ? " (done)" : ""}
+              </button>
+            )}
+            {isJudge && <button onClick={() => setSheet("judge")}>Judge controls</button>}
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={speakOn}
+                onChange={(e) => {
+                  setSpeakOn(e.target.checked);
+                  savePref("speak", e.target.checked);
+                }}
+              />
+              Speak calls out loud
+            </label>
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={readAll}
+                onChange={(e) => {
+                  setReadAll(e.target.checked);
+                  savePref("readall", e.target.checked);
+                }}
+              />
+              Also read every score change
+            </label>
+            <button onClick={() => setSheet("stats")}>Connection details</button>
+            {onLeave && (
+              <button className="ghost" onClick={leave}>
+                Leave game
+              </button>
+            )}
+            <p className="muted small">
+              Hold to talk: say “challenge”, “undo”, “house rule: …”, or ask a rules question.
+            </p>
+          </nav>
+        </div>
+      )}
 
-      {showStats && (
-        <aside className="stats mono small">
-          <div>camera: {cam ? `${cam.label} ${cam.settings.width}×${cam.settings.height} @ ${cam.settings.frameRate ?? "?"}` : "—"}</div>
-          {stats && (
+      {isJudge && (sheet === "judge" || needsDecision) && (
+        <JudgePanel api={mock ? undefined : api} g={g} onError={say} onClose={() => setSheet(undefined)} />
+      )}
+
+      {sheet === "stats" && (
+        <div className="sheet-wrap" onClick={() => setSheet(undefined)}>
+          <aside className="sheet stats mono small" onClick={(e) => e.stopPropagation()}>
+            <div>camera: {cam ? cam.label : "—"}</div>
+            {stats && (
+              <div>
+                sending {stats.sentFps.toFixed(1)} fps · {stats.w}×{stats.h} · encode {stats.encodeMs.toFixed(1)} ms ·{" "}
+                {stats.kbPerFrame.toFixed(0)} KB/frame · skipped {stats.skipped}
+              </div>
+            )}
             <div>
-              sent {stats.sentFps.toFixed(1)} fps · {stats.w}×{stats.h} · encode {stats.encodeMs.toFixed(1)} ms ·{" "}
-              {stats.kbPerFrame.toFixed(0)} KB/frame · skipped {stats.skipped}
+              clock: offset {sync.offsetMs?.toFixed(1) ?? "—"} ms · error ±{sync.syncErrMs?.toFixed(1) ?? "—"} ms ·
+              sound onsets {onsets}
             </div>
-          )}
-          <div>
-            clock: offset {sync.offsetMs?.toFixed(1) ?? "—"} ms · err {sync.syncErrMs?.toFixed(1) ?? "—"} ms · onsets {onsets}
-          </div>
-          <div>
-            role {session.role} · cam {session.camId} · game {session.gameId}
-          </div>
-          <div className="row">
-            <button onClick={() => beep("short")}>Beep</button>
-            <button
-              onClick={() =>
-                void voice
-                  ?.speak("Edge ball. Good. Point, B.", { voice: "calls", interrupt: true })
-                  .then((ms) => say(`First audio after ${ms.toFixed(0)} ms`))
-              }
-            >
-              Test voice
-            </button>
-          </div>
-        </aside>
+            <div>
+              {session.role} · {session.camId} · {session.gameId}
+            </div>
+            {g.error && <div className="error">state: {g.error}</div>}
+            <div className="row">
+              <button onClick={() => beep("short")}>Beep</button>
+              <button
+                onClick={() =>
+                  void voice
+                    ?.speak("Edge ball. Good. Point, B.", { voice: "calls", interrupt: true })
+                    .then((ms) => say(`First audio after ${ms.toFixed(0)} ms`))
+                }
+              >
+                Test voice
+              </button>
+              <button className="ghost" onClick={() => setSheet(undefined)}>
+                Close
+              </button>
+            </div>
+          </aside>
+        </div>
       )}
 
       {toast && <div className="toast">{toast}</div>}
-      {isCam && <div className="rotate">Rotate the phone to landscape</div>}
-      {calibrating && <CalibrateView api={api} sport={g.game?.sport ?? "table_tennis"} onClose={() => setCalibrating(false)} />}
+      {isCam && <div className="rotate">Turn the phone sideways (landscape)</div>}
+      {calibrating && (
+        <CalibrateView
+          api={api}
+          sport={g.game?.sport ?? "table_tennis"}
+          onClose={(ok) => {
+            setCalibrating(false);
+            if (ok) setCalibratedHere(true);
+          }}
+        />
+      )}
     </div>
   );
 }

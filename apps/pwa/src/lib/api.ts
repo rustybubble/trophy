@@ -135,7 +135,9 @@ export class Api {
     return req("/voice/token", {}, this.s.token);
   }
   async still(): Promise<{ blob: Blob; seq: number; w: number; h: number }> {
-    const res = await fetch(`/api/cams/${this.s.camId}/still`, { headers: { Authorization: `Bearer ${this.s.token}` } });
+    const res = await fetch(`/api/cams/${this.s.camId}/still`, {
+      headers: { Authorization: `Bearer ${this.s.token}` },
+    });
     if (!res.ok) throw new ApiError(res.status, res.status === 404 ? "no frames yet" : res.statusText);
     return {
       blob: await res.blob(),

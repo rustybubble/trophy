@@ -42,7 +42,9 @@ export function beep(kind: "short" | "double" | "long" | "none"): void {
  * Onset detection on a raw mic track (echo cancellation, noise suppression and AGC OFF, to keep the transients).
  * Calls `onOnset` with the phone-clock time of each onset (build card 2D: context time -> performance time).
  */
-export async function startOnsets(onOnset: (tPhoneMs: number, peak: number, energy: number) => void): Promise<() => void> {
+export async function startOnsets(
+  onOnset: (tPhoneMs: number, peak: number, energy: number) => void,
+): Promise<() => void> {
   const ac = audioContext();
   const mic = await microphone(true);
   await ensureWorklet(onsetWorkletUrl);

@@ -13,7 +13,9 @@ export interface StreamStats {
 }
 
 type VideoWithRvfc = HTMLVideoElement & {
-  requestVideoFrameCallback?: (cb: (now: number, md: { captureTime?: number; presentationTime: number }) => void) => number;
+  requestVideoFrameCallback?: (
+    cb: (now: number, md: { captureTime?: number; presentationTime: number }) => void,
+  ) => number;
 };
 
 export class FrameStreamer {

@@ -44,7 +44,8 @@ export function JoinView(props: {
       </button>
       {props.error && <p className="error">{props.error}</p>}
       <p className="muted small">
-        Cameras film the game for automatic calls. Everyone filmed should agree to it. Video stays on the referee laptop.
+        Cameras film the game for automatic calls. Everyone filmed should agree to it. Video stays on the referee
+        laptop.
       </p>
     </main>
   );

@@ -4,7 +4,7 @@ import type { Api } from "../lib/api.ts";
 import { apply, invert3, TABLE_TENNIS } from "../lib/homography.ts";
 
 /** Calibration taps (interfaces-v1 §6): tap the table corners on a still, team A's end first; drag to adjust. */
-export function CalibrateView({ api, sport, onClose }: { api: Api; sport: string; onClose: () => void }) {
+export function CalibrateView({ api, sport, onClose }: { api: Api; sport: string; onClose: (ok: boolean) => void }) {
   const [still, setStill] = useState<{ url: string; seq: number; w: number; h: number }>();
   const [pts, setPts] = useState<[number, number][]>([]);
   const [result, setResult] = useState<Calibration>();
@@ -32,7 +32,7 @@ export function CalibrateView({ api, sport, onClose }: { api: Api; sport: string
     return (
       <div className="modal">
         <p>Calibration taps for {sport} aren't built yet.</p>
-        <button onClick={onClose}>Close</button>
+        <button onClick={() => onClose(false)}>Close</button>
       </div>
     );
   }
@@ -92,7 +92,7 @@ export function CalibrateView({ api, sport, onClose }: { api: Api; sport: string
     setBusy(true);
     try {
       await api.saveCalibration(result);
-      onClose();
+      onClose(true);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
       setBusy(false);
@@ -113,28 +113,37 @@ export function CalibrateView({ api, sport, onClose }: { api: Api; sport: string
 
   return (
     <div className="modal calibrate">
-      <p className="prompt">{next ? `Tap ${pts.length + 1}/4: ${next.prompt}` : result ? "Check the outline, then confirm." : "Drag to adjust, then solve."}</p>
+      <p className="prompt">
+        {next
+          ? `Tap ${pts.length + 1}/4: ${next.prompt}`
+          : result
+            ? "Check the outline, then confirm."
+            : "Drag to adjust, then solve."}
+      </p>
       {still ? (
         <div className="still" onPointerDown={down} onPointerMove={move} onPointerUp={() => (drag.current = null)}>
-          <img ref={imgRef} src={still.url} alt="Camera still" draggable={false} />
-          <svg viewBox={`0 0 ${still.w} ${still.h}`} preserveAspectRatio="none">
-            {outline && <polygon points={outline} className="outline" />}
-            {pts.map((p, i) => (
-              <g key={i}>
-                <circle cx={p[0]} cy={p[1]} r={still.w / 90} className="tap" />
-                <text x={p[0] + still.w / 70} y={p[1] - still.w / 70} className="tap-label">
-                  {landmarks[i]!.name}
-                </text>
-              </g>
-            ))}
-          </svg>
+          <div className="frame">
+            <img ref={imgRef} src={still.url} alt="Camera still" draggable={false} />
+            <svg viewBox={`0 0 ${still.w} ${still.h}`} preserveAspectRatio="none">
+              {outline && <polygon points={outline} className="outline" />}
+              {pts.map((p, i) => (
+                <g key={i}>
+                  <circle cx={p[0]} cy={p[1]} r={still.w / 90} className="tap" />
+                  <text x={p[0] + still.w / 70} y={p[1] - still.w / 70} className="tap-label">
+                    {landmarks[i]!.name}
+                  </text>
+                </g>
+              ))}
+            </svg>
+          </div>
         </div>
       ) : (
         <p className="muted">{err ?? "Loading the latest frame…"}</p>
       )}
       {result && (
         <p className={result.trusted ? "ok" : "warn"}>
-          {result.trusted ? "Trusted" : "Not trusted: calls stay BETA"} · reprojection error {result.reproj_err_px.toFixed(1)} px
+          {result.trusted ? "Trusted" : "Not trusted: calls stay BETA"} · reprojection error{" "}
+          {result.reproj_err_px.toFixed(1)} px
           {result.warnings.length > 0 && ` · ${result.warnings.join("; ")}`}
         </p>
       )}
@@ -150,7 +159,7 @@ export function CalibrateView({ api, sport, onClose }: { api: Api; sport: string
             Confirm
           </button>
         )}
-        <button className="ghost" onClick={onClose}>
+        <button className="ghost" onClick={() => onClose(false)}>
           Cancel
         </button>
       </div>

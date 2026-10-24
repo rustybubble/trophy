@@ -13,7 +13,9 @@ export function App() {
   const gameId = params.get("g") ?? "";
   const joinKey = params.get("k") ?? "";
   const mock = params.get("mock") === "1";
-  const [session, setSession] = useState<Session | undefined>(() => (GAME_RE.test(gameId) ? savedSession(gameId) : undefined));
+  const [session, setSession] = useState<Session | undefined>(() =>
+    GAME_RE.test(gameId) ? savedSession(gameId) : undefined,
+  );
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
 
