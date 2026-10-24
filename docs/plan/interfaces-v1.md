@@ -322,6 +322,8 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 | `POST /ask` | `{question, sport?}` → proxied to the `rules` service `POST /ask` (§17) → `{answer, speech, citations, latency_ms}`; the gateway then sends an `ask_logged` ctl command |
 | `GET /healthz` | → `{ok, redis, adapter, recorder}` |
 
+**As built (2026-10-24, `services/gateway`):** join and `/public` also return `t0_ms`; `/healthz` also reports `spacetime` and `rules`; client `ctl` args are validated against the `*Args` schemas (422 otherwise); frames that arrive before the clock fit exists are stamped by arrival time with `sync_err_ms = 1000`; onsets need a fit and are dropped before one exists; audio onsets go to `ev:audio` only (not mirrored into `observation`); `call_ack` latencies go to `data/local/logs/call_ack.jsonl`. Replay routes come with the recorder.
+
 ## 14. Dev and runtime conventions (M5 Pro)
 - **One HTTPS origin for phones** (OPEN-2). Caddy + a DNS-01 certificate for a real domain pointing at the Mac's LAN IP is required for WebRTC and best for 720p30. A tunnel (cloudflared/ngrok) works for WebSocket only and adds latency, so it's acceptable for day-1 UI work only.
 - **Ports:** gateway 8000, courtcam-adapter 8050, SpacetimeDB 3000, Redis 6379, PWA 5173, dashboard 5174. Each worktree adds its offset (A1 +0, A2 +100, A3 +200).

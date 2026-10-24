@@ -96,47 +96,49 @@ class Frame:
     data: bytes  # JPEG
 
 
+def frame_fields(
+    *,
+    game_id: str,
+    cam_id: str,
+    seq: int,
+    t_phone_ms: float,
+    t_srv_ms: float,
+    t_game_s: float,
+    sync_err_ms: float,
+    jpeg: bytes,
+    source: Source = "ws",
+    flags: int = 0,
+    size: tuple[int, int] | None = None,
+) -> dict[str, str | bytes]:
+    """The fields of one ``frames:{cam}`` entry (§5.2). Async writers XADD these themselves."""
+    w, h = size or jpeg_size(jpeg)
+    return {
+        "v": "1",
+        "game_id": game_id,
+        "cam_id": cam_id,
+        "seq": str(seq),
+        "t_phone_ms": repr(float(t_phone_ms)),
+        "t_srv_ms": repr(float(t_srv_ms)),
+        "t_game_s": repr(float(t_game_s)),
+        "sync_err_ms": repr(float(sync_err_ms)),
+        "w": str(w),
+        "h": str(h),
+        "fmt": "jpeg",
+        "source": source,
+        "flags": str(flags),
+        "data": jpeg,
+    }
+
+
 class FrameWriter:
     def __init__(self, r: redis.Redis, maxlen: int = FRAMES_MAXLEN) -> None:
         self.r = r
         self.maxlen = maxlen
 
-    def write(
-        self,
-        *,
-        game_id: str,
-        cam_id: str,
-        seq: int,
-        t_phone_ms: float,
-        t_srv_ms: float,
-        t_game_s: float,
-        sync_err_ms: float,
-        jpeg: bytes,
-        source: Source = "ws",
-        flags: int = 0,
-        size: tuple[int, int] | None = None,
-    ) -> str:
-        w, h = size or jpeg_size(jpeg)
+    def write(self, *, cam_id: str, **kw) -> str:
+        """Keyword args as :func:`frame_fields`. Returns the stream entry id."""
         entry_id = self.r.xadd(
-            frames_key(cam_id),
-            {
-                "v": "1",
-                "game_id": game_id,
-                "cam_id": cam_id,
-                "seq": str(seq),
-                "t_phone_ms": repr(float(t_phone_ms)),
-                "t_srv_ms": repr(float(t_srv_ms)),
-                "t_game_s": repr(float(t_game_s)),
-                "sync_err_ms": repr(float(sync_err_ms)),
-                "w": str(w),
-                "h": str(h),
-                "fmt": "jpeg",
-                "source": source,
-                "flags": str(flags),
-                "data": jpeg,
-            },
-            maxlen=self.maxlen,
-            approximate=True,
+            frames_key(cam_id), frame_fields(cam_id=cam_id, **kw), maxlen=self.maxlen, approximate=True
         )
         return entry_id.decode() if isinstance(entry_id, bytes) else entry_id
 
