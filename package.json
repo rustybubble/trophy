@@ -5,12 +5,13 @@
   "workspaces": [
     "packages/contracts",
     "packages/state-client",
-    "spacetime"
+    "spacetime",
+    "apps/pwa"
   ],
   "scripts": {
     "contracts": "node scripts/gen-contracts.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "eslint packages",
+    "lint": "eslint packages apps",
     "test": "npm run test --workspaces --if-present",
     "format": "prettier --write \"packages/**/*.{ts,tsx,json}\""
   },

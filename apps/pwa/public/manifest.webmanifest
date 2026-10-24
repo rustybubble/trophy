@@ -1,0 +1,10 @@
+{
+  "name": "Trophy referee",
+  "short_name": "Trophy",
+  "start_url": "/cam/",
+  "scope": "/cam/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115"
+}

@@ -354,6 +354,7 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 - **Intent parse** (client-side regex first, then the gateway falls back to a Claude Haiku classification): `challenge` · `ask:<question>` · `house_rule:<text>` · `score?` · `undo`. Each maps to `/api/ctl` or `/api/ask`.
 - **Verify on day 1:** the header vs. query auth forms, and the current `cartesia_version` value (search results show `2026-03-01`). Record what worked in `docs/status/a1.md`.
 - **Accessibility:** a "read everything" mode speaks every call and score change (Cartesia's "impact and responsibility" criterion).
+- **As built (2026-10-24, `apps/pwa`):** a new call cancels the line that's still playing (a fresh `context_id` per line, `cancel` on the old one, rather than one continued context per game). Push-to-talk **reuses the raw onset mic** when it's open instead of opening a second, echo-cancelled track, because iOS can mute an earlier capture when a second one starts; Ink-2 transcribed correctly without echo cancellation in the iPhone spike. Calls older than 15 s when they arrive (e.g. after a reconnect) are listed, not announced.
 
 ## 17. Ask the ref: Apify → Moss → Claude (Agent 3, `services/rules`)
 - **Apify actor "Sports Rulebook Scraper"** (`actors/rulebook-scraper/`, Python Apify SDK + Crawlee):
