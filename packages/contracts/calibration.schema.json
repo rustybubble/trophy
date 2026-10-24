@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trophy.local/contracts/calibration.schema.json",
+  "title": "Calibration",
+  "description": "trophy.calibration.v1 (interfaces-v1 §6): the courtcam-adapter /calibrate response, stored in Redis calib:{cam_id} and the camera row.",
+  "type": "object",
+  "required": [
+    "schema",
+    "game_id",
+    "cam_id",
+    "sport",
+    "created_at_ms",
+    "image_size",
+    "method",
+    "H_img_to_field",
+    "reproj_err_px",
+    "trusted",
+    "warnings",
+    "solver"
+  ],
+  "properties": {
+    "schema": { "const": "trophy.calibration.v1" },
+    "game_id": { "type": "string" },
+    "cam_id": { "type": "string" },
+    "sport": { "type": "string" },
+    "created_at_ms": { "type": "number" },
+    "image_size": { "$ref": "#/$defs/ImageSize" },
+    "method": { "type": "string", "description": "e.g. homography+pnp, homography, stub" },
+    "H_img_to_field": { "$ref": "#/$defs/Mat3" },
+    "K": { "$ref": "#/$defs/Mat3" },
+    "dist": { "type": "array", "items": { "type": "number" }, "description": "[k1], courtcam's division model" },
+    "rvec": { "$ref": "#/$defs/Vec3" },
+    "tvec": { "$ref": "#/$defs/Vec3" },
+    "camera_position_m": { "$ref": "#/$defs/Vec3" },
+    "reproj_err_px": { "type": "number", "minimum": 0 },
+    "trusted": { "type": "boolean" },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "overlay_px": {
+      "type": "array",
+      "items": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 },
+      "description": "Field lines projected to px as [x1,y1,x2,y2] segments"
+    },
+    "solver": { "type": "string", "description": "e.g. courtcam@b2f5ff5" }
+  },
+  "$defs": {
+    "ImageSize": {
+      "title": "ImageSize",
+      "type": "object",
+      "required": ["w", "h"],
+      "properties": {
+        "w": { "type": "integer", "minimum": 1 },
+        "h": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "Mat3": {
+      "title": "Mat3",
+      "description": "3x3 row-major",
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 9,
+      "maxItems": 9
+    },
+    "Vec3": { "title": "Vec3", "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+    "TapPoint": {
+      "title": "TapPoint",
+      "type": "object",
+      "required": ["name", "px"],
+      "properties": {
+        "name": { "type": "string", "description": "A field.landmarks name, e.g. A_left" },
+        "px": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+      }
+    },
+    "CalibrationRequest": {
+      "title": "CalibrationRequest",
+      "description": "trophy.calibration_request.v1: gateway POST /api/calibrate -> courtcam-adapter POST /calibrate",
+      "type": "object",
+      "required": ["schema", "game_id", "cam_id", "sport", "seq", "image_size", "points"],
+      "properties": {
+        "schema": { "const": "trophy.calibration_request.v1" },
+        "game_id": { "type": "string" },
+        "cam_id": { "type": "string" },
+        "sport": { "type": "string" },
+        "seq": { "type": "integer", "minimum": 0 },
+        "image_size": { "$ref": "#/$defs/ImageSize" },
+        "points": { "type": "array", "minItems": 4, "items": { "$ref": "#/$defs/TapPoint" } }
+      }
+    }
+  }
+}

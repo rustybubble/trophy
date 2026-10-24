@@ -1,80 +1,121 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "trophy/call",
+  "$id": "https://trophy.local/contracts/call.schema.json",
   "title": "Call",
+  "description": "trophy.call.v1: a decision by the engine (interfaces-v1 §10). Stored in the Spacetime `call` table; clients receive it parsed.",
   "type": "object",
   "required": [
+    "schema",
     "id",
+    "game_id",
     "t_game_s",
     "rule_id",
+    "rule_version",
+    "kind",
     "outcome",
     "p",
+    "p_source",
     "tier",
-    "shown"
+    "shown",
+    "text",
+    "speech",
+    "cue",
+    "event_ids",
+    "evidence",
+    "status",
+    "created_at_ms"
   ],
   "properties": {
-    "id": {
-      "type": "string"
+    "schema": { "const": "trophy.call.v1" },
+    "id": { "type": "string", "description": "ULID" },
+    "game_id": { "type": "string" },
+    "t_game_s": { "type": "number" },
+    "rule_id": { "type": "string" },
+    "rule_version": { "type": "string", "description": "Pack version the rule came from (house rules: the house_rule rule_version)" },
+    "rally_no": { "type": "integer", "minimum": 1 },
+    "kind": { "$ref": "#/$defs/CallKind" },
+    "outcome": { "type": "string", "description": "e.g. point_A, in, out, edge_good, side_fault, made_3, illegal_toss_height" },
+    "team_id": { "type": "string", "description": "Who the call favours" },
+    "points": { "type": "integer" },
+    "p": { "type": "number", "minimum": 0, "maximum": 1, "description": "Probability of outcome" },
+    "p_source": { "$ref": "#/$defs/PSource" },
+    "tier": { "$ref": "#/$defs/Tier" },
+    "shown": { "$ref": "#/$defs/Shown" },
+    "text": { "type": "string", "maxLength": 80 },
+    "speech": { "type": "string" },
+    "emotion": { "type": "string", "description": "Optional Cartesia emotion for this line (game/match point only)" },
+    "cue": { "$ref": "#/$defs/Cue" },
+    "event_ids": { "type": "array", "items": { "type": "string" } },
+    "evidence": { "type": "array", "items": { "$ref": "#/$defs/EvidenceWindow" } },
+    "overlay": { "$ref": "#/$defs/Overlay" },
+    "status": { "$ref": "#/$defs/CallStatus" },
+    "supersedes": { "type": "string" },
+    "rule_ref": { "type": "string", "description": "Closest official clause (Moss), if any" },
+    "why": { "type": "string", "description": "One short sentence from event facts" },
+    "suggested": {
+      "type": "string",
+      "description": "decide() suggested verdict after AI votes; advisory only, the judge decides"
     },
-    "t_game_s": {
-      "type": "number"
+    "created_at_ms": { "type": "number" }
+  },
+  "$defs": {
+    "CallKind": {
+      "title": "CallKind",
+      "enum": ["point", "basket", "line_call", "edge_call", "violation", "foul_flag", "score_update", "info"]
     },
-    "rule_id": {
-      "type": "string"
-    },
-    "outcome": {
-      "type": "string"
-    },
-    "p": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1,
-      "description": "calibrated probability of outcome"
-    },
-    "tier": {
-      "enum": [
-        "AUTO",
-        "BETA",
-        "PLAYERS"
-      ]
-    },
-    "shown": {
-      "enum": [
-        "auto",
-        "challengeable",
-        "replay",
-        "evidence"
-      ]
-    },
-    "evidence": {
+    "PSource": { "title": "PSource", "enum": ["geometry", "heuristic", "decide:ensemble", "manual"] },
+    "Tier": { "title": "Tier", "enum": ["AUTO", "BETA", "PLAYERS"] },
+    "Shown": { "title": "Shown", "enum": ["auto", "challengeable", "replay", "evidence"] },
+    "CallStatus": { "title": "CallStatus", "enum": ["final", "challenged", "upheld", "overturned", "voided"] },
+    "Cue": {
+      "title": "Cue",
       "type": "object",
+      "required": ["beep", "flash"],
       "properties": {
-        "cams": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "t0": {
-          "type": "number"
-        },
-        "t1": {
-          "type": "number"
-        },
-        "frames": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
+        "beep": { "enum": ["short", "double", "long", "none"] },
+        "flash": { "type": "string", "description": "<team_id>, #rrggbb or none" }
       }
     },
-    "rule_ref": {
-      "type": "string",
-      "description": "official rule citation from Moss, if any"
+    "EvidenceWindow": {
+      "title": "EvidenceWindow",
+      "description": "The window the replay shows",
+      "type": "object",
+      "required": ["cam_id", "t0_s", "t1_s"],
+      "properties": {
+        "cam_id": { "type": "string" },
+        "t0_s": { "type": "number" },
+        "t1_s": { "type": "number" }
+      }
     },
-    "why": {
-      "type": "string"
+    "BounceMark": {
+      "title": "BounceMark",
+      "type": "object",
+      "required": ["pos_m", "sigma_m"],
+      "properties": {
+        "pos_m": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 3,
+          "description": "[x, y] or [x, y, z] in field metres"
+        },
+        "sigma_m": { "type": "number", "minimum": 0 },
+        "cov_m2": { "type": "array", "items": { "type": "number" } },
+        "t_game_s": { "type": "number" }
+      }
+    },
+    "Overlay": {
+      "title": "Overlay",
+      "type": "object",
+      "properties": {
+        "bounce_marks": { "type": "array", "items": { "$ref": "#/$defs/BounceMark" } },
+        "lines": { "type": "array", "items": { "type": "string" } },
+        "highlight_track_ids": { "type": "array", "items": { "type": "string" } },
+        "serve_toss_event_id": {
+          "type": "string",
+          "description": "For serve calls: the serve_toss observation the viewer draws (trace, 6 in line, 30 deg cone)"
+        }
+      }
     }
   }
 }

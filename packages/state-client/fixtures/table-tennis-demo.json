@@ -1,0 +1,2102 @@
+{
+ "schema": "trophy.mock_script.v1",
+ "synthetic": true,
+ "label": "SYNTHETIC demo script: hand-made rows for UI development, not measurements or real calls",
+ "sport": "table_tennis",
+ "game_id": "g_demtt001",
+ "t0_ms": 1792000000000,
+ "steps": [
+  {
+   "at_ms": 0,
+   "table": "game",
+   "row": {
+    "game_id": "g_demtt001",
+    "sport": "table_tennis",
+    "pack_version": "table_tennis@1",
+    "status": "lobby",
+    "t0_ms": 1792000000000,
+    "period_no": 1,
+    "rally_no": 0,
+    "server_team_id": "A",
+    "teams": [
+     {
+      "team_id": "A",
+      "name": "Team A",
+      "color": "#e4572e"
+     },
+     {
+      "team_id": "B",
+      "name": "Team B",
+      "color": "#2e86ab"
+     }
+    ],
+    "params": {
+     "points_to_win": 11,
+     "win_by": 2
+    },
+    "created_at_ms": 1792000000000
+   }
+  },
+  {
+   "at_ms": 200,
+   "table": "camera",
+   "row": {
+    "cam_id": "c_demca1",
+    "game_id": "g_demtt001",
+    "label": "Side cam (net line)",
+    "role": "cam",
+    "device": {
+     "ua": "synthetic",
+     "w": 1280,
+     "h": 720
+    },
+    "calibration": null,
+    "calib_trusted": true,
+    "connected": true,
+    "fps_in": 29.8,
+    "sync_err_ms": 4.1,
+    "last_seen_ms": 1792000000500
+   }
+  },
+  {
+   "at_ms": 500,
+   "table": "game",
+   "row": {
+    "game_id": "g_demtt001",
+    "sport": "table_tennis",
+    "pack_version": "table_tennis@1",
+    "status": "live",
+    "t0_ms": 1792000000000,
+    "period_no": 1,
+    "rally_no": 0,
+    "server_team_id": "A",
+    "teams": [
+     {
+      "team_id": "A",
+      "name": "Team A",
+      "color": "#e4572e"
+     },
+     {
+      "team_id": "B",
+      "name": "Team B",
+      "color": "#2e86ab"
+     }
+    ],
+    "params": {
+     "points_to_win": 11,
+     "win_by": 2
+    },
+    "created_at_ms": 1792000000000
+   }
+  },
+  {
+   "at_ms": 500,
+   "table": "score",
+   "row": {
+    "game_id": "g_demtt001",
+    "team_id": "A",
+    "points": 0,
+    "display": "0–0",
+    "updated_at_ms": 1792000000500
+   }
+  },
+  {
+   "at_ms": 500,
+   "table": "score",
+   "row": {
+    "game_id": "g_demtt001",
+    "team_id": "B",
+    "points": 0,
+    "display": "0–0",
+    "updated_at_ms": 1792000000500
+   }
+  },
+  {
+   "at_ms": 1000,
+   "table": "rally",
+   "row": {
+    "game_id": "g_demtt001",
+    "rally_no": 1,
+    "status": "open",
+    "t_start_s": 1,
+    "t_end_s": null,
+    "winner_team_id": null,
+    "summary": null
+   }
+  },
+  {
+   "at_ms": 1680,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000001",
+    "game_id": "g_demtt001",
+    "t_game_s": 1.6,
+    "sport": "table_tennis",
+    "type": "serve_toss",
+    "source": "synthetic",
+    "cams": [
+     "c_demca1"
+    ],
+    "conf": 0.95,
+    "payload": {
+     "server_side": "A",
+     "release": {
+      "t_s": 1,
+      "pos_m": {
+       "x": -1.5,
+       "y": 0.3,
+       "z": 0
+      }
+     },
+     "apex": {
+      "t_s": 1.3,
+      "pos_m": {
+       "x": -1.5,
+       "y": 0.3,
+       "z": 0.22
+      }
+     },
+     "contact": {
+      "t_s": 1.6,
+      "pos_m": {
+       "x": -1.4771297140100466,
+       "y": 0.3,
+       "z": 0.08800000000000001
+      }
+     },
+     "height_m": 0.22,
+     "sigma_height_m": 0.012,
+     "rise_angle_rad": 0.05,
+     "fall_angle_rad": 0.20943951023931953,
+     "angle_from_vertical_rad": 0.20943951023931953,
+     "sigma_angle_rad": 0.06,
+     "palm_still_s": 0.6,
+     "observable_plane": "xz"
+    }
+   }
+  },
+  {
+   "at_ms": 1660,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 1.6,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -1.4,
+     0.3,
+     0
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 1760,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 1.7,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -1.286,
+     0.293,
+     0.083
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 1860,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 1.8,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -1.171,
+     0.286,
+     0.156
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 1960,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 1.9,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -1.057,
+     0.279,
+     0.212
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 2060,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 2,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.943,
+     0.271,
+     0.244
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 2160,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 2.1,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.829,
+     0.264,
+     0.248
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 2260,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 2.2,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.714,
+     0.257,
+     0.225
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 2360,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 2.3,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.6,
+     0.25,
+     0.177
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 2460,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 2.4,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.486,
+     0.243,
+     0.108
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 2560,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 2.5,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.371,
+     0.236,
+     0.028
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 2660,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 2.6,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.257,
+     0.229,
+     0.056
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 2760,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 2.7,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.143,
+     0.221,
+     0.133
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 2860,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 2.8,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.029,
+     0.214,
+     0.195
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 2960,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 2.9,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.086,
+     0.207,
+     0.236
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 3060,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 3,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.2,
+     0.2,
+     0.25
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 3160,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 3.1,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.314,
+     0.193,
+     0.236
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 3260,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 3.2,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.429,
+     0.186,
+     0.195
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 3360,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 3.3,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.543,
+     0.179,
+     0.133
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 3460,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 3.4,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.657,
+     0.171,
+     0.056
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 3560,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 3.5,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.771,
+     0.164,
+     0.028
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 3660,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 3.6,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.886,
+     0.157,
+     0.108
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 3760,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 3.7,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1,
+     0.15,
+     0.177
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 3860,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 3.8,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1.114,
+     0.143,
+     0.225
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 3960,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 3.9,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1.229,
+     0.136,
+     0.248
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 4060,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 4,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1.343,
+     0.129,
+     0.244
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 4160,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 4.1,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1.457,
+     0.121,
+     0.212
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 4260,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 4.2,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1.571,
+     0.114,
+     0.156
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 4360,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 4.3,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1.686,
+     0.107,
+     0.083
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 4460,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 4.4,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1.8,
+     0.1,
+     0
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 2080,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000002",
+    "game_id": "g_demtt001",
+    "t_game_s": 2,
+    "sport": "table_tennis",
+    "type": "bounce",
+    "source": "synthetic",
+    "cams": [
+     "c_demca1"
+    ],
+    "conf": 0.95,
+    "payload": {
+     "surface": "table",
+     "side": "A",
+     "d_lines_m": {
+      "end_A": 0.4700000000000001,
+      "side_left": 0.46249999999999997
+     },
+     "p_in": 0.99,
+     "edge": null,
+     "timing": "audio"
+    },
+    "side": "A",
+    "pos_m": {
+     "x": -0.9,
+     "y": 0.3,
+     "z": 0
+    },
+    "sigma_m": 0.018
+   }
+  },
+  {
+   "at_ms": 2580,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000003",
+    "game_id": "g_demtt001",
+    "t_game_s": 2.5,
+    "sport": "table_tennis",
+    "type": "bounce",
+    "source": "synthetic",
+    "cams": [
+     "c_demca1"
+    ],
+    "conf": 0.95,
+    "payload": {
+     "surface": "table",
+     "side": "B",
+     "d_lines_m": {
+      "end_B": 0.5700000000000001,
+      "side_left": 0.6625
+     },
+     "p_in": 0.99,
+     "edge": null,
+     "timing": "audio"
+    },
+    "side": "B",
+    "pos_m": {
+     "x": 0.8,
+     "y": 0.1,
+     "z": 0
+    },
+    "sigma_m": 0.018
+   }
+  },
+  {
+   "at_ms": 3480,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000004",
+    "game_id": "g_demtt001",
+    "t_game_s": 3.4,
+    "sport": "table_tennis",
+    "type": "bounce",
+    "source": "synthetic",
+    "cams": [
+     "c_demca1"
+    ],
+    "conf": 0.95,
+    "payload": {
+     "surface": "table",
+     "side": "A",
+     "d_lines_m": {
+      "end_A": 0.3700000000000001,
+      "side_left": 0.9624999999999999
+     },
+     "p_in": 0.99,
+     "edge": null,
+     "timing": "audio"
+    },
+    "side": "A",
+    "pos_m": {
+     "x": -1,
+     "y": -0.2,
+     "z": 0
+    },
+    "sigma_m": 0.018
+   }
+  },
+  {
+   "at_ms": 4480,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000005",
+    "game_id": "g_demtt001",
+    "t_game_s": 4.4,
+    "sport": "table_tennis",
+    "type": "ball_dead",
+    "source": "synthetic",
+    "cams": [
+     "c_demca1"
+    ],
+    "conf": 0.95,
+    "payload": {
+     "reason": "floor",
+     "last_side": "B"
+    }
+   }
+  },
+  {
+   "at_ms": 4600,
+   "table": "rally",
+   "row": {
+    "game_id": "g_demtt001",
+    "rally_no": 1,
+    "status": "closed",
+    "t_start_s": 1,
+    "t_end_s": 4.6,
+    "winner_team_id": "B",
+    "summary": null
+   }
+  },
+  {
+   "at_ms": 4800,
+   "table": "call",
+   "row": {
+    "schema": "trophy.call.v1",
+    "id": "01JDEMCAL00000000000000006",
+    "game_id": "g_demtt001",
+    "t_game_s": 4.6,
+    "rule_id": "rally_point",
+    "rule_version": "table_tennis@1",
+    "p_source": "geometry",
+    "cue": {
+     "beep": "short",
+     "flash": "B"
+    },
+    "event_ids": [
+     "01JDEMOBS00000000000000001",
+     "01JDEMOBS00000000000000002",
+     "01JDEMOBS00000000000000003",
+     "01JDEMOBS00000000000000004",
+     "01JDEMOBS00000000000000005"
+    ],
+    "evidence": [
+     {
+      "cam_id": "c_demca1",
+      "t0_s": 1.5999999999999996,
+      "t1_s": 5.1
+     }
+    ],
+    "status": "final",
+    "created_at_ms": 1792000004800,
+    "outcome": "point_B",
+    "kind": "point",
+    "team_id": "B",
+    "points": 1,
+    "p": 0.97,
+    "tier": "AUTO",
+    "shown": "auto",
+    "text": "Out — point B (97%)",
+    "speech": "Out. Point, B.",
+    "why": "Return landed 0.31 m past end B."
+   }
+  },
+  {
+   "at_ms": 4800,
+   "table": "score",
+   "row": {
+    "game_id": "g_demtt001",
+    "team_id": "A",
+    "points": 0,
+    "display": "0–1",
+    "updated_at_ms": 1792000004800
+   }
+  },
+  {
+   "at_ms": 4800,
+   "table": "score",
+   "row": {
+    "game_id": "g_demtt001",
+    "team_id": "B",
+    "points": 1,
+    "display": "0–1",
+    "updated_at_ms": 1792000004800
+   }
+  },
+  {
+   "at_ms": 7000,
+   "table": "rally",
+   "row": {
+    "game_id": "g_demtt001",
+    "rally_no": 2,
+    "status": "open",
+    "t_start_s": 7,
+    "t_end_s": null,
+    "winner_team_id": null,
+    "summary": null
+   }
+  },
+  {
+   "at_ms": 7680,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000007",
+    "game_id": "g_demtt001",
+    "t_game_s": 7.6,
+    "sport": "table_tennis",
+    "type": "serve_toss",
+    "source": "synthetic",
+    "cams": [
+     "c_demca1"
+    ],
+    "conf": 0.95,
+    "payload": {
+     "server_side": "A",
+     "release": {
+      "t_s": 7,
+      "pos_m": {
+       "x": -1.5,
+       "y": 0.3,
+       "z": 0
+      }
+     },
+     "apex": {
+      "t_s": 7.3,
+      "pos_m": {
+       "x": -1.5,
+       "y": 0.3,
+       "z": 0.09
+      }
+     },
+     "contact": {
+      "t_s": 7.6,
+      "pos_m": {
+       "x": -1.493737210456797,
+       "y": 0.3,
+       "z": 0.036
+      }
+     },
+     "height_m": 0.09,
+     "sigma_height_m": 0.012,
+     "rise_angle_rad": 0.05,
+     "fall_angle_rad": 0.13962634015954636,
+     "angle_from_vertical_rad": 0.13962634015954636,
+     "sigma_angle_rad": 0.06,
+     "palm_still_s": 0.6,
+     "observable_plane": "xz"
+    }
+   }
+  },
+  {
+   "at_ms": 7800,
+   "table": "rally",
+   "row": {
+    "game_id": "g_demtt001",
+    "rally_no": 2,
+    "status": "closed",
+    "t_start_s": 7,
+    "t_end_s": 7.8,
+    "winner_team_id": "B",
+    "summary": null
+   }
+  },
+  {
+   "at_ms": 8000,
+   "table": "call",
+   "row": {
+    "schema": "trophy.call.v1",
+    "id": "01JDEMCAL00000000000000008",
+    "game_id": "g_demtt001",
+    "t_game_s": 7.6,
+    "rule_id": "serve_toss_height",
+    "rule_version": "table_tennis@1",
+    "p_source": "geometry",
+    "cue": {
+     "beep": "short",
+     "flash": "B"
+    },
+    "event_ids": [
+     "01JDEMOBS00000000000000007"
+    ],
+    "evidence": [
+     {
+      "cam_id": "c_demca1",
+      "t0_s": 4.6,
+      "t1_s": 8.1
+     }
+    ],
+    "status": "final",
+    "created_at_ms": 1792000008000,
+    "kind": "violation",
+    "outcome": "illegal_toss_height",
+    "team_id": "B",
+    "points": 1,
+    "p": 0.96,
+    "tier": "AUTO",
+    "shown": "auto",
+    "text": "Fault: toss too low (9 cm < 15.2 cm) — point B",
+    "speech": "Fault. Toss too low. Point, B.",
+    "overlay": {
+     "serve_toss_event_id": "01JDEMOBS00000000000000007"
+    },
+    "why": "Toss rose 0.09 m; the rule needs more than 0.1524 m."
+   }
+  },
+  {
+   "at_ms": 8000,
+   "table": "score",
+   "row": {
+    "game_id": "g_demtt001",
+    "team_id": "A",
+    "points": 0,
+    "display": "0–2",
+    "updated_at_ms": 1792000008000
+   }
+  },
+  {
+   "at_ms": 8000,
+   "table": "score",
+   "row": {
+    "game_id": "g_demtt001",
+    "team_id": "B",
+    "points": 2,
+    "display": "0–2",
+    "updated_at_ms": 1792000008000
+   }
+  },
+  {
+   "at_ms": 10000,
+   "table": "rally",
+   "row": {
+    "game_id": "g_demtt001",
+    "rally_no": 3,
+    "status": "open",
+    "t_start_s": 10,
+    "t_end_s": null,
+    "winner_team_id": null,
+    "summary": null
+   }
+  },
+  {
+   "at_ms": 10680,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000009",
+    "game_id": "g_demtt001",
+    "t_game_s": 10.6,
+    "sport": "table_tennis",
+    "type": "serve_toss",
+    "source": "synthetic",
+    "cams": [
+     "c_demca1"
+    ],
+    "conf": 0.95,
+    "payload": {
+     "server_side": "B",
+     "release": {
+      "t_s": 10,
+      "pos_m": {
+       "x": 1.5,
+       "y": 0.3,
+       "z": 0
+      }
+     },
+     "apex": {
+      "t_s": 10.3,
+      "pos_m": {
+       "x": 1.5,
+       "y": 0.3,
+       "z": 0.24
+      }
+     },
+     "contact": {
+      "t_s": 10.6,
+      "pos_m": {
+       "x": 1.5125434155921185,
+       "y": 0.3,
+       "z": 0.096
+      }
+     },
+     "height_m": 0.24,
+     "sigma_height_m": 0.012,
+     "rise_angle_rad": 0.05,
+     "fall_angle_rad": 0.10471975511965977,
+     "angle_from_vertical_rad": 0.10471975511965977,
+     "sigma_angle_rad": 0.06,
+     "palm_still_s": 0.6,
+     "observable_plane": "xz"
+    }
+   }
+  },
+  {
+   "at_ms": 10660,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 10.6,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1.4,
+     0.1,
+     0
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 10760,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 10.7,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1.285,
+     0.125,
+     0.057
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 10860,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 10.8,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1.171,
+     0.15,
+     0.11
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 10960,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 10.9,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     1.056,
+     0.175,
+     0.156
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 11060,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 11,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.942,
+     0.2,
+     0.191
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 11160,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 11.1,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.827,
+     0.225,
+     0.213
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 11260,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 11.2,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.713,
+     0.25,
+     0.22
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 11360,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 11.3,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.598,
+     0.275,
+     0.213
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 11460,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 11.4,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.483,
+     0.3,
+     0.191
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 11560,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 11.5,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.369,
+     0.325,
+     0.156
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 11660,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 11.6,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.254,
+     0.35,
+     0.11
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 11760,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 11.7,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.14,
+     0.375,
+     0.057
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 11860,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 11.8,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     0.025,
+     0.4,
+     0
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 11960,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 11.9,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.09,
+     0.425,
+     0.057
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 12060,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 12,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.204,
+     0.45,
+     0.11
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 12160,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 12.1,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.319,
+     0.475,
+     0.156
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 12260,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 12.2,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.433,
+     0.5,
+     0.191
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 12360,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 12.3,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.548,
+     0.525,
+     0.213
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 12460,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 12.4,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.662,
+     0.55,
+     0.22
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 12560,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 12.5,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.777,
+     0.575,
+     0.213
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 12660,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 12.6,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -0.892,
+     0.6,
+     0.191
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 12760,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 12.7,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -1.006,
+     0.625,
+     0.156
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 12860,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 12.8,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -1.121,
+     0.65,
+     0.11
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 12960,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 12.9,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -1.235,
+     0.675,
+     0.057
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 13060,
+   "table": "track_sample",
+   "row": {
+    "cam_id": "c_demca1",
+    "t_game_s": 13,
+    "game_id": "g_demtt001",
+    "object": "ball",
+    "pos_m": [
+     -1.35,
+     0.7,
+     0
+    ],
+    "px": null,
+    "conf": 0.9
+   }
+  },
+  {
+   "at_ms": 11280,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000010",
+    "game_id": "g_demtt001",
+    "t_game_s": 11.2,
+    "sport": "table_tennis",
+    "type": "bounce",
+    "source": "synthetic",
+    "cams": [
+     "c_demca1"
+    ],
+    "conf": 0.95,
+    "payload": {
+     "surface": "table",
+     "side": "B",
+     "d_lines_m": {
+      "end_B": 0.6700000000000002,
+      "side_left": 0.5625
+     },
+     "p_in": 0.99,
+     "edge": null,
+     "timing": "audio"
+    },
+    "side": "B",
+    "pos_m": {
+     "x": 0.7,
+     "y": 0.2,
+     "z": 0
+    },
+    "sigma_m": 0.018
+   }
+  },
+  {
+   "at_ms": 12480,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000011",
+    "game_id": "g_demtt001",
+    "t_game_s": 12.4,
+    "sport": "table_tennis",
+    "type": "bounce",
+    "source": "synthetic",
+    "cams": [
+     "c_demca1"
+    ],
+    "conf": 0.95,
+    "payload": {
+     "surface": "table",
+     "side": "A",
+     "d_lines_m": {
+      "end_A": 0.008000000000000007,
+      "side_left": 0.10249999999999992
+     },
+     "p_in": 0.7999999999999999,
+     "edge": {
+      "top_edge": 0.71,
+      "side_face": 0.2,
+      "surface": 0.09
+     },
+     "timing": "audio"
+    },
+    "side": "A",
+    "pos_m": {
+     "x": -1.362,
+     "y": 0.66,
+     "z": 0
+    },
+    "sigma_m": 0.018
+   }
+  },
+  {
+   "at_ms": 13080,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000012",
+    "game_id": "g_demtt001",
+    "t_game_s": 13,
+    "sport": "table_tennis",
+    "type": "ball_dead",
+    "source": "synthetic",
+    "cams": [
+     "c_demca1"
+    ],
+    "conf": 0.95,
+    "payload": {
+     "reason": "floor",
+     "last_side": "A"
+    }
+   }
+  },
+  {
+   "at_ms": 13200,
+   "table": "rally",
+   "row": {
+    "game_id": "g_demtt001",
+    "rally_no": 3,
+    "status": "closed",
+    "t_start_s": 10,
+    "t_end_s": 13.2,
+    "winner_team_id": "A",
+    "summary": null
+   }
+  },
+  {
+   "at_ms": 13400,
+   "table": "call",
+   "row": {
+    "schema": "trophy.call.v1",
+    "id": "01JDEMCAL00000000000000013",
+    "game_id": "g_demtt001",
+    "t_game_s": 13.2,
+    "rule_id": "edge_ball",
+    "rule_version": "table_tennis@1",
+    "p_source": "geometry",
+    "cue": {
+     "beep": "double",
+     "flash": "B"
+    },
+    "event_ids": [
+     "01JDEMOBS00000000000000009",
+     "01JDEMOBS00000000000000010",
+     "01JDEMOBS00000000000000011",
+     "01JDEMOBS00000000000000012"
+    ],
+    "evidence": [
+     {
+      "cam_id": "c_demca1",
+      "t0_s": 10.2,
+      "t1_s": 13.7
+     }
+    ],
+    "status": "final",
+    "created_at_ms": 1792000013400,
+    "kind": "edge_call",
+    "outcome": "edge_good",
+    "team_id": "B",
+    "points": 1,
+    "p": 0.71,
+    "tier": "BETA",
+    "shown": "challengeable",
+    "text": "Edge ball — good. Point B (71%)",
+    "speech": "Edge ball. Good. Point, B.",
+    "overlay": {
+     "bounce_marks": [
+      {
+       "pos_m": [
+        -1.362,
+        0.66
+       ],
+       "sigma_m": 0.018,
+       "t_game_s": 12.4
+      }
+     ],
+     "lines": [
+      "end_A"
+     ]
+    },
+    "why": "Bounce 8 mm inside end A, within the edge band."
+   }
+  },
+  {
+   "at_ms": 13400,
+   "table": "score",
+   "row": {
+    "game_id": "g_demtt001",
+    "team_id": "A",
+    "points": 0,
+    "display": "0–3",
+    "updated_at_ms": 1792000013400
+   }
+  },
+  {
+   "at_ms": 13400,
+   "table": "score",
+   "row": {
+    "game_id": "g_demtt001",
+    "team_id": "B",
+    "points": 3,
+    "display": "0–3",
+    "updated_at_ms": 1792000013400
+   }
+  },
+  {
+   "at_ms": 15200,
+   "table": "ai_vote",
+   "row": {
+    "call_id": "01JDEMCAL00000000000000013",
+    "game_id": "g_demtt001",
+    "created_at_ms": 1792000015200,
+    "backend": "claude",
+    "model": "claude-opus-5-5",
+    "challenge_id": null,
+    "choice": "EDGE_GOOD",
+    "probs": {
+     "EDGE_GOOD": 0.78,
+     "SIDE_FAULT": 0.22
+    },
+    "latency_ms": 1800,
+    "rationale": "Ball deflects upward off the top edge (synthetic)."
+   }
+  },
+  {
+   "at_ms": 15800,
+   "table": "ai_vote",
+   "row": {
+    "call_id": "01JDEMCAL00000000000000013",
+    "game_id": "g_demtt001",
+    "created_at_ms": 1792000015800,
+    "backend": "gemini",
+    "model": "gemini (synthetic)",
+    "challenge_id": null,
+    "choice": "EDGE_GOOD",
+    "probs": {
+     "EDGE_GOOD": 0.66,
+     "SIDE_FAULT": 0.34
+    },
+    "latency_ms": 2400,
+    "rationale": "Trajectory after contact suggests top edge (synthetic)."
+   }
+  },
+  {
+   "at_ms": 16000,
+   "table": "challenge",
+   "row": {
+    "challenge_id": "01JDEMCHL00000000000000014",
+    "game_id": "g_demtt001",
+    "call_id": "01JDEMCAL00000000000000013",
+    "by_cam_id": "c_demca1",
+    "status": "open",
+    "result": null,
+    "created_at_ms": 1792000016000,
+    "resolved_at_ms": null
+   }
+  },
+  {
+   "at_ms": 16000,
+   "table": "call",
+   "row": {
+    "schema": "trophy.call.v1",
+    "id": "01JDEMCAL00000000000000013",
+    "game_id": "g_demtt001",
+    "t_game_s": 13.2,
+    "rule_id": "edge_ball",
+    "rule_version": "table_tennis@1",
+    "p_source": "geometry",
+    "cue": {
+     "beep": "double",
+     "flash": "B"
+    },
+    "event_ids": [
+     "01JDEMOBS00000000000000009",
+     "01JDEMOBS00000000000000010",
+     "01JDEMOBS00000000000000011",
+     "01JDEMOBS00000000000000012"
+    ],
+    "evidence": [
+     {
+      "cam_id": "c_demca1",
+      "t0_s": 10.2,
+      "t1_s": 13.7
+     }
+    ],
+    "status": "challenged",
+    "created_at_ms": 1792000013400,
+    "kind": "edge_call",
+    "outcome": "edge_good",
+    "team_id": "B",
+    "points": 1,
+    "p": 0.71,
+    "tier": "BETA",
+    "shown": "challengeable",
+    "text": "Edge ball — good. Point B (71%)",
+    "speech": "Edge ball. Good. Point, B.",
+    "overlay": {
+     "bounce_marks": [
+      {
+       "pos_m": [
+        -1.362,
+        0.66
+       ],
+       "sigma_m": 0.018,
+       "t_game_s": 12.4
+      }
+     ],
+     "lines": [
+      "end_A"
+     ]
+    },
+    "why": "Bounce 8 mm inside end A, within the edge band."
+   }
+  },
+  {
+   "at_ms": 16500,
+   "table": "ai_vote",
+   "row": {
+    "call_id": "01JDEMCAL00000000000000013",
+    "game_id": "g_demtt001",
+    "created_at_ms": 1792000016500,
+    "backend": "bitdeer",
+    "model": "Qwen/Qwen3.5-397B-A17B",
+    "challenge_id": "01JDEMCHL00000000000000014",
+    "choice": "SIDE_FAULT",
+    "probs": {
+     "EDGE_GOOD": 0.45,
+     "SIDE_FAULT": 0.55
+    },
+    "latency_ms": 3100,
+    "rationale": "Blurred crop; slight lean to side face (synthetic)."
+   }
+  },
+  {
+   "at_ms": 20000,
+   "table": "challenge",
+   "row": {
+    "challenge_id": "01JDEMCHL00000000000000014",
+    "game_id": "g_demtt001",
+    "call_id": "01JDEMCAL00000000000000013",
+    "by_cam_id": "c_demca1",
+    "status": "resolved",
+    "result": "upheld",
+    "created_at_ms": 1792000016000,
+    "resolved_at_ms": 1792000020000
+   }
+  },
+  {
+   "at_ms": 20000,
+   "table": "call",
+   "row": {
+    "schema": "trophy.call.v1",
+    "id": "01JDEMCAL00000000000000013",
+    "game_id": "g_demtt001",
+    "t_game_s": 13.2,
+    "rule_id": "edge_ball",
+    "rule_version": "table_tennis@1",
+    "p_source": "geometry",
+    "cue": {
+     "beep": "double",
+     "flash": "B"
+    },
+    "event_ids": [
+     "01JDEMOBS00000000000000009",
+     "01JDEMOBS00000000000000010",
+     "01JDEMOBS00000000000000011",
+     "01JDEMOBS00000000000000012"
+    ],
+    "evidence": [
+     {
+      "cam_id": "c_demca1",
+      "t0_s": 10.2,
+      "t1_s": 13.7
+     }
+    ],
+    "status": "upheld",
+    "created_at_ms": 1792000013400,
+    "kind": "edge_call",
+    "outcome": "edge_good",
+    "team_id": "B",
+    "points": 1,
+    "p": 0.71,
+    "tier": "BETA",
+    "shown": "challengeable",
+    "text": "Edge ball — good. Point B (71%)",
+    "speech": "Edge ball. Good. Point, B.",
+    "overlay": {
+     "bounce_marks": [
+      {
+       "pos_m": [
+        -1.362,
+        0.66
+       ],
+       "sigma_m": 0.018,
+       "t_game_s": 12.4
+      }
+     ],
+     "lines": [
+      "end_A"
+     ]
+    },
+    "why": "Bounce 8 mm inside end A, within the edge band.",
+    "suggested": "EDGE_GOOD"
+   }
+  },
+  {
+   "at_ms": 22000,
+   "table": "house_rule",
+   "row": {
+    "rule_version": "01JDEMHR000000000000000015",
+    "game_id": "g_demtt001",
+    "sport": "table_tennis",
+    "text": "First to 7, win by 1",
+    "source": "typed",
+    "status": "pending",
+    "backend": "droid",
+    "plan_md": "",
+    "steps": [],
+    "diff": "",
+    "results": null,
+    "pack_path": null,
+    "error": null,
+    "created_at_ms": 1792000022000,
+    "updated_at_ms": 1792000022000
+   }
+  },
+  {
+   "at_ms": 23000,
+   "table": "house_rule",
+   "row": {
+    "rule_version": "01JDEMHR000000000000000015",
+    "game_id": "g_demtt001",
+    "sport": "table_tennis",
+    "text": "First to 7, win by 1",
+    "source": "typed",
+    "status": "compiling",
+    "backend": "droid",
+    "plan_md": "1. Set scoring.params.points_to_win to 7.\n2. Set scoring.params.win_by to 1.\n3. Run replay_test.",
+    "steps": [
+     {
+      "t_ms": 1000,
+      "kind": "plan",
+      "text": "Read rules/table_tennis.yaml and the request"
+     }
+    ],
+    "diff": "",
+    "results": null,
+    "pack_path": null,
+    "error": null,
+    "created_at_ms": 1792000022000,
+    "updated_at_ms": 1792000023000
+   }
+  },
+  {
+   "at_ms": 26000,
+   "table": "house_rule",
+   "row": {
+    "rule_version": "01JDEMHR000000000000000015",
+    "game_id": "g_demtt001",
+    "sport": "table_tennis",
+    "text": "First to 7, win by 1",
+    "source": "typed",
+    "status": "ready",
+    "backend": "droid",
+    "plan_md": "1. Set scoring.params.points_to_win to 7.\n2. Set scoring.params.win_by to 1.\n3. Run replay_test.",
+    "steps": [
+     {
+      "t_ms": 1000,
+      "kind": "plan",
+      "text": "Read rules/table_tennis.yaml and the request"
+     },
+     {
+      "t_ms": 2600,
+      "kind": "edit",
+      "text": "scoring.params: points_to_win 11 → 7, win_by 2 → 1"
+     },
+     {
+      "t_ms": 4100,
+      "kind": "test",
+      "text": "replay_test: 3 rallies, schema ok"
+     }
+    ],
+    "diff": "--- a/rules/table_tennis.yaml\n+++ b/rules/table_tennis.yaml\n@@ scoring.params @@\n-    points_to_win: 11\n-    win_by: 2\n+    points_to_win: 7\n+    win_by: 1\n",
+    "results": {
+     "tests": [
+      {
+       "name": "schema",
+       "pass": true
+      },
+      {
+       "name": "replay rallies 1-3",
+       "before": "0–3",
+       "after": "0–3",
+       "pass": true
+      }
+     ],
+     "calls_changed": []
+    },
+    "pack_path": "rulepacks/house/g_demtt001/table_tennis.v2.yaml",
+    "error": null,
+    "created_at_ms": 1792000022000,
+    "updated_at_ms": 1792000026000
+   }
+  },
+  {
+   "at_ms": 29000,
+   "table": "house_rule",
+   "row": {
+    "rule_version": "01JDEMHR000000000000000015",
+    "game_id": "g_demtt001",
+    "sport": "table_tennis",
+    "text": "First to 7, win by 1",
+    "source": "typed",
+    "status": "approved",
+    "backend": "droid",
+    "plan_md": "1. Set scoring.params.points_to_win to 7.\n2. Set scoring.params.win_by to 1.\n3. Run replay_test.",
+    "steps": [
+     {
+      "t_ms": 1000,
+      "kind": "plan",
+      "text": "Read rules/table_tennis.yaml and the request"
+     },
+     {
+      "t_ms": 2600,
+      "kind": "edit",
+      "text": "scoring.params: points_to_win 11 → 7, win_by 2 → 1"
+     },
+     {
+      "t_ms": 4100,
+      "kind": "test",
+      "text": "replay_test: 3 rallies, schema ok"
+     }
+    ],
+    "diff": "--- a/rules/table_tennis.yaml\n+++ b/rules/table_tennis.yaml\n@@ scoring.params @@\n-    points_to_win: 11\n-    win_by: 2\n+    points_to_win: 7\n+    win_by: 1\n",
+    "results": {
+     "tests": [
+      {
+       "name": "schema",
+       "pass": true
+      },
+      {
+       "name": "replay rallies 1-3",
+       "before": "0–3",
+       "after": "0–3",
+       "pass": true
+      }
+     ],
+     "calls_changed": []
+    },
+    "pack_path": "rulepacks/house/g_demtt001/table_tennis.v2.yaml",
+    "error": null,
+    "created_at_ms": 1792000022000,
+    "updated_at_ms": 1792000029000
+   }
+  },
+  {
+   "at_ms": 29200,
+   "table": "call",
+   "row": {
+    "schema": "trophy.call.v1",
+    "id": "01JDEMCAL00000000000000016",
+    "game_id": "g_demtt001",
+    "t_game_s": 29.2,
+    "rule_id": "house_rule",
+    "rule_version": "01JDEMHR000000000000000015",
+    "p_source": "manual",
+    "cue": {
+     "beep": "long",
+     "flash": "none"
+    },
+    "event_ids": [],
+    "evidence": [
+     {
+      "cam_id": "c_demca1",
+      "t0_s": 26.2,
+      "t1_s": 29.7
+     }
+    ],
+    "status": "final",
+    "created_at_ms": 1792000029200,
+    "kind": "info",
+    "outcome": "house_rule_added",
+    "p": 1,
+    "tier": "AUTO",
+    "shown": "auto",
+    "text": "House rule added: first to 7, win by 1",
+    "speech": "House rule added. First to seven, win by one."
+   }
+  },
+  {
+   "at_ms": 32000,
+   "table": "ask",
+   "row": {
+    "ask_id": "01JDEMASK00000000000000017",
+    "game_id": "g_demtt001",
+    "sport": "table_tennis",
+    "question": "Can the serve clip the net?",
+    "answer": "[Synthetic] A serve that touches the net assembly and then lands correctly is a let and is replayed.",
+    "citations": [
+     {
+      "rule_id": "SYNTH-1",
+      "title": "Synthetic placeholder clause",
+      "url": "https://example.invalid/synthetic",
+      "quote": "Synthetic placeholder text, not an official rule."
+     }
+    ],
+    "moss_ms": 42,
+    "latency_ms": 2100,
+    "created_at_ms": 1792000032000
+   }
+  }
+ ]
+}

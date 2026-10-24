@@ -6,6 +6,17 @@ This file is the source of truth for wire formats **until Agent 1 lands checkpoi
 
 **Principle (D-18): perception emits measurements; rule packs decide.** An event states what was observed, with uncertainty: "bounce at (x, y), σ = 1.8 cm, top-edge p = 0.71" or "left toe 3 cm inside the kitchen at contact". Whether that is a point, a fault or a foul is decided only by the engine, from CEL conditions and scoring templates in `rulepacks/*.yaml`. That is what lets the Droid add house rules without touching perception code.
 
+> **C0 landed (2026-10-24, Agent 1).** The schemas in `packages/contracts/` are now the source of truth; generated types are `@trophy/contracts` (TS) and `trophy.contracts` (Pydantic). Changes from the text below:
+> - **Event (§7):** every payload in the table is a typed `$def` (`BouncePayload`, `ServeTossPayload`, …); `trophy.events.make_event` validates it. `serve_toss` points use `pos_m: {x, y, z}` like everything else. Any payload may carry `calib_untrusted`.
+> - **Call (§10):** adds optional `rally_no`, `emotion` (Cartesia, game/match point only), `suggested` (the decide() verdict, advisory) and `overlay.serve_toss_event_id` (the toss trace the replay draws).
+> - **`ai_vote` (§11) is keyed by `(call_id, backend)`**, with `challenge_id` nullable: votes start speculatively before any challenge exists (D-23). See D-25.
+> - **Reducer args (§7.1, §11):** reducers take one JSON string argument (e.g. `post_observations(batch_json)`, a JSON array). The HTTP body is the args array, so it's `["<json text>"]`. Verified in the Spacetime spike (`spikes/spacetime-latency/`).
+> - **Vision identity:** `trophy.world` writers send `Authorization: Bearer $SPACETIME_VISION_TOKEN` (new `.env` key).
+> - **`TrophyState` (§11)** adds `synthetic`, `label`, `calls()`, `scores()`, `onObservation` and `onTrackSample` (the world view), and every `on*` replays known rows first. `MockState` scripts are `trophy.mock_script.v1`.
+> - **`/api/ws/ctl` (§13):** `ping {t0, prev?}` carries the previous completed exchange `{t0, t1, t2, t3}` so the gateway can fit the clock (`trophy.timebase.ClockFit`).
+> - **RulePack:** requires `version` and `teams`; adds `params`, `variants` (e.g. `ittf_strict`), `field.frame`, `field.landmarks [{name, pos_m, prompt}]`, and per-rule `kind`, `p`, `team`, `points`, `text`, `speech`, `requires`. `family` may be `resting`.
+> - **State rows:** `game.status` ∈ `lobby|live|paused|ended`; `house_rule.steps` items are `{t_ms, kind: plan|edit|test|repair|message|error, text}`.
+
 ---
 
 ## 0. Ownership of shared artifacts
@@ -240,7 +251,7 @@ Each entry has one field, `json`: `{schema, req_id, cmd, game_id, t_srv_ms, by_c
 | `score` | `(game_id, team_id)` | `points, games?, sets?, display, updated_at_ms` (`display` is a sport-formatted string, e.g. `"10–9"` or `"40–30, 3–2"`) |
 | `challenge` | `challenge_id` | `game_id, call_id, by_cam_id, status, result?, created_at_ms, resolved_at_ms?` |
 | `house_rule` | `rule_version` | `game_id, sport, text, source, status (pending\|compiling\|ready\|approved\|rejected\|failed), backend (droid\|claude-fallback), plan_md, steps_json (streamed), diff, results_json ({tests:[{name, before, after, pass}], calls_changed:[…]}), pack_path, error?, created_at_ms, updated_at_ms` |
-| `ai_vote` | `(challenge_id, backend)` | `call_id, backend (claude\|gemini\|bitdeer), model, choice, probs_json, latency_ms, error?, rationale (≤ 140 chars)` |
+| `ai_vote` | `(call_id, backend)` | `challenge_id?, backend (claude\|gemini\|bitdeer), model, choice, probs_json, latency_ms, error?, rationale (≤ 140 chars)` |
 | `observation` | `event_id` | `game_id, cam_id(s), t_game_s, sport, type, source, track_id?, team_id?, side?, pos_json?, sigma_m?, conf, payload_json, supersedes?` (one row per Event, §7.1) |
 | `track_sample` | `(cam_id, t_game_s)` | `game_id, object (ball\|player:<id>), pos_json?, px_json?, conf` (10 Hz, rolling 120 s) |
 | `ask` | `ask_id` | `game_id, sport, question, answer, citations_json ([{rule_id, title, url, quote}]), latency_ms, created_at_ms` |
@@ -314,7 +325,7 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 - **One HTTPS origin for phones** (OPEN-2). Caddy + a DNS-01 certificate for a real domain pointing at the Mac's LAN IP is required for WebRTC and best for 720p30. A tunnel (cloudflared/ngrok) works for WebSocket only and adds latency, so it's acceptable for day-1 UI work only.
 - **Ports:** gateway 8000, courtcam-adapter 8050, SpacetimeDB 3000, Redis 6379, PWA 5173, dashboard 5174. Each worktree adds its offset (A1 +0, A2 +100, A3 +200).
 - **Native processes** in per-service `uv` venvs, run under a `Procfile` (`make dev`). The `docker-compose.yml` is the Linux/AWS path.
-- **`.env`** is never committed: `TROPHY_TOKEN_SECRET`, `REDIS_URL`, `SPACETIME_URI`, `SPACETIME_MODULE`, `SPACETIME_ENGINE_TOKEN`, `SPACETIME_COMPILER_TOKEN`, `ANTHROPIC_API_KEY`, `CLAUDE_MODEL`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `BITDEER_API_KEY`, `BITDEER_BASE_URL=https://api-inference.bitdeer.ai/v1`, `BITDEER_VISION_MODEL`, `CARTESIA_API_KEY`, `CARTESIA_VERSION`, `CARTESIA_VOICE_CALLS`, `CARTESIA_VOICE_REF`, `FACTORY_API_KEY`, `MOSS_PROJECT_ID`, `MOSS_PROJECT_KEY`, `APIFY_TOKEN`, optional `ROBOFLOW_API_KEY`. Ports for the new services: `rules` 8100, `compiler` 8200.
+- **`.env`** is never committed: `TROPHY_TOKEN_SECRET`, `REDIS_URL`, `SPACETIME_URI`, `SPACETIME_MODULE`, `SPACETIME_ENGINE_TOKEN`, `SPACETIME_COMPILER_TOKEN`, `SPACETIME_VISION_TOKEN`, `ANTHROPIC_API_KEY`, `CLAUDE_MODEL`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `BITDEER_API_KEY`, `BITDEER_BASE_URL=https://api-inference.bitdeer.ai/v1`, `BITDEER_VISION_MODEL`, `CARTESIA_API_KEY`, `CARTESIA_VERSION`, `CARTESIA_VOICE_CALLS`, `CARTESIA_VOICE_REF`, `FACTORY_API_KEY`, `MOSS_PROJECT_ID`, `MOSS_PROJECT_KEY`, `APIFY_TOKEN`, optional `ROBOFLOW_API_KEY`. Ports for the new services: `rules` 8100, `compiler` 8200.
 
 ---
 

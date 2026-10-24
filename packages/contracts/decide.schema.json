@@ -1,76 +1,74 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "trophy/decide",
+  "$id": "https://trophy.local/contracts/decide.schema.json",
   "title": "Decide",
+  "description": "trophy.decide.v1: the background AI second opinion (interfaces-v1 §15). Never on the live path (D-23). Blend weights are uncalibrated heuristics until >= 60 labelled challenges exist.",
   "type": "object",
+  "required": ["request"],
   "properties": {
-    "request": {
+    "request": { "$ref": "#/$defs/DecideRequest" },
+    "result": { "$ref": "#/$defs/DecideResult" }
+  },
+  "$defs": {
+    "Backend": { "title": "Backend", "enum": ["claude", "gemini", "bitdeer", "geometry"] },
+    "DecideRequest": {
+      "title": "DecideRequest",
       "type": "object",
-      "required": [
-        "question",
-        "options",
-        "state"
-      ],
+      "required": ["schema", "req_id", "game_id", "call_id", "question", "options"],
       "properties": {
-        "question": {
-          "type": "string"
-        },
-        "options": {
-          "type": "array",
-          "minItems": 2,
-          "maxItems": 255,
-          "items": {
-            "type": "string"
-          }
-        },
-        "state": {},
+        "schema": { "const": "trophy.decide.v1" },
+        "req_id": { "type": "string", "description": "ULID" },
+        "game_id": { "type": "string" },
+        "call_id": { "type": "string" },
+        "challenge_id": { "type": "string" },
+        "question": { "type": "string" },
+        "options": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+        "context": { "type": "string", "description": "Event facts as text: distance to edge, sigma, trajectory after contact, audio class" },
         "images": {
           "type": "array",
           "maxItems": 4,
-          "items": {
-            "type": "string",
-            "description": "base64 jpeg/png/webp, tight crops"
-          }
+          "items": { "type": "string", "description": "base64 JPEG crop, < 1 MB each" }
         },
-        "timeout_s": {
-          "type": "number",
-          "default": 2.0
-        }
+        "observations": {
+          "type": "array",
+          "items": { "type": "object" },
+          "description": "The relevant observation rows (trophy.event.v1 JSON)"
+        },
+        "p_geometry": {
+          "type": "object",
+          "additionalProperties": { "type": "number" },
+          "description": "Geometry probabilities per option"
+        },
+        "timeout_s": { "type": "number", "default": 4 }
       }
     },
-    "response": {
+    "Vote": {
+      "title": "Vote",
+      "description": "One voter's answer; one ai_vote row per voter",
       "type": "object",
-      "required": [
-        "choice",
-        "probs",
-        "p_cal",
-        "backend",
-        "latency_ms"
-      ],
+      "required": ["backend", "model", "probs", "latency_ms"],
       "properties": {
-        "choice": {
-          "type": "string"
-        },
-        "probs": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "number"
-          }
-        },
-        "p_cal": {
-          "type": "number"
-        },
-        "backend": {
-          "enum": [
-            "claude",
-            "gemini",
-            "bitdeer",
-            "geometry"
-          ]
-        },
-        "latency_ms": {
-          "type": "number"
-        }
+        "backend": { "$ref": "#/$defs/Backend" },
+        "model": { "type": "string" },
+        "choice": { "type": ["string", "null"] },
+        "probs": { "type": "object", "additionalProperties": { "type": "number" } },
+        "latency_ms": { "type": "number" },
+        "error": { "type": "string", "description": "timeout | http_<code> | parse | ..." },
+        "rationale": { "type": "string", "maxLength": 140 }
+      }
+    },
+    "DecideResult": {
+      "title": "DecideResult",
+      "type": "object",
+      "required": ["req_id", "votes", "p_final", "suggested", "weights", "p_source", "calibrated"],
+      "properties": {
+        "req_id": { "type": "string" },
+        "votes": { "type": "array", "items": { "$ref": "#/$defs/Vote" } },
+        "p_final": { "type": "object", "additionalProperties": { "type": "number" } },
+        "suggested": { "type": "string" },
+        "weights": { "type": "object", "additionalProperties": { "type": "number" } },
+        "p_source": { "const": "decide:ensemble" },
+        "calibrated": { "type": "boolean", "description": "false until calibrated on labelled challenges; the UI must say 'uncalibrated'" }
       }
     }
   }
