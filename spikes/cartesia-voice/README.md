@@ -21,6 +21,8 @@ P0, 2026-10-24. The API key stays on the server (`.env`); clients only ever get 
 
 `index.html` in the desktop browser pane (Chromium 152, Windows): TTS played; first chunk **112 ms** after the request and 444 ms after the tap (including a 218 ms token mint, which the product should prefetch). Single run.
 
+Through `https://trophy.photo/spike/voice/` in **desktop Firefox 158 on Windows** (single runs, posted back by the page): TTS first chunk **110 ms** after the request (574 ms after the tap, including the token mint). Push-to-talk: the first try returned an empty transcript (the button was released during the mic permission prompt; fixed in the page); the second try transcribed "Hello." with `turn.end` **591 ms** after release.
+
 **Not yet measured: the iPhone** (TTS playback after a tap, and the push-to-talk mic → Ink-2). That needs an HTTPS origin.
 
 ## Run it
