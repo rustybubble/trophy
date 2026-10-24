@@ -1,6 +1,7 @@
 """Run Caddy for the dev origin with only the variables it needs from .env (TROPHY_DOMAIN, PORKBUN_*).
 
     python infra/caddy/run.py            # caddy run --config infra/caddy/Caddyfile.dev
+    python infra/caddy/run.py reload     # apply Caddyfile changes to the running Caddy
 
 Finds caddy on $CADDY, then PATH, then ~/.trophy/bin. Caddy must include caddy-dns/porkbun (infra/README.md).
 """
@@ -32,7 +33,8 @@ def main() -> int:
     if not exe:
         home = Path.home() / ".trophy" / "bin"
         exe = str(next((p for p in (home / "caddy.exe", home / "caddy") if p.exists()), "caddy"))
-    cmd = [exe, "run", "--config", str(ROOT / "infra" / "caddy" / "Caddyfile.dev"), "--adapter", "caddyfile"]
+    action = "reload" if sys.argv[1:2] == ["reload"] else "run"
+    cmd = [exe, action, "--config", str(ROOT / "infra" / "caddy" / "Caddyfile.dev"), "--adapter", "caddyfile"]
     return subprocess.call(cmd, env=env, cwd=ROOT)
 
 
