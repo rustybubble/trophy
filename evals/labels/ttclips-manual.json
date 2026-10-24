@@ -1,0 +1,1166 @@
+{
+  "schema": "trophy.manual-ball-labels.v1",
+  "reviewed_by": "Codex visual review of unannotated source contact sheets",
+  "source_sha256": {
+    "side": "dfcf4305bcd58ca707507504177544697ace389e8b67afe482926e8734cee6a1",
+    "diagonal": "8687e666442f5eb2f6c3c990099680a9908295ca96f125d4f2ef89c249700819"
+  },
+  "method": "Source centers estimated visually at 960\u00d7540 without detector overlays. Ambiguous/occluded/cropped ball = unassessable, not negative.",
+  "split": "Development slice 7.4\u20139.75 s; not held-out, no overall footage accuracy claim.",
+  "tolerance_source_px": 32,
+  "limitations": "Single reviewer, approximate labels, one serve/rally interval; no labeled absent frames or independent real 3D truth.",
+  "labels": [
+    {
+      "cam_id": "side",
+      "seq": 444,
+      "t_source_s": 7.4,
+      "status": "visible",
+      "x": 852,
+      "y": 996,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 447,
+      "t_source_s": 7.45,
+      "status": "visible",
+      "x": 840,
+      "y": 968,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 450,
+      "t_source_s": 7.5,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 453,
+      "t_source_s": 7.55,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 456,
+      "t_source_s": 7.6,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 459,
+      "t_source_s": 7.65,
+      "status": "visible",
+      "x": 792,
+      "y": 1048,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 462,
+      "t_source_s": 7.7,
+      "status": "visible",
+      "x": 776,
+      "y": 1100,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 465,
+      "t_source_s": 7.75,
+      "status": "visible",
+      "x": 876,
+      "y": 1140,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 468,
+      "t_source_s": 7.8,
+      "status": "visible",
+      "x": 1020,
+      "y": 1176,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 471,
+      "t_source_s": 7.85,
+      "status": "visible",
+      "x": 1164,
+      "y": 1228,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 474,
+      "t_source_s": 7.9,
+      "status": "visible",
+      "x": 1312,
+      "y": 1292,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 477,
+      "t_source_s": 7.95,
+      "status": "visible",
+      "x": 1444,
+      "y": 1328,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 480,
+      "t_source_s": 8.0,
+      "status": "visible",
+      "x": 1560,
+      "y": 1288,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 483,
+      "t_source_s": 8.05,
+      "status": "visible",
+      "x": 1680,
+      "y": 1256,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 486,
+      "t_source_s": 8.1,
+      "status": "visible",
+      "x": 1792,
+      "y": 1240,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 489,
+      "t_source_s": 8.15,
+      "status": "visible",
+      "x": 1900,
+      "y": 1240,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 492,
+      "t_source_s": 8.2,
+      "status": "visible",
+      "x": 2004,
+      "y": 1264,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 495,
+      "t_source_s": 8.25,
+      "status": "visible",
+      "x": 2112,
+      "y": 1300,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 498,
+      "t_source_s": 8.3,
+      "status": "visible",
+      "x": 2216,
+      "y": 1352,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 501,
+      "t_source_s": 8.35,
+      "status": "visible",
+      "x": 2316,
+      "y": 1376,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 504,
+      "t_source_s": 8.4,
+      "status": "visible",
+      "x": 2400,
+      "y": 1332,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 507,
+      "t_source_s": 8.45,
+      "status": "visible",
+      "x": 2488,
+      "y": 1308,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 510,
+      "t_source_s": 8.5,
+      "status": "visible",
+      "x": 2568,
+      "y": 1300,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 513,
+      "t_source_s": 8.55,
+      "status": "visible",
+      "x": 2544,
+      "y": 1276,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 516,
+      "t_source_s": 8.6,
+      "status": "visible",
+      "x": 2348,
+      "y": 1212,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 519,
+      "t_source_s": 8.65,
+      "status": "visible",
+      "x": 2160,
+      "y": 1172,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 522,
+      "t_source_s": 8.7,
+      "status": "visible",
+      "x": 1980,
+      "y": 1148,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 525,
+      "t_source_s": 8.75,
+      "status": "visible",
+      "x": 1812,
+      "y": 1148,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 528,
+      "t_source_s": 8.8,
+      "status": "visible",
+      "x": 1648,
+      "y": 1192,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 531,
+      "t_source_s": 8.85,
+      "status": "visible",
+      "x": 1488,
+      "y": 1224,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 534,
+      "t_source_s": 8.9,
+      "status": "visible",
+      "x": 1336,
+      "y": 1236,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 537,
+      "t_source_s": 8.95,
+      "status": "visible",
+      "x": 1188,
+      "y": 1300,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 540,
+      "t_source_s": 9.0,
+      "status": "visible",
+      "x": 1056,
+      "y": 1312,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 543,
+      "t_source_s": 9.05,
+      "status": "visible",
+      "x": 948,
+      "y": 1252,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 546,
+      "t_source_s": 9.1,
+      "status": "visible",
+      "x": 924,
+      "y": 1192,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 549,
+      "t_source_s": 9.15,
+      "status": "visible",
+      "x": 1092,
+      "y": 1128,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 552,
+      "t_source_s": 9.2,
+      "status": "visible",
+      "x": 1256,
+      "y": 1084,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 555,
+      "t_source_s": 9.25,
+      "status": "visible",
+      "x": 1416,
+      "y": 1060,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 558,
+      "t_source_s": 9.3,
+      "status": "visible",
+      "x": 1572,
+      "y": 1048,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 561,
+      "t_source_s": 9.35,
+      "status": "visible",
+      "x": 1724,
+      "y": 1056,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 564,
+      "t_source_s": 9.4,
+      "status": "visible",
+      "x": 1872,
+      "y": 1072,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 567,
+      "t_source_s": 9.45,
+      "status": "visible",
+      "x": 2016,
+      "y": 1112,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 570,
+      "t_source_s": 9.5,
+      "status": "visible",
+      "x": 2160,
+      "y": 1164,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 573,
+      "t_source_s": 9.55,
+      "status": "visible",
+      "x": 2296,
+      "y": 1228,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 576,
+      "t_source_s": 9.6,
+      "status": "visible",
+      "x": 2432,
+      "y": 1312,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 579,
+      "t_source_s": 9.65,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 582,
+      "t_source_s": 9.7,
+      "status": "visible",
+      "x": 2668,
+      "y": 1332,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 585,
+      "t_source_s": 9.75,
+      "status": "visible",
+      "x": 2760,
+      "y": 1272,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 444,
+      "t_source_s": 7.4,
+      "status": "visible",
+      "x": 2180,
+      "y": 1324,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 447,
+      "t_source_s": 7.45,
+      "status": "visible",
+      "x": 2192,
+      "y": 1304,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 450,
+      "t_source_s": 7.5,
+      "status": "visible",
+      "x": 2216,
+      "y": 1272,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 453,
+      "t_source_s": 7.55,
+      "status": "visible",
+      "x": 2220,
+      "y": 1260,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 456,
+      "t_source_s": 7.6,
+      "status": "visible",
+      "x": 2232,
+      "y": 1236,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 459,
+      "t_source_s": 7.65,
+      "status": "visible",
+      "x": 2244,
+      "y": 1236,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 462,
+      "t_source_s": 7.7,
+      "status": "visible",
+      "x": 2240,
+      "y": 1288,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 465,
+      "t_source_s": 7.75,
+      "status": "visible",
+      "x": 2252,
+      "y": 1324,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 468,
+      "t_source_s": 7.8,
+      "status": "visible",
+      "x": 2260,
+      "y": 1384,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 471,
+      "t_source_s": 7.85,
+      "status": "visible",
+      "x": 2216,
+      "y": 1412,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 474,
+      "t_source_s": 7.9,
+      "status": "visible",
+      "x": 2168,
+      "y": 1444,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 477,
+      "t_source_s": 7.95,
+      "status": "visible",
+      "x": 2112,
+      "y": 1496,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 480,
+      "t_source_s": 8.0,
+      "status": "visible",
+      "x": 2044,
+      "y": 1556,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 483,
+      "t_source_s": 8.05,
+      "status": "visible",
+      "x": 2024,
+      "y": 1556,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 486,
+      "t_source_s": 8.1,
+      "status": "visible",
+      "x": 1972,
+      "y": 1528,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 489,
+      "t_source_s": 8.15,
+      "status": "visible",
+      "x": 1924,
+      "y": 1500,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 492,
+      "t_source_s": 8.2,
+      "status": "visible",
+      "x": 1880,
+      "y": 1496,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 495,
+      "t_source_s": 8.25,
+      "status": "visible",
+      "x": 1828,
+      "y": 1508,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 498,
+      "t_source_s": 8.3,
+      "status": "visible",
+      "x": 1776,
+      "y": 1540,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 501,
+      "t_source_s": 8.35,
+      "status": "visible",
+      "x": 1716,
+      "y": 1596,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 504,
+      "t_source_s": 8.4,
+      "status": "visible",
+      "x": 1656,
+      "y": 1676,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 507,
+      "t_source_s": 8.45,
+      "status": "visible",
+      "x": 1600,
+      "y": 1664,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 510,
+      "t_source_s": 8.5,
+      "status": "visible",
+      "x": 1544,
+      "y": 1628,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 513,
+      "t_source_s": 8.55,
+      "status": "visible",
+      "x": 1520,
+      "y": 1632,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 516,
+      "t_source_s": 8.6,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 519,
+      "t_source_s": 8.65,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 522,
+      "t_source_s": 8.7,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 525,
+      "t_source_s": 8.75,
+      "status": "visible",
+      "x": 1800,
+      "y": 1400,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 528,
+      "t_source_s": 8.8,
+      "status": "visible",
+      "x": 1900,
+      "y": 1388,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 531,
+      "t_source_s": 8.85,
+      "status": "visible",
+      "x": 1980,
+      "y": 1388,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 534,
+      "t_source_s": 8.9,
+      "status": "visible",
+      "x": 2056,
+      "y": 1408,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 537,
+      "t_source_s": 8.95,
+      "status": "visible",
+      "x": 2116,
+      "y": 1444,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 540,
+      "t_source_s": 9.0,
+      "status": "visible",
+      "x": 2172,
+      "y": 1496,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 543,
+      "t_source_s": 9.05,
+      "status": "visible",
+      "x": 2220,
+      "y": 1556,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 546,
+      "t_source_s": 9.1,
+      "status": "visible",
+      "x": 2260,
+      "y": 1520,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 549,
+      "t_source_s": 9.15,
+      "status": "visible",
+      "x": 2288,
+      "y": 1448,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 552,
+      "t_source_s": 9.2,
+      "status": "visible",
+      "x": 2264,
+      "y": 1400,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 555,
+      "t_source_s": 9.25,
+      "status": "visible",
+      "x": 2232,
+      "y": 1352,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 558,
+      "t_source_s": 9.3,
+      "status": "visible",
+      "x": 2156,
+      "y": 1312,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 561,
+      "t_source_s": 9.35,
+      "status": "visible",
+      "x": 2100,
+      "y": 1284,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 564,
+      "t_source_s": 9.4,
+      "status": "visible",
+      "x": 2044,
+      "y": 1272,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 567,
+      "t_source_s": 9.45,
+      "status": "visible",
+      "x": 1984,
+      "y": 1276,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 570,
+      "t_source_s": 9.5,
+      "status": "visible",
+      "x": 1920,
+      "y": 1320,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 573,
+      "t_source_s": 9.55,
+      "status": "visible",
+      "x": 1856,
+      "y": 1352,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 576,
+      "t_source_s": 9.6,
+      "status": "visible",
+      "x": 1788,
+      "y": 1420,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 579,
+      "t_source_s": 9.65,
+      "status": "visible",
+      "x": 1716,
+      "y": 1524,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 582,
+      "t_source_s": 9.7,
+      "status": "visible",
+      "x": 1632,
+      "y": 1652,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 585,
+      "t_source_s": 9.75,
+      "status": "visible",
+      "x": 1556,
+      "y": 1720,
+      "source_size": [
+        3840,
+        2160
+      ]
+    }
+  ]
+}

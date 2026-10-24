@@ -1,0 +1,685 @@
+{
+  "date": "2026-10-24",
+  "method": "Read-only audit of existing cached rows. Count only consecutive source seq pairs with both finite x/y and 0<dt<=0.02s. Pixel displacements are in original 3840x2160 coordinates. 384px/960px are descriptive thresholds (10%/25% image width), not validated physical-speed limits or confirmed error counts.",
+  "new_inference_run": false,
+  "views": {
+    "side": {
+      "tracking": {
+        "cache_path": "data/local/tt-demo/side-tracking.json",
+        "cache_sha256": "b12ca11589fe2c3fa8798d660eafe10fc5b2010054d225076a889339fffca6a8",
+        "source_rows": 6457,
+        "valid_position_rows": 3464,
+        "adjacent_valid_pairs": 3034,
+        "pairs_over_384_px": 55,
+        "pairs_over_960_px": 45,
+        "largest_jumps": [
+          {
+            "seq0": 5086,
+            "seq1": 5087,
+            "t0_s": 84.76666666666667,
+            "t1_s": 84.78333333333333,
+            "from_px": [
+              3402.0,
+              882.0
+            ],
+            "to_px": [
+              565.5,
+              936.0
+            ],
+            "displacement_px": 2837.0139671845113,
+            "detector0": "classical-orange-color-motion",
+            "detector1": "classical-orange-color-motion"
+          },
+          {
+            "seq0": 5089,
+            "seq1": 5090,
+            "t0_s": 84.81666666666666,
+            "t1_s": 84.83333333333333,
+            "from_px": [
+              3396.0,
+              883.5
+            ],
+            "to_px": [
+              564.0,
+              1039.2857142857142
+            ],
+            "displacement_px": 2836.2815778366416,
+            "detector0": "classical-orange-color-motion",
+            "detector1": "classical-orange-color-motion"
+          },
+          {
+            "seq0": 5093,
+            "seq1": 5094,
+            "t0_s": 84.88333333333334,
+            "t1_s": 84.9,
+            "from_px": [
+              3390.0,
+              888.0
+            ],
+            "to_px": [
+              690.1935483870968,
+              1091.9032258064515
+            ],
+            "displacement_px": 2707.4954111992383,
+            "detector0": "classical-orange-color-motion",
+            "detector1": "classical-orange-color-motion"
+          },
+          {
+            "seq0": 3469,
+            "seq1": 3470,
+            "t0_s": 57.81666666666667,
+            "t1_s": 57.833333333333336,
+            "from_px": [
+              3834.0,
+              834.0
+            ],
+            "to_px": [
+              1206.0,
+              1279.5
+            ],
+            "displacement_px": 2665.493247037028,
+            "detector0": "classical-orange-color-motion",
+            "detector1": "classical-orange-color-motion"
+          },
+          {
+            "seq0": 3460,
+            "seq1": 3461,
+            "t0_s": 57.666666666666664,
+            "t1_s": 57.68333333333333,
+            "from_px": [
+              1191.5,
+              1285.5
+            ],
+            "to_px": [
+              3816.0,
+              835.5
+            ],
+            "displacement_px": 2662.799325897466,
+            "detector0": "classical-orange-color-motion",
+            "detector1": "classical-orange-color-motion"
+          }
+        ]
+      },
+      "blurball-gray": {
+        "cache_path": "data/local/tt-demo/side-blurball-gray.json",
+        "cache_sha256": "bf7bd67552cbba29490f18b9ab89d8cfee64945afb5cdfeef982d5320939ac68",
+        "source_rows": 6457,
+        "valid_position_rows": 2500,
+        "adjacent_valid_pairs": 2136,
+        "pairs_over_384_px": 32,
+        "pairs_over_960_px": 17,
+        "largest_jumps": [
+          {
+            "seq0": 783,
+            "seq1": 784,
+            "t0_s": 13.05,
+            "t1_s": 13.066666666666666,
+            "from_px": [
+              827.8873594596165,
+              2122.980050331923
+            ],
+            "to_px": [
+              2982.658506005878,
+              1248.6756046743935
+            ],
+            "displacement_px": 2325.3917858470236,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "BlurBall max-channel-gray"
+          },
+          {
+            "seq0": 782,
+            "seq1": 783,
+            "t0_s": 13.033333333333333,
+            "t1_s": 13.05,
+            "from_px": [
+              2981.1982396809412,
+              1252.4999338728035
+            ],
+            "to_px": [
+              827.8873594596165,
+              2122.980050331923
+            ],
+            "displacement_px": 2322.602716787832,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "BlurBall max-channel-gray"
+          },
+          {
+            "seq0": 749,
+            "seq1": 750,
+            "t0_s": 12.483333333333333,
+            "t1_s": 12.5,
+            "from_px": [
+              2853.80996128461,
+              1209.6764107885872
+            ],
+            "to_px": [
+              764.1006396048165,
+              1909.0666179014843
+            ],
+            "displacement_px": 2203.640558467021,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "BlurBall max-channel-gray"
+          },
+          {
+            "seq0": 443,
+            "seq1": 444,
+            "t0_s": 7.383333333333334,
+            "t1_s": 7.4,
+            "from_px": [
+              855.6196000588337,
+              1003.5517421616444
+            ],
+            "to_px": [
+              3037.4997103214264,
+              1229.999882698059
+            ],
+            "displacement_px": 2193.599684516731,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "BlurBall max-channel-gray"
+          },
+          {
+            "seq0": 5615,
+            "seq1": 5616,
+            "t0_s": 93.58333333333333,
+            "t1_s": 93.6,
+            "from_px": [
+              1202.260322460017,
+              1413.7145772743002
+            ],
+            "to_px": [
+              496.88726825216776,
+              219.98400402028966
+            ],
+            "displacement_px": 1386.5582667612127,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "BlurBall max-channel-gray"
+          }
+        ]
+      },
+      "hybrid": {
+        "cache_path": "data/local/tt-demo/side-hybrid.json",
+        "cache_sha256": "6382c15dbb7df04e4321112392b6c3428ef672b065da6630dc0e2b3914adddc9",
+        "source_rows": 6457,
+        "valid_position_rows": 3970,
+        "adjacent_valid_pairs": 3480,
+        "pairs_over_384_px": 213,
+        "pairs_over_960_px": 134,
+        "largest_jumps": [
+          {
+            "seq0": 6397,
+            "seq1": 6398,
+            "t0_s": 106.61666666666666,
+            "t1_s": 106.63333333333334,
+            "from_px": [
+              648.7809972337335,
+              1327.4998733997345
+            ],
+            "to_px": [
+              3504.0,
+              766.5
+            ],
+            "displacement_px": 2909.8103738408986,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "conservative orange color/motion fallback"
+          },
+          {
+            "seq0": 6395,
+            "seq1": 6396,
+            "t0_s": 106.58333333333333,
+            "t1_s": 106.6,
+            "from_px": [
+              3492.0,
+              769.5
+            ],
+            "to_px": [
+              660.9255373511116,
+              1333.1524225462335
+            ],
+            "displacement_px": 2886.6393377948916,
+            "detector0": "conservative orange color/motion fallback",
+            "detector1": "BlurBall max-channel-gray"
+          },
+          {
+            "seq0": 5627,
+            "seq1": 5628,
+            "t0_s": 93.78333333333333,
+            "t1_s": 93.8,
+            "from_px": [
+              648.8660569033739,
+              11.190675926006445
+            ],
+            "to_px": [
+              3276.0,
+              871.5
+            ],
+            "displacement_px": 2764.4104051423114,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "conservative orange color/motion fallback"
+          },
+          {
+            "seq0": 3084,
+            "seq1": 3085,
+            "t0_s": 51.4,
+            "t1_s": 51.416666666666664,
+            "from_px": [
+              1011.0,
+              1504.5
+            ],
+            "to_px": [
+              3570.0,
+              988.5
+            ],
+            "displacement_px": 2610.505123534524,
+            "detector0": "conservative orange color/motion fallback",
+            "detector1": "conservative orange color/motion fallback"
+          },
+          {
+            "seq0": 2931,
+            "seq1": 2932,
+            "t0_s": 48.85,
+            "t1_s": 48.86666666666667,
+            "from_px": [
+              3558.0,
+              892.5
+            ],
+            "to_px": [
+              981.0,
+              1273.5
+            ],
+            "displacement_px": 2605.0124759778023,
+            "detector0": "conservative orange color/motion fallback",
+            "detector1": "conservative orange color/motion fallback"
+          }
+        ],
+        "adjacent_detector_switches": 319,
+        "switches_over_384_px": 174,
+        "switches_over_960_px": 111
+      }
+    },
+    "diagonal": {
+      "tracking": {
+        "cache_path": "data/local/tt-demo/diagonal-tracking.json",
+        "cache_sha256": "7978eb85b77b44e8cecd6305269b1705a25f2576e0ffeb78e162ce81b7d0aa64",
+        "source_rows": 6781,
+        "valid_position_rows": 2972,
+        "adjacent_valid_pairs": 2739,
+        "pairs_over_384_px": 70,
+        "pairs_over_960_px": 28,
+        "largest_jumps": [
+          {
+            "seq0": 4861,
+            "seq1": 4862,
+            "t0_s": 81.01666666666667,
+            "t1_s": 81.03333333333333,
+            "from_px": [
+              2904.3,
+              1685.3999999999999
+            ],
+            "to_px": [
+              870.0,
+              2095.0
+            ],
+            "displacement_px": 2075.126176886601,
+            "detector0": "classical-orange-color-motion",
+            "detector1": "classical-orange-color-motion"
+          },
+          {
+            "seq0": 4860,
+            "seq1": 4861,
+            "t0_s": 81.0,
+            "t1_s": 81.01666666666667,
+            "from_px": [
+              1061.5,
+              2089.0
+            ],
+            "to_px": [
+              2904.3,
+              1685.3999999999999
+            ],
+            "displacement_px": 1886.4794724565652,
+            "detector0": "classical-orange-color-motion",
+            "detector1": "classical-orange-color-motion"
+          },
+          {
+            "seq0": 4859,
+            "seq1": 4860,
+            "t0_s": 80.98333333333333,
+            "t1_s": 81.0,
+            "from_px": [
+              2899.5,
+              1675.5
+            ],
+            "to_px": [
+              1061.5,
+              2089.0
+            ],
+            "displacement_px": 1883.939025021776,
+            "detector0": "classical-orange-color-motion",
+            "detector1": "classical-orange-color-motion"
+          },
+          {
+            "seq0": 4858,
+            "seq1": 4859,
+            "t0_s": 80.96666666666667,
+            "t1_s": 80.98333333333333,
+            "from_px": [
+              1075.1842105263158,
+              2054.3684210526317
+            ],
+            "to_px": [
+              2899.5,
+              1675.5
+            ],
+            "displacement_px": 1863.2416322618776,
+            "detector0": "classical-orange-color-motion",
+            "detector1": "classical-orange-color-motion"
+          },
+          {
+            "seq0": 4856,
+            "seq1": 4857,
+            "t0_s": 80.93333333333334,
+            "t1_s": 80.95,
+            "from_px": [
+              2893.0,
+              1651.0
+            ],
+            "to_px": [
+              1111.875,
+              2039.6999999999998
+            ],
+            "displacement_px": 1823.04524234178,
+            "detector0": "classical-orange-color-motion",
+            "detector1": "classical-orange-color-motion"
+          }
+        ]
+      },
+      "blurball-gray": {
+        "cache_path": "data/local/tt-demo/diagonal-blurball-gray.json",
+        "cache_sha256": "00c2eab477ad3b960d0a18702a2bddc4c054157664abdaa7e3dad4a16e6b7df0",
+        "source_rows": 6781,
+        "valid_position_rows": 2231,
+        "adjacent_valid_pairs": 1954,
+        "pairs_over_384_px": 15,
+        "pairs_over_960_px": 6,
+        "largest_jumps": [
+          {
+            "seq0": 5996,
+            "seq1": 5997,
+            "t0_s": 99.93333333333334,
+            "t1_s": 99.95,
+            "from_px": [
+              14.999998569488525,
+              2099.9997997283936
+            ],
+            "to_px": [
+              2387.9395713348536,
+              1323.8574497252102
+            ],
+            "displacement_px": 2496.645582269205,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "BlurBall max-channel-gray"
+          },
+          {
+            "seq0": 1742,
+            "seq1": 1743,
+            "t0_s": 29.033333333333335,
+            "t1_s": 29.05,
+            "from_px": [
+              1172.9044434484185,
+              1711.4054155650722
+            ],
+            "to_px": [
+              2706.2393091756153,
+              1819.2731759180379
+            ],
+            "displacement_px": 1537.1243489640665,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "BlurBall max-channel-gray"
+          },
+          {
+            "seq0": 4019,
+            "seq1": 4020,
+            "t0_s": 66.98333333333333,
+            "t1_s": 67.0,
+            "from_px": [
+              1364.9915541137675,
+              1515.1181622791519
+            ],
+            "to_px": [
+              2432.0069421308312,
+              1152.1955905026252
+            ],
+            "displacement_px": 1127.046862987557,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "BlurBall max-channel-gray"
+          },
+          {
+            "seq0": 5927,
+            "seq1": 5928,
+            "t0_s": 98.78333333333333,
+            "t1_s": 98.8,
+            "from_px": [
+              2103.781280384018,
+              1079.9999447036862
+            ],
+            "to_px": [
+              1187.2330904854643,
+              1560.938362079943
+            ],
+            "displacement_px": 1035.0663484601814,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "BlurBall max-channel-gray"
+          },
+          {
+            "seq0": 143,
+            "seq1": 144,
+            "t0_s": 2.3833333333333333,
+            "t1_s": 2.4,
+            "from_px": [
+              2047.6946638546403,
+              1451.3304746234858
+            ],
+            "to_px": [
+              2895.148443318066,
+              1976.2293163596082
+            ],
+            "displacement_px": 996.843369031849,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "BlurBall max-channel-gray"
+          }
+        ]
+      },
+      "hybrid": {
+        "cache_path": "data/local/tt-demo/diagonal-hybrid.json",
+        "cache_sha256": "fabd543c380fed66614cb37e952bcd3696c267afce72aaba555f4a58047996aa",
+        "source_rows": 6781,
+        "valid_position_rows": 3301,
+        "adjacent_valid_pairs": 3009,
+        "pairs_over_384_px": 88,
+        "pairs_over_960_px": 41,
+        "largest_jumps": [
+          {
+            "seq0": 5996,
+            "seq1": 5997,
+            "t0_s": 99.93333333333334,
+            "t1_s": 99.95,
+            "from_px": [
+              14.999998569488525,
+              2099.9997997283936
+            ],
+            "to_px": [
+              2387.9395713348536,
+              1323.8574497252102
+            ],
+            "displacement_px": 2496.645582269205,
+            "detector0": "BlurBall max-channel-gray",
+            "detector1": "BlurBall max-channel-gray"
+          },
+          {
+            "seq0": 5995,
+            "seq1": 5996,
+            "t0_s": 99.91666666666667,
+            "t1_s": 99.93333333333334,
+            "from_px": [
+              2239.2,
+              1696.1999999999998
+            ],
+            "to_px": [
+              14.999998569488525,
+              2099.9997997283936
+            ],
+            "displacement_px": 2260.557436700996,
+            "detector0": "conservative orange color/motion fallback",
+            "detector1": "BlurBall max-channel-gray"
+          },
+          {
+            "seq0": 4861,
+            "seq1": 4862,
+            "t0_s": 81.01666666666667,
+            "t1_s": 81.03333333333333,
+            "from_px": [
+              2904.3,
+              1685.3999999999999
+            ],
+            "to_px": [
+              870.0,
+              2095.0
+            ],
+            "displacement_px": 2075.126176886601,
+            "detector0": "conservative orange color/motion fallback",
+            "detector1": "conservative orange color/motion fallback"
+          },
+          {
+            "seq0": 4860,
+            "seq1": 4861,
+            "t0_s": 81.0,
+            "t1_s": 81.01666666666667,
+            "from_px": [
+              1061.5,
+              2089.0
+            ],
+            "to_px": [
+              2904.3,
+              1685.3999999999999
+            ],
+            "displacement_px": 1886.4794724565652,
+            "detector0": "conservative orange color/motion fallback",
+            "detector1": "conservative orange color/motion fallback"
+          },
+          {
+            "seq0": 4859,
+            "seq1": 4860,
+            "t0_s": 80.98333333333333,
+            "t1_s": 81.0,
+            "from_px": [
+              2899.5,
+              1675.5
+            ],
+            "to_px": [
+              1061.5,
+              2089.0
+            ],
+            "displacement_px": 1883.939025021776,
+            "detector0": "conservative orange color/motion fallback",
+            "detector1": "conservative orange color/motion fallback"
+          }
+        ],
+        "adjacent_detector_switches": 238,
+        "switches_over_384_px": 57,
+        "switches_over_960_px": 27
+      }
+    }
+  },
+  "scene": {
+    "cache_path": "data/local/tt-demo/scene.json",
+    "cache_sha256": "9f4c8b233acc3c79d88d56f6c1f5459bca734d92d39a94adfa959db9afe2bb3a",
+    "frames": 1615,
+    "frames_with_ball_position": 0,
+    "ball_statuses": [
+      "unavailable_dynamic_metric_calibration"
+    ],
+    "source_camera_count": 0
+  },
+  "point_candidates": {
+    "count": 15,
+    "unresolved": 15,
+    "with_winner": 0,
+    "start_end_seconds": [
+      [
+        "r001",
+        0.11666666666666667,
+        3.3333333333333335
+      ],
+      [
+        "r002",
+        6.45,
+        13.75
+      ],
+      [
+        "r003",
+        15.283333333333333,
+        27.28333333333333
+      ],
+      [
+        "r004",
+        27.28333333333333,
+        28.433333333333334
+      ],
+      [
+        "r005",
+        29.7,
+        31.083333333333332
+      ],
+      [
+        "r006",
+        33.3,
+        34.55
+      ],
+      [
+        "r007",
+        36.28333333333333,
+        39.333333333333336
+      ],
+      [
+        "r008",
+        40.45,
+        46.983333333333334
+      ],
+      [
+        "r009",
+        48.25,
+        49.333333333333336
+      ],
+      [
+        "r010",
+        50.18333333333333,
+        55.45
+      ],
+      [
+        "r011",
+        56.93333333333333,
+        68.93333333333334
+      ],
+      [
+        "r012",
+        68.93333333333334,
+        80.93333333333334
+      ],
+      [
+        "r013",
+        80.93333333333334,
+        82.33333333333333
+      ],
+      [
+        "r014",
+        83.33333333333333,
+        95.33333333333333
+      ],
+      [
+        "r015",
+        95.33333333333333,
+        107.33333333333333
+      ]
+    ]
+  }
+}

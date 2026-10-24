@@ -1,0 +1,11 @@
+# Validated native Python 3.12 runtime; ball inference optional and separate from playback.
+# Install with: python3.12 -m pip install -r services/flight/requirements-demo.txt
+av==16.0.1
+numpy==1.26.4
+opencv-python-headless==4.11.0.86
+scipy==1.13.1
+imageio-ffmpeg==0.6.0
+PyYAML==6.0.3
+pytest==8.4.2
+# Optional tracker spike: torch==2.9.0
+# Optional poses/hands (separate env): mediapipe==1.1.1

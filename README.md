@@ -1,16 +1,21 @@
 # Trophy 🏆
 
+> **Demo acceptance failed.** The current two-camera prototype has incorrect/teleporting ball detections, inadequate 3D presentation with no real 3D ball, and unreliable point segmentation with no automatic real point scoring. See the [comprehensive status report](docs/status/tt-demo-failure-report-2026-10-24.md). This reporting branch preserves the failing implementation without fixes.
+
 **A universal AI referee for pickup games, built at Cal Hacks 13.0.**
 
-Point a phone at a ping-pong table and Trophy referees the game:
-- It **keeps score**.
-- It **calls the edge rule and illegal serves**: the toss must rise more than 6 in off the palm and stay within 30° of vertical from the hand to the hit.
-- It **speaks every call** in a referee voice.
-- Close calls show their probability and can be **challenged**. A challenge brings an **instant replay** and a second opinion from three AI models.
-- Players can **ask the ref** about any rule by voice and get an answer quoted from the official rulebook.
-- Players can **add their own house rule** in plain English, and a Factory Droid compiles, tests and applies it.
+A local recorded demo now runs on the two original recordings in `data/ttClips`:
 
-> **Status:** under construction this weekend. The plan is in [`docs/plan/three-agent-plan.md`](docs/plan/three-agent-plan.md). Each prize-track section below gets filled in with what actually shipped and what was measured.
+```bash
+make tt-demo
+# Open http://127.0.0.1:8765/
+```
+
+It provides synchronized source playback, slow motion, original 4K evidence crops, ball tracks, estimated wireframe player replay, and persistent player/official score resolutions. A separate synthetic laboratory exercises deterministic toss thresholds and uncertainty. The server uses only Python's standard library; prepared local assets are already present on this machine.
+
+**Automatic scoring, metric serve/edge adjudication, and live sponsor integrations have not passed validation on these phone clips.** Camera motion, calibration and timing uncertainty remain explicit. The official serve profile requires at least **16 cm** upward rise; the 30° review criterion applies to the upward toss, with an explicitly disclosed estimator. The real footage is local/private, and no model weights or recordings are included in git.
+
+See [the demo guide](docs/tt-demo.md) for rebuilding, checks, measured results and remaining work. Live capture, Cartesia, shared Spacetime state, AI challenge votes, voice rule questions and the house-rule compiler remain the wider project plan in [three-agent-plan.md](docs/plan/three-agent-plan.md).
 
 ## Repo map
 | Path | What |

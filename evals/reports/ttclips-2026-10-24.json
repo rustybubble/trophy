@@ -1,0 +1,484 @@
+{
+  "date": "2026-10-24",
+  "runtime": "native Apple Silicon, PyTorch MPS / CPU decode; existing Python3.12 environments",
+  "sources": {
+    "acquired": "2026-10-24",
+    "source": "user-provided data/ttClips",
+    "usage": "local development and evaluation; publication not authorized",
+    "split": "demo/development; no held-out accuracy claim",
+    "files": [
+      {
+        "file": "Adobe Express - IMG_4342.mp4",
+        "sha256": "dfcf4305bcd58ca707507504177544697ace389e8b67afe482926e8734cee6a1",
+        "bytes": 849255746,
+        "width": 3840,
+        "height": 2160,
+        "fps": 60.0,
+        "average_rate": "60",
+        "time_base": "1/15360",
+        "start_pts": 0,
+        "duration_s": 107.61666666666666,
+        "frames": 6457,
+        "audio": true,
+        "codec": "h264"
+      },
+      {
+        "file": "IMG_2865 (1).mov",
+        "sha256": "8687e666442f5eb2f6c3c990099680a9908295ca96f125d4f2ef89c249700819",
+        "bytes": 389451500,
+        "width": 3840,
+        "height": 2160,
+        "fps": 60.0,
+        "average_rate": "60",
+        "time_base": "1/15360",
+        "start_pts": 0,
+        "duration_s": 113.01666666666667,
+        "frames": 6781,
+        "audio": true,
+        "codec": "h264"
+      }
+    ],
+    "sync": {
+      "method": "7-window shared-audio energy correlation; visual verification pending",
+      "offset_s": 0.039,
+      "drift": 1.0,
+      "verified": false,
+      "uncertainty_s": 0.0276,
+      "windows": [
+        {
+          "t_s": 11.0,
+          "offset_s": 0.038,
+          "correlation": 0.7721156908256455
+        },
+        {
+          "t_s": 24.778166666666664,
+          "offset_s": 0.038,
+          "correlation": 0.865294339953987
+        },
+        {
+          "t_s": 38.55633333333333,
+          "offset_s": 0.062,
+          "correlation": 0.64163589913685
+        },
+        {
+          "t_s": 52.3345,
+          "offset_s": 0.053,
+          "correlation": 0.45794833959861964
+        },
+        {
+          "t_s": 66.11266666666666,
+          "offset_s": 0.04,
+          "correlation": 0.7229552426839418
+        },
+        {
+          "t_s": 79.89083333333333,
+          "offset_s": 0.037,
+          "correlation": 0.9261992157090263
+        },
+        {
+          "t_s": 93.669,
+          "offset_s": 0.039,
+          "correlation": 0.9156307833094774
+        }
+      ],
+      "sound_travel_note": "Acoustic delay depends on contact position; rolling shutter and exposure are unverified.",
+      "drift_note": "No stable drift established; unity clock rate retained. Manual offset supported."
+    }
+  },
+  "benchmarks": {
+    "classical": {
+      "detector": "classical",
+      "device": "CPU",
+      "views": {
+        "side": {
+          "frames": 180,
+          "elapsed_s": 1.1996821250068024,
+          "end_to_end_fps": 150.03974490240853,
+          "model_mean_ms": null,
+          "per_frame_processing_p50_ms": 5.305354425217956,
+          "detected": 133,
+          "recall": null,
+          "false_positives": null,
+          "decode": "original 4K source decoded and resized to 1280\u00d7720 CPU",
+          "note": "Heuristic coverage is not recall. Sequential paired FPS = reciprocal sum of measured per-view seconds/frame."
+        },
+        "diagonal": {
+          "frames": 180,
+          "elapsed_s": 1.1075314169283956,
+          "end_to_end_fps": 162.52360632731143,
+          "model_mean_ms": null,
+          "per_frame_processing_p50_ms": 5.123041511978954,
+          "detected": 84,
+          "recall": null,
+          "false_positives": null,
+          "decode": "original 4K source decoded and resized to 1280\u00d7720 CPU",
+          "note": "Heuristic coverage is not recall. Sequential paired FPS = reciprocal sum of measured per-view seconds/frame."
+        }
+      },
+      "sequential_paired_fps": 78.01618564054684
+    },
+    "blurball": {
+      "detector": "blurball",
+      "device": "mps",
+      "views": {
+        "side": {
+          "frames": 180,
+          "elapsed_s": 5.834308999939822,
+          "end_to_end_fps": 30.85198264299279,
+          "model_mean_ms": 25.049346284423436,
+          "per_frame_processing_p50_ms": 32.122645527124405,
+          "detected": 56,
+          "recall": null,
+          "false_positives": null,
+          "decode": "original 4K source decoded and resized to 1280\u00d7720 CPU",
+          "note": "Heuristic coverage is not recall. Sequential paired FPS = reciprocal sum of measured per-view seconds/frame."
+        },
+        "diagonal": {
+          "frames": 180,
+          "elapsed_s": 6.747052917024121,
+          "end_to_end_fps": 26.6783145491308,
+          "model_mean_ms": 28.237007669528968,
+          "per_frame_processing_p50_ms": 36.869853967800736,
+          "detected": 39,
+          "recall": null,
+          "false_positives": null,
+          "decode": "original 4K source decoded and resized to 1280\u00d7720 CPU",
+          "note": "Heuristic coverage is not recall. Sequential paired FPS = reciprocal sum of measured per-view seconds/frame."
+        }
+      },
+      "sequential_paired_fps": 14.306877203595818
+    },
+    "full_grayscale": {
+      "side": {
+        "detector": "BlurBall max-channel-gray",
+        "device": "mps",
+        "weights_sha256": "3545206c7155194ea654899d33579c88c9fd8e82c632cbdbae3b0c0ec3f2985f",
+        "upstream_commit": "2f0f5496f7ba4b5b1a36790749935121b2ce972d",
+        "temporal_stride": 3,
+        "temporal_window": 3,
+        "input_size": [
+          512,
+          288
+        ],
+        "source_processing_size": [
+          1280,
+          720
+        ],
+        "photometric": "max-channel-gray",
+        "threshold": 0.65,
+        "source_frames": 6457,
+        "observed_frames": 2500,
+        "elapsed_s": 144.71293591696303,
+        "end_to_end_fps": 44.61936978256772,
+        "model_mean_ms": 26.377413249356053,
+        "model_p95_ms": 30.972052272409197,
+        "postprocess_mean_ms": 0.8194071818904806,
+        "recall": null,
+        "false_positives": null,
+        "score_note": "Heatmap scores are uncalibrated; not a probability of correct call.",
+        "private_evaluation_only": true,
+        "public_weights_permission": "Not granted. No weights redistributed.",
+        "source_sha256": "dfcf4305bcd58ca707507504177544697ace389e8b67afe482926e8734cee6a1"
+      },
+      "diagonal": {
+        "detector": "BlurBall max-channel-gray",
+        "device": "mps",
+        "weights_sha256": "3545206c7155194ea654899d33579c88c9fd8e82c632cbdbae3b0c0ec3f2985f",
+        "upstream_commit": "2f0f5496f7ba4b5b1a36790749935121b2ce972d",
+        "temporal_stride": 3,
+        "temporal_window": 3,
+        "input_size": [
+          512,
+          288
+        ],
+        "source_processing_size": [
+          1280,
+          720
+        ],
+        "photometric": "max-channel-gray",
+        "threshold": 0.65,
+        "source_frames": 6781,
+        "observed_frames": 2231,
+        "elapsed_s": 152.59473591693677,
+        "end_to_end_fps": 44.43796805475099,
+        "model_mean_ms": 26.982024575808225,
+        "model_p95_ms": 29.652064864058048,
+        "postprocess_mean_ms": 0.7203946436602886,
+        "recall": null,
+        "false_positives": null,
+        "score_note": "Heatmap scores are uncalibrated; not a probability of correct call.",
+        "private_evaluation_only": true,
+        "public_weights_permission": "Not granted. No weights redistributed.",
+        "source_sha256": "8687e666442f5eb2f6c3c990099680a9908295ca96f125d4f2ef89c249700819"
+      }
+    },
+    "full_grayscale_sequential_paired_fps": 22.264242084608924
+  },
+  "development_grayscale": {
+    "method": "Source centers estimated visually at 960\u00d7540 without detector overlays. Ambiguous/occluded/cropped ball = unassessable, not negative.",
+    "split": "Development slice 7.4\u20139.75 s; not held-out, no overall footage accuracy claim.",
+    "views": {
+      "side": {
+        "labeled_visible": 44,
+        "unassessable": 4,
+        "correct_within_tolerance": 39,
+        "missed": 3,
+        "localized_elsewhere": 2,
+        "recall": 0.8863636363636364,
+        "tolerance_source_px": 32,
+        "false_localizations_on_visible_frames": 2,
+        "false_positives_on_absent_frames": null,
+        "note": "No absent-frame annotations; false-positive rate on absent frames is not established."
+      },
+      "diagonal": {
+        "labeled_visible": 45,
+        "unassessable": 3,
+        "correct_within_tolerance": 36,
+        "missed": 8,
+        "localized_elsewhere": 1,
+        "recall": 0.8,
+        "tolerance_source_px": 32,
+        "false_localizations_on_visible_frames": 1,
+        "false_positives_on_absent_frames": null,
+        "note": "No absent-frame annotations; false-positive rate on absent frames is not established."
+      }
+    }
+  },
+  "held_out_grayscale": {
+    "split": "Held-out fixed-time slices 40\u201341.1 and 87\u201388.1 seconds, not used to change tracker settings. Mostly occlusion/held-ball interval; not an active-rally benchmark.",
+    "method": "Source centers estimated visually at 960\u00d7540 without detector overlays. Ambiguous/occluded/cropped ball = unassessable, not negative.",
+    "views": {
+      "side": {
+        "labeled_visible": 12,
+        "unassessable": 12,
+        "correct_within_tolerance": 2,
+        "missed": 10,
+        "localized_elsewhere": 0,
+        "recall": 0.16666666666666666,
+        "tolerance_source_px": 32,
+        "false_localizations_on_visible_frames": 0,
+        "false_positives_on_absent_frames": null,
+        "note": "No absent-frame annotations; false-positive rate on absent frames is not established."
+      },
+      "diagonal": {
+        "labeled_visible": 7,
+        "unassessable": 17,
+        "correct_within_tolerance": 4,
+        "missed": 3,
+        "localized_elsewhere": 0,
+        "recall": 0.5714285714285714,
+        "tolerance_source_px": 32,
+        "false_localizations_on_visible_frames": 0,
+        "false_positives_on_absent_frames": null,
+        "note": "No absent-frame annotations; false-positive rate on absent frames is not established."
+      }
+    }
+  },
+  "experimental_hybrid_development": {
+    "method": "Source centers estimated visually at 960\u00d7540 without detector overlays. Ambiguous/occluded/cropped ball = unassessable, not negative.",
+    "split": "Development slice 7.4\u20139.75 s; not held-out, no overall footage accuracy claim.",
+    "views": {
+      "side": {
+        "labeled_visible": 44,
+        "unassessable": 4,
+        "correct_within_tolerance": 41,
+        "missed": 1,
+        "localized_elsewhere": 2,
+        "recall": 0.9318181818181818,
+        "tolerance_source_px": 32,
+        "false_localizations_on_visible_frames": 2,
+        "false_positives_on_absent_frames": null,
+        "note": "No absent-frame annotations; false-positive rate on absent frames is not established."
+      },
+      "diagonal": {
+        "labeled_visible": 45,
+        "unassessable": 3,
+        "correct_within_tolerance": 41,
+        "missed": 3,
+        "localized_elsewhere": 1,
+        "recall": 0.9111111111111111,
+        "tolerance_source_px": 32,
+        "false_localizations_on_visible_frames": 1,
+        "false_positives_on_absent_frames": null,
+        "note": "No absent-frame annotations; false-positive rate on absent frames is not established."
+      }
+    }
+  },
+  "hybrid_evaluation_note": "Hybrid selected after both component evaluations; no held-out hybrid claim or joint processing throughput.",
+  "real_point_serve_edge_accuracy": null,
+  "pose": {
+    "status": "illustrative pose, not metric evidence",
+    "source": "/Users/mudu/Developer/trophy/data/ttClips/Adobe Express - IMG_4342.mp4",
+    "source_pose_report": {
+      "model": "MediaPipe Pose Landmarker Full float16 v1",
+      "checkpoint_sha256": "5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1",
+      "model_asset_url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
+      "package_version": "1.1.1",
+      "execution_provider": "native CPU / XNNPACK",
+      "source": "/Users/mudu/Developer/trophy/data/ttClips/Adobe Express - IMG_4342.mp4",
+      "source_width": 3840,
+      "source_height": 2160,
+      "source_fps": 60.0,
+      "sample_stride": 4,
+      "sample_fps_nominal": 15.0,
+      "sampled_frames": 1615,
+      "detected_person_frames": [
+        1463,
+        1574
+      ],
+      "mean_person_inference_ms": 6.931935863831764,
+      "total_seconds": 36.722052666009404,
+      "source_pts_preserved": true,
+      "roi_identity": "Green/left=0, Blue/right=1; positional prior, not reidentification",
+      "notes": [
+        "Coverage is not pose accuracy.",
+        "Hip-relative model world coordinates are inferred, not measured table coordinates.",
+        "No open-palm, paddle orientation, release or contact evidence is inferred from this body model.",
+        "Only observed sampled poses are exported. Missing people remain missing."
+      ]
+    },
+    "sampled_frames": 1615,
+    "visible_person_frames": [
+      1458,
+      1573
+    ],
+    "calibration": {
+      "status": "approximate single-plane pinhole fit",
+      "trusted": false,
+      "corner_fit_rmse_px_1280": 0.4729215305756588,
+      "camera_position_m_estimate": [
+        0.14196482412968342,
+        -4.475048558298769,
+        1.4259860311842945
+      ],
+      "focal_px_estimate_1280": 1042.2188969552717,
+      "validation": "Four manually selected coplanar corners at source 6s; no independent height/intrinsics ground truth"
+    },
+    "camera_stabilization": {
+      "method": "ORB table-region descriptors + independent current-to-reference RANSAC",
+      "reference_source_s": 6.0,
+      "reference_corners_px_1920": [
+        [
+          566.0,
+          624.0
+        ],
+        [
+          386.0,
+          701.0
+        ],
+        [
+          1527.0,
+          729.0
+        ],
+        [
+          1378.0,
+          646.0
+        ]
+      ],
+      "accepted_frames": 1438,
+      "total_frames": 1615,
+      "median_inliers": 48.0,
+      "median_corner_motion_px_1280": 58.35567543007615,
+      "scope": "illustrative avatar image stabilization only; not validated metric calibration"
+    },
+    "presentation_smoothing": {
+      "method": "symmetric Savitzky-Golay filtering + constant-length limb retargeting",
+      "scope": "render_joints only; raw joints and ball measurements unchanged",
+      "fps": 15.0,
+      "window_frames": {
+        "0": {
+          "root": 9,
+          "body": 7,
+          "arms": 5
+        },
+        "1": {
+          "root": 9,
+          "body": 7,
+          "arms": 5
+        }
+      },
+      "missing_person_frames_filled": false,
+      "median_joint_adjustment_cm": 2.254563513601104,
+      "p95_joint_adjustment_cm": 14.304439740882918,
+      "second_difference_rms_m_before": 0.11617813234683744,
+      "second_difference_rms_m_after": 0.02559673175368395,
+      "second_difference_rms_reduction_fraction": 0.7796768528067948,
+      "root_prior": "Display only: end-position lane x +/-[1.35,3.5]m, unobserved y=0, 5-sample median root filter",
+      "accuracy": "Smoothing diagnostics are not motion-capture accuracy or metric evidence"
+    },
+    "hands": {
+      "status": "pixel wrist-crop observations only; metric release/open-palm evidence unvalidated",
+      "probes": [
+        {
+          "model": "MediaPipe Hand Landmarker Full float16 v1",
+          "checkpoint_sha256": "fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1",
+          "model_url": "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+          "docs_url": "https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker",
+          "package_version": "1.1.1",
+          "execution_provider": "native CPU / XNNPACK",
+          "source": "/Users/mudu/Developer/trophy/data/ttClips/Adobe Express - IMG_4342.mp4",
+          "camera": "side",
+          "interval_source_s": [
+            6.0,
+            8.0
+          ],
+          "source_frames": 120,
+          "crop_attempts": 480,
+          "crops_with_hands": 466,
+          "mean_crop_inference_ms": 11.501357822999125,
+          "elapsed_s": 6.492067750077695,
+          "notes": [
+            "Coverage is not hand/palm or release accuracy; overlapping wrist crops may detect the same hand.",
+            "Native-pixel crops preserve the crop-to-source transform; pose hints are sampled and may be stale.",
+            "Hand skeletons and handedness do not prove open stationary palm, ball release, or metric height.",
+            "No hand/paddle data is fed into automatic real-footage serve decisions without validation."
+          ]
+        },
+        {
+          "model": "MediaPipe Hand Landmarker Full float16 v1",
+          "checkpoint_sha256": "fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1",
+          "model_url": "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+          "docs_url": "https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker",
+          "package_version": "1.1.1",
+          "execution_provider": "native CPU / XNNPACK",
+          "source": "/Users/mudu/Developer/trophy/data/ttClips/IMG_2865 (1).mov",
+          "camera": "diagonal",
+          "interval_source_s": [
+            6.039,
+            8.039
+          ],
+          "source_frames": 120,
+          "crop_attempts": 240,
+          "crops_with_hands": 118,
+          "mean_crop_inference_ms": 8.269143559058042,
+          "elapsed_s": 3.262544707977213,
+          "notes": [
+            "Coverage is not hand/palm or release accuracy; overlapping wrist crops may detect the same hand.",
+            "Native-pixel crops preserve the crop-to-source transform; pose hints are sampled and may be stale.",
+            "Hand skeletons and handedness do not prove open stationary palm, ball release, or metric height.",
+            "No hand/paddle data is fed into automatic real-footage serve decisions without validation."
+          ]
+        }
+      ]
+    },
+    "paddle": "Wrist-attached illustration only; face orientation and contact not measured",
+    "ball_3d": "Unavailable: moving cameras lack validated time-varying metric calibration and sync",
+    "total_build_seconds": 41.678263999987394,
+    "notes": [
+      "Source 2D landmark coordinates and model world outputs are retained unchanged in poses.json.",
+      "Scene root placement, occluded-leg prior, body shape and paddle are illustrative estimates.",
+      "Image stabilization is for presentation, and may fail under occlusion or large camera motion.",
+      "render_joints are separately smoothed; raw joints and source time are unchanged by smoothing.",
+      "No avatar quantity is used as referee measurement evidence."
+    ]
+  },
+  "checks": {
+    "pytest": 75,
+    "ruff": "pass",
+    "js_syntax": "pass",
+    "shared_event_schema": "62 selected events pass",
+    "spacetime_publication": "not run",
+    "browser": "pairedplayback, slowmotion/challenge, original4Kcrop, illustrative avatars, manualresolution, synthetic scoreonce"
+  },
+  "limitation": "Manual pixel labels are approximate single-reviewer annotations. No absent-ball negatives establish false-positive rate. Geometry unit tests are synthetic, never real-world accuracy evidence."
+}

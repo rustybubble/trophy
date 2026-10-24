@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Trophy · Rally room</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+<header class="topbar">
+  <a href="/" class="brand" aria-label="Trophy home"><span class="brand-mark">T<span>•</span></span> TROPHY</a>
+  <div class="top-divider"></div><span class="room-label">THE RALLY ROOM</span>
+  <div class="top-actions"><span class="connection"><i></i> LOCAL SESSION</span><select id="sessionMode" aria-label="Choose footage or synthetic fixture"><option value="recorded">Your two recordings</option><option value="synthetic">Synthetic rule fixtures</option></select></div>
+</header>
+<main>
+  <section class="intro"><div><div class="eyebrow">TABLE TENNIS / TWO PERSPECTIVES</div><h1>Every point has a story.</h1><p id="sessionLabel">Loading your recorded session…</p></div><div class="recorded-tag" id="recordedTag"><span class="dot"></span> RECORDED · PREPROCESSED</div></section>
+  <section class="scoreboard" aria-label="Game score">
+    <div class="player player-a"><span class="player-dot"></span><div><span class="player-caption">PLAYER A</span><strong id="nameA">A</strong></div><span class="server" id="serveA">SERVING</span></div>
+    <div class="score"><span id="scoreA">0</span><span class="score-separator">:</span><span id="scoreB">0</span></div>
+    <div class="player player-b"><span class="server" id="serveB" hidden>SERVING</span><div><span class="player-caption">PLAYER B</span><strong id="nameB">B</strong></div><span class="player-dot"></span></div>
+    <div class="score-meta"><span id="games">GAMES 0 — 0</span><span id="scoreOrigin">Recorded demo · initial score 0–0</span></div>
+  </section>
+  <div id="error" class="error" role="alert" hidden></div>
+  <section class="workspace">
+    <div class="sources-section">
+      <div class="section-heading"><h2>One rally. Both angles.</h2><span id="syncSummary" class="muted">Estimating alignment</span></div>
+      <div class="sources">
+        <article class="source-card primary"><div class="card-bar"><span><i class="cam-dot"></i><b id="camLabel0">SIDE CAMERA</b></span><span class="tiny" id="camRate0">SOURCE VIEW</span></div><div class="video-wrap" id="videoWrap0"><video id="video0" muted playsinline preload="metadata" aria-label="First recorded camera view"></video><canvas id="overlay0" class="overlay"></canvas><div class="video-empty" id="empty0" hidden></div><button class="inspect-button" data-inspect="0" title="Inspect this camera">⌕ Inspect</button></div><div class="frame-readout" id="frameReadout0">Waiting for source frame</div></article>
+        <article class="source-card"><div class="card-bar"><span><i class="cam-dot alternate"></i><b id="camLabel1">DIAGONAL CAMERA</b></span><span class="tiny" id="camRate1">SOURCE VIEW</span></div><div class="video-wrap" id="videoWrap1"><video id="video1" muted playsinline preload="metadata" aria-label="Second recorded camera view"></video><canvas id="overlay1" class="overlay"></canvas><div class="video-empty" id="empty1" hidden></div><button class="inspect-button" data-inspect="1" title="Inspect this camera">⌕ Inspect</button></div><div class="frame-readout" id="frameReadout1">Waiting for source frame</div></article>
+      </div>
+      <section class="transport" aria-label="Shared playback controls">
+        <div class="transport-top"><div class="play-controls"><button id="stepBack" class="icon-button" aria-label="Previous source frame" title="Previous source frame">❮</button><button id="play" class="play-button" aria-label="Play both views">▶</button><button id="stepForward" class="icon-button" aria-label="Next source frame" title="Next source frame">❯</button><span id="clock" class="clock">0:00.00 <small>/ 0:00.00</small></span></div><div class="transport-options"><label class="check"><input type="checkbox" id="showTrack" checked> Ball trail</label><label class="check"><input type="checkbox" id="audio"> Source audio</label><label class="sr-only" for="speed">Playback speed</label><select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></div></div>
+        <div class="timeline-wrap"><div id="pointMarks" class="point-marks" aria-hidden="true"></div><input id="timeline" type="range" min="0" max="1" step="0.001" value="0" aria-label="Shared session timeline"></div><div class="timeline-labels"><span>SESSION TIME</span><span id="timelineHint">Select a point to inspect its evidence</span></div>
+      </section>
+      <div class="section-heading points-heading"><h2>Point by point</h2><span id="pointCount" class="muted">Candidate boundaries</span></div><div id="pointList" class="point-list" aria-label="Selectable rallies"></div>
+      <section class="inspection-grid">
+        <article class="inspection-card"><div class="card-bar"><span>SOURCE CLOSE-UP</span><select id="cropCamera" aria-label="Close-up camera"><option value="0">Side camera</option><option value="1">Diagonal camera</option></select></div><div class="crop-wrap"><canvas id="crop" width="800" height="440"></canvas><div class="crop-caption" id="cropCaption">Original pixels, enlarged for review</div></div><div class="crop-controls"><span>Click a source view to move the crop</span><label>Zoom <input id="cropZoom" aria-label="Close-up zoom" type="range" min="1.5" max="8" step=".25" value="3"></label></div></article>
+        <article class="inspection-card reconstruction"><div class="card-bar"><span>3D EVIDENCE VIEW</span><span id="sceneStatus" class="tiny">READINESS CHECK</span></div><div id="viewport"><div class="scene-empty" id="sceneEmpty"><span class="scene-glyph">◇</span><strong>Source evidence comes first.</strong><p id="sceneReason">Metric reconstruction requires validated calibration and timing. Unsupported ball positions remain hidden.</p></div></div><div class="view-controls"><button data-view="orbit">Orbit</button><button data-view="side">Side</button><button data-view="diagonal">Diagonal</button><button data-view="overhead">Overhead</button><button data-view="serve">Serve</button><button data-view="edge">Edge</button></div><p class="evidence-footnote" id="sceneDisclaimer">Player and paddle poses are estimates. Avatars do not establish contact or serve legality.</p></article>
+      </section>
+    </div>
+    <aside class="evidence-sidebar">
+      <section class="decision-panel"><div class="eyebrow">THE CALL</div><div id="decisionStatus" class="status-pill pending">PLAYERS DECIDE</div><h2 id="decisionTitle">Select a point.</h2><p id="decisionReason">Review the original views and the evidence behind each candidate rally.</p><div id="measurement" class="measurement" hidden></div><div class="rule-ref" id="ruleRef">ITTF 2026 · evidence-led review</div><button id="evidence" class="evidence-button">⌖ Go to evidence</button><button id="challenge" class="secondary-button">Challenge / review</button><div id="reviewDetails" class="review-details" hidden></div><div class="resolve-box"><span class="tiny">PLAYER / OFFICIAL RESOLUTION</span><p>Record the agreed outcome.</p><div class="resolve-buttons"><button data-winner="A">Point A</button><button data-winner="B">Point B</button><button data-winner="let">Let</button></div><label for="resolutionReason" class="sr-only">Resolution reason</label><input id="resolutionReason" type="text" maxlength="240" placeholder="Reason for decision (optional)"><p class="manual-note">Manual decisions are labeled and retained in the audit trail.</p></div><label class="check voice-toggle"><input type="checkbox" id="voice" checked> Speak decisions <span class="tiny">LOCAL VOICE</span></label></section>
+      <details class="setup-panel"><summary><span>Session setup</span><span class="tiny">TIMING + CALIBRATION</span></summary><div class="setup-content"><span class="tiny">ESTIMATED CAMERA OFFSET</span><strong id="offsetValue">—</strong><p id="syncMethod"></p><label class="offset-label" for="manualOffset">Camera 2 offset, seconds</label><div class="offset-controls"><button id="offsetMinus" aria-label="Move second camera back one frame">−</button><input id="manualOffset" type="number" step=".001" aria-label="Second camera offset in seconds"><button id="offsetPlus" aria-label="Move second camera forward one frame">+</button></div><button id="saveOffset" class="secondary-button">Apply manual alignment</button><p class="manual-note">Playback alignment is not verified capture-time synchronization. Sound travel and exposure can add uncertainty.</p><div class="setup-divider"></div><span class="tiny">METRIC CALIBRATION</span><strong id="calibrationStatus">Not established</strong><p id="calibrationDetails">No metric claims without validated geometry.</p></div></details>
+      <details class="setup-panel"><summary><span>What is measured</span><span class="tiny">PROVENANCE</span></summary><div class="setup-content"><div id="benchmark"></div><ul id="limitations" class="limitations"></ul><a href="/api/session" target="_blank" rel="noopener" class="text-link">Session measurements ↗</a><p class="manual-note">Detector scores are uncalibrated and are not probabilities that a ruling is correct.</p></div></details>
+      <details class="setup-panel"><summary><span>Decision history</span><span id="historyCount" class="tiny">0 EVENTS</span></summary><ol id="history" class="history"></ol></details>
+    </aside>
+  </section>
+</main>
+<footer><span>TROPHY <b>/</b> CAL HACKS 13</span><span>Two cameras. Shared evidence. Your call.</span><span class="tiny">LOCAL PLAYBACK · NO VIDEO UPLOADED</span></footer>
+<script type="module" src="app.js"></script>
+</body></html>

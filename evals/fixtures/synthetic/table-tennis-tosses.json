@@ -1,0 +1,333 @@
+{
+  "id": "g_syntt001",
+  "label": "Synthetic threshold laboratory",
+  "synthetic": true,
+  "recorded": false,
+  "duration_s": 28,
+  "cameras": [],
+  "points": [
+    {
+      "id": "synthetic-1",
+      "label": "Low toss",
+      "start_s": 0,
+      "end_s": 3.5,
+      "evidence_s": 1,
+      "status": "toss_fault_supported",
+      "reason": "Low toss \u2014 synthetic known geometry",
+      "kind": "serve_toss",
+      "server": "A",
+      "assessment": {
+        "profile": "ittf-2026-01-01+ttr-2025-upward-chord-v1",
+        "rule_refs": [
+          "2.6.2"
+        ],
+        "source": "https://documents.ittf.sport/sites/default/files/public/2026-02/2026_Statutes_v1_consolidated_clean.pdf",
+        "ttr_source": "https://www.ittf.com/2025/04/13/enhanced-table-tennis-review-system-to-feature-at-ittf-mens-and-womens-world-cup-macao-2025/",
+        "status": "toss_fault_supported",
+        "height": "fail",
+        "angle": "pass",
+        "full_service_legality": "unverified",
+        "angle_estimator": "upward release-to-apex chord from vertical",
+        "official_angle_estimator_verified": false
+      },
+      "measurement": {
+        "height_interval_m": [
+          0.11499999999999999,
+          0.125
+        ],
+        "angle_interval_deg": [
+          9,
+          11
+        ],
+        "calibrated": true,
+        "release_observed": true,
+        "timing_validated": true,
+        "measurement_validated": true
+      },
+      "evidence_origin": "synthetic_fixture",
+      "rule_ref": "2.6.2 / TTR 30\u00b0 review criterion",
+      "height_m": 0.12,
+      "rise_angle_deg": 10,
+      "winner": "B"
+    },
+    {
+      "id": "synthetic-2",
+      "label": "16 cm boundary",
+      "start_s": 4,
+      "end_s": 7.5,
+      "evidence_s": 5,
+      "status": "toss_checks_pass",
+      "reason": "16 cm boundary \u2014 synthetic known geometry",
+      "kind": "serve_toss",
+      "server": "A",
+      "assessment": {
+        "profile": "ittf-2026-01-01+ttr-2025-upward-chord-v1",
+        "rule_refs": [
+          "2.6.2"
+        ],
+        "source": "https://documents.ittf.sport/sites/default/files/public/2026-02/2026_Statutes_v1_consolidated_clean.pdf",
+        "ttr_source": "https://www.ittf.com/2025/04/13/enhanced-table-tennis-review-system-to-feature-at-ittf-mens-and-womens-world-cup-macao-2025/",
+        "status": "toss_checks_pass",
+        "height": "pass",
+        "angle": "pass",
+        "full_service_legality": "unverified",
+        "angle_estimator": "upward release-to-apex chord from vertical",
+        "official_angle_estimator_verified": false
+      },
+      "measurement": {
+        "height_interval_m": [
+          0.16,
+          0.16
+        ],
+        "angle_interval_deg": [
+          0,
+          0
+        ],
+        "calibrated": true,
+        "release_observed": true,
+        "timing_validated": true,
+        "measurement_validated": true
+      },
+      "evidence_origin": "synthetic_fixture",
+      "rule_ref": "2.6.2 / TTR 30\u00b0 review criterion",
+      "height_m": 0.16,
+      "rise_angle_deg": 0,
+      "winner": null
+    },
+    {
+      "id": "synthetic-3",
+      "label": "Angle above 30\u00b0",
+      "start_s": 8,
+      "end_s": 11.5,
+      "evidence_s": 9,
+      "status": "toss_fault_supported",
+      "reason": "Angle above 30\u00b0 \u2014 synthetic known geometry",
+      "kind": "serve_toss",
+      "server": "A",
+      "assessment": {
+        "profile": "ittf-2026-01-01+ttr-2025-upward-chord-v1",
+        "rule_refs": [
+          "2.6.2"
+        ],
+        "source": "https://documents.ittf.sport/sites/default/files/public/2026-02/2026_Statutes_v1_consolidated_clean.pdf",
+        "ttr_source": "https://www.ittf.com/2025/04/13/enhanced-table-tennis-review-system-to-feature-at-ittf-mens-and-womens-world-cup-macao-2025/",
+        "status": "toss_fault_supported",
+        "height": "pass",
+        "angle": "fail",
+        "full_service_legality": "unverified",
+        "angle_estimator": "upward release-to-apex chord from vertical",
+        "official_angle_estimator_verified": false
+      },
+      "measurement": {
+        "height_interval_m": [
+          0.225,
+          0.23500000000000001
+        ],
+        "angle_interval_deg": [
+          39,
+          41
+        ],
+        "calibrated": true,
+        "release_observed": true,
+        "timing_validated": true,
+        "measurement_validated": true
+      },
+      "evidence_origin": "synthetic_fixture",
+      "rule_ref": "2.6.2 / TTR 30\u00b0 review criterion",
+      "height_m": 0.23,
+      "rise_angle_deg": 40,
+      "winner": "B"
+    },
+    {
+      "id": "synthetic-4",
+      "label": "30\u00b0 boundary",
+      "start_s": 12,
+      "end_s": 15.5,
+      "evidence_s": 13,
+      "status": "toss_checks_pass",
+      "reason": "30\u00b0 boundary \u2014 synthetic known geometry",
+      "kind": "serve_toss",
+      "server": "A",
+      "assessment": {
+        "profile": "ittf-2026-01-01+ttr-2025-upward-chord-v1",
+        "rule_refs": [
+          "2.6.2"
+        ],
+        "source": "https://documents.ittf.sport/sites/default/files/public/2026-02/2026_Statutes_v1_consolidated_clean.pdf",
+        "ttr_source": "https://www.ittf.com/2025/04/13/enhanced-table-tennis-review-system-to-feature-at-ittf-mens-and-womens-world-cup-macao-2025/",
+        "status": "toss_checks_pass",
+        "height": "pass",
+        "angle": "pass",
+        "full_service_legality": "unverified",
+        "angle_estimator": "upward release-to-apex chord from vertical",
+        "official_angle_estimator_verified": false
+      },
+      "measurement": {
+        "height_interval_m": [
+          0.23,
+          0.23
+        ],
+        "angle_interval_deg": [
+          30,
+          30
+        ],
+        "calibrated": true,
+        "release_observed": true,
+        "timing_validated": true,
+        "measurement_validated": true
+      },
+      "evidence_origin": "synthetic_fixture",
+      "rule_ref": "2.6.2 / TTR 30\u00b0 review criterion",
+      "height_m": 0.23,
+      "rise_angle_deg": 30,
+      "winner": null
+    },
+    {
+      "id": "synthetic-5",
+      "label": "Height uncertain",
+      "start_s": 16,
+      "end_s": 19.5,
+      "evidence_s": 17,
+      "status": "review_needed",
+      "reason": "Height uncertain \u2014 synthetic known geometry",
+      "kind": "serve_toss",
+      "server": "A",
+      "assessment": {
+        "profile": "ittf-2026-01-01+ttr-2025-upward-chord-v1",
+        "rule_refs": [
+          "2.6.2"
+        ],
+        "source": "https://documents.ittf.sport/sites/default/files/public/2026-02/2026_Statutes_v1_consolidated_clean.pdf",
+        "ttr_source": "https://www.ittf.com/2025/04/13/enhanced-table-tennis-review-system-to-feature-at-ittf-mens-and-womens-world-cup-macao-2025/",
+        "status": "review_needed",
+        "height": "uncertain",
+        "angle": "pass",
+        "full_service_legality": "unverified",
+        "angle_estimator": "upward release-to-apex chord from vertical",
+        "official_angle_estimator_verified": false
+      },
+      "measurement": {
+        "height_interval_m": [
+          0.14,
+          0.18
+        ],
+        "angle_interval_deg": [
+          9,
+          11
+        ],
+        "calibrated": true,
+        "release_observed": true,
+        "timing_validated": true,
+        "measurement_validated": true
+      },
+      "evidence_origin": "synthetic_fixture",
+      "rule_ref": "2.6.2 / TTR 30\u00b0 review criterion",
+      "height_m": 0.16,
+      "rise_angle_deg": 10,
+      "winner": null
+    },
+    {
+      "id": "synthetic-6",
+      "label": "Missing release",
+      "start_s": 20,
+      "end_s": 23.5,
+      "evidence_s": 21,
+      "status": "unavailable",
+      "reason": "Missing release \u2014 synthetic known geometry",
+      "kind": "serve_toss",
+      "server": "A",
+      "assessment": {
+        "profile": "ittf-2026-01-01+ttr-2025-upward-chord-v1",
+        "rule_refs": [
+          "2.6.2"
+        ],
+        "source": "https://documents.ittf.sport/sites/default/files/public/2026-02/2026_Statutes_v1_consolidated_clean.pdf",
+        "ttr_source": "https://www.ittf.com/2025/04/13/enhanced-table-tennis-review-system-to-feature-at-ittf-mens-and-womens-world-cup-macao-2025/",
+        "status": "unavailable",
+        "height": "unavailable",
+        "angle": "unavailable",
+        "full_service_legality": "unverified",
+        "angle_estimator": "upward release-to-apex chord from vertical",
+        "official_angle_estimator_verified": false,
+        "reason": "Metric calibration, release, timing and measurement validation are required."
+      },
+      "measurement": {
+        "height_interval_m": null,
+        "angle_interval_deg": null,
+        "calibrated": true,
+        "release_observed": false,
+        "timing_validated": true,
+        "measurement_validated": true
+      },
+      "evidence_origin": "synthetic_fixture",
+      "rule_ref": "2.6.2 / TTR 30\u00b0 review criterion",
+      "height_m": null,
+      "rise_angle_deg": null,
+      "winner": null
+    },
+    {
+      "id": "synthetic-7",
+      "label": "Angle uncertain",
+      "start_s": 24,
+      "end_s": 27.5,
+      "evidence_s": 25,
+      "status": "review_needed",
+      "reason": "Angle uncertain \u2014 synthetic known geometry",
+      "kind": "serve_toss",
+      "server": "A",
+      "assessment": {
+        "profile": "ittf-2026-01-01+ttr-2025-upward-chord-v1",
+        "rule_refs": [
+          "2.6.2"
+        ],
+        "source": "https://documents.ittf.sport/sites/default/files/public/2026-02/2026_Statutes_v1_consolidated_clean.pdf",
+        "ttr_source": "https://www.ittf.com/2025/04/13/enhanced-table-tennis-review-system-to-feature-at-ittf-mens-and-womens-world-cup-macao-2025/",
+        "status": "review_needed",
+        "height": "pass",
+        "angle": "uncertain",
+        "full_service_legality": "unverified",
+        "angle_estimator": "upward release-to-apex chord from vertical",
+        "official_angle_estimator_verified": false
+      },
+      "measurement": {
+        "height_interval_m": [
+          0.225,
+          0.23500000000000001
+        ],
+        "angle_interval_deg": [
+          28,
+          32
+        ],
+        "calibrated": true,
+        "release_observed": true,
+        "timing_validated": true,
+        "measurement_validated": true
+      },
+      "evidence_origin": "synthetic_fixture",
+      "rule_ref": "2.6.2 / TTR 30\u00b0 review criterion",
+      "height_m": 0.23,
+      "rise_angle_deg": 30,
+      "winner": null
+    }
+  ],
+  "sync": {
+    "method": "Synthetic truth clock",
+    "offset_s": 0,
+    "uncertainty_s": 0,
+    "verified": true
+  },
+  "calibration": {
+    "trusted": true,
+    "status": "Known synthetic geometry \u2014 not real-world calibration"
+  },
+  "limitations": [
+    "Synthetic demonstrations test geometry and deterministic rule behavior; they establish no accuracy on real footage.",
+    "Passing height and angle does not establish full service legality.",
+    "Release-to-apex chord angle is an implementation convention, not a verified official technical definition."
+  ],
+  "provenance": {
+    "footage": "Generated mathematical fixtures; no original video",
+    "profile": "ittf-2026-01-01+ttr-2025-upward-chord-v1"
+  },
+  "benchmark": {}
+}

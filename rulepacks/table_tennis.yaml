@@ -1,0 +1,37 @@
+# Field template: Agent 2. Referee/rules are owned by Agent 3.
+# Empty rules intentionally prevent unsupported automatic calls.
+sport: table_tennis
+family: flight
+version: ittf-2026-recorded-demo-v1
+name: Table tennis — recorded evidence profile
+teams:
+  - {team_id: A, name: Player A, color: "#51dbed"}
+  - {team_id: B, name: Player B, color: "#a78bfa"}
+params:
+  edge_band_m: 0.04
+  serve_min_toss_m: 0.16
+  serve_max_upward_angle_rad: 0.5235987755982988
+  angle_profile: "ITTF TTR 30-degree review criterion; implementation convention must be disclosed"
+field:
+  units: m
+  frame: "Origin at tabletop centre; +x toward end B; +y left when facing A to B; z up, tabletop z=0."
+  dims: {length: 2.74, width: 1.525, net_height: 0.1525, table_height: 0.76, ball_diameter: 0.04}
+  landmarks:
+    - {name: A_left, pos_m: [-1.37, 0.7625, 0.0], prompt: "Team A's end, left corner facing toward B"}
+    - {name: A_right, pos_m: [-1.37, -0.7625, 0.0], prompt: "Team A's end, right corner facing toward B"}
+    - {name: B_right, pos_m: [1.37, -0.7625, 0.0], prompt: "Far end B, same right sideline"}
+    - {name: B_left, pos_m: [1.37, 0.7625, 0.0], prompt: "Far end B, same left sideline"}
+  lines:
+    end_A: [[-1.37, 0.7625], [-1.37, -0.7625]]
+    end_B: [[1.37, 0.7625], [1.37, -0.7625]]
+    side_left: [[-1.37, 0.7625], [1.37, 0.7625]]
+    side_right: [[-1.37, -0.7625], [1.37, -0.7625]]
+    net: [[0.0, 0.7625], [0.0, -0.7625]]
+    centre: [[-1.37, 0.0], [1.37, 0.0]]
+  zones:
+    half_A: [[-1.37, 0.7625], [-1.37, -0.7625], [0.0, -0.7625], [0.0, 0.7625]]
+    half_B: [[0.0, 0.7625], [0.0, -0.7625], [1.37, -0.7625], [1.37, 0.7625]]
+scoring:
+  template: rally
+  params: {points_to_win: 11, win_by: 2, serves_per_turn: 2, deuce_serves_per_turn: 1, games_to_win: 3}
+rules: []

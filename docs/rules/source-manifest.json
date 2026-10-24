@@ -1,0 +1,60 @@
+{
+  "profile": "ittf-2026-01-01+ttr-2025-upward-chord-v1",
+  "checked_on": "2026-10-24",
+  "sources": [
+    {
+      "id": "ittf-statutes-2026",
+      "file": "2026_Statutes_v1_consolidated_clean.pdf",
+      "url": "https://documents.ittf.sport/sites/default/files/public/2026-02/2026_Statutes_v1_consolidated_clean.pdf",
+      "edition": "54th edition, effective 1 January 2026",
+      "required": true,
+      "status": "cached",
+      "sha256": "e55780dd20492253992dd6911a232d1a758c9660833672cb3a5d978a147e8671",
+      "bytes": 2343607,
+      "local_path": "data/local/rules/2026_Statutes_v1_consolidated_clean.pdf",
+      "retrieved_at_utc": "2026-10-24",
+      "extracted_files": {
+        "statutes-extracted.txt": "179ed59faaf026060530e50c49c4644686b5b5aa7a5046dd0be3574b0e19e8a1",
+        "chapter-2.txt": "bfcf504420c87b0b893d96c76a01b23e155c95d8c09b217a9041f9ead65c4364",
+        "match-officials-regulations.txt": "c367689af4f6bdde850bc400a494cdb8748c11d930c3e1eb63ce9bd782034cb3",
+        "chapter-2-clauses.json": "32095542ea2f8833e0539ba01423c31d34cd5a948fec22cf5f1f0ac8a393b886"
+      }
+    },
+    {
+      "id": "hmo-18-2026",
+      "file": "hmo-18-2026.pdf",
+      "url": "https://www.ittf.com/wp-content/uploads/2026/02/HMO-18th-edition-February-2026.pdf",
+      "edition": "18th edition February 2026 (index verified; full text blocked)",
+      "required": false,
+      "status": "blocked",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "id": "ittf-documents",
+      "file": "ittf-documents.html",
+      "url": "https://www.ittf.com/committees/umpires-referees/documents/",
+      "edition": "Index checked 2026-10-24",
+      "required": false,
+      "status": "blocked",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "id": "ttr-2025",
+      "file": "ttr-2025.html",
+      "url": "https://www.ittf.com/2025/04/13/enhanced-table-tennis-review-system-to-feature-at-ittf-mens-and-womens-world-cup-macao-2025/",
+      "edition": "Official announcement; rendered date 13 May 2025; URL path 13 April 2025",
+      "required": false,
+      "status": "blocked",
+      "error": "HTTP Error 403: Forbidden"
+    }
+  ],
+  "full_playing_laws_read": true,
+  "hmo_full_text_read": false,
+  "verification_note": {
+    "path": "docs/rules/source-verification.md",
+    "sha256": "92d0ce1cc425fef2dce81887806e0c748d85d7547a659673a1772bdd04da4c98"
+  },
+  "license_note": "ITTF Statutes front matter encourages reproduction with attribution. Source files remain local; no handbook redistribution permission is assumed.",
+  "amendment_status": "Official documents index and official 2026 listing checked. Demo intentionally pinned to 1 January 2026 edition; no claim of exhaustive later-amendment certification.",
+  "errors": []
+}

@@ -15,3 +15,11 @@ check:      ## what CI runs: lint, types, tests, fixture validation, codegen sta
 	$(MAKE) contracts fixtures && git diff --exit-code -- packages/contracts/gen packages/py-trophy/trophy/contracts packages/state-client/fixtures
 smoke:      ## P0 spikes
 	bash scripts/smoke.sh
+
+.PHONY: tt-demo tt-demo-build tt-demo-test
+tt-demo:    ## local, recorded two-camera review demo; no external services needed
+	bash scripts/tt-demo.sh
+tt-demo-build: ## conservative classical baseline + browser previews from originals
+	$${TROPHY_PYTHON:-python3} tools/build_tt_demo.py
+tt-demo-test: ## deterministic rules, geometry, PTS and replay-state checks
+	$${TROPHY_PYTHON:-python3} -m pytest tests -q

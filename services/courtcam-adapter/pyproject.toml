@@ -1,0 +1,8 @@
+[project]
+name = "trophy-courtcam-adapter"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["numpy==1.26.4", "opencv-python-headless==4.11.0.86"]
+
+[dependency-groups]
+dev = ["pytest>=8", "jsonschema>=4.23", "pyyaml>=6"]
