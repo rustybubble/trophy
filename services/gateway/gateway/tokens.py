@@ -13,7 +13,7 @@ import json
 import time
 from dataclasses import dataclass
 
-CLIENT_ROLES = frozenset({"cam", "display", "judge"})
+CLIENT_ROLES = frozenset({"cam", "display", "judge", "viewer"})
 ALL_ROLES = CLIENT_ROLES | {"service"}
 
 

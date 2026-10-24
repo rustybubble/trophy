@@ -27,15 +27,19 @@ import httpx
 import redis
 import websockets
 from trophy.framebus import pack_header
+from trophy.recordings import ffmpeg_binary
 
 ROOT = Path(__file__).resolve().parents[3]
 BASE = "http://127.0.0.1:8000"
 STDB = "http://127.0.0.1:3000"
+MODULE = "trophy"
+REDIS_URL = "redis://127.0.0.1:6379/0"
+ENV_PATH = ROOT / ".env"
 
 
 def env() -> dict[str, str]:
     out = {}
-    for line in (ROOT / ".env").read_text("utf8").splitlines():
+    for line in ENV_PATH.read_text("utf8").splitlines():
         if "=" in line and not line.lstrip().startswith("#"):
             k, v = line.split("=", 1)
             out[k.strip()] = v.split("#")[0].strip()
@@ -48,7 +52,7 @@ def now_ms() -> float:
 
 def reducer(name: str, payload: object, token: str) -> None:
     req = urllib.request.Request(
-        f"{STDB}/v1/database/trophy/call/{name}",
+        f"{STDB}/v1/database/{MODULE}/call/{name}",
         data=json.dumps([json.dumps(payload)]).encode(),
         method="POST",
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
@@ -59,7 +63,7 @@ def reducer(name: str, payload: object, token: str) -> None:
 async def jpeg_frames(path: Path, start: float, seconds: float):
     """1280x720 JPEGs at 30 fps from ffmpeg (MJPEG on a pipe), with each frame's clip time."""
     proc = await asyncio.create_subprocess_exec(
-        "ffmpeg",
+        ffmpeg_binary(),
         "-v",
         "error",
         "-ss",
@@ -98,7 +102,9 @@ async def jpeg_frames(path: Path, start: float, seconds: float):
     await proc.wait()
 
 
-async def main(path: Path, start: float, seconds: float) -> None:
+async def main(
+    path: Path, start: float, seconds: float, check_replay: bool = False, report: Path | None = None
+) -> None:
     e = env()
     async with httpx.AsyncClient(base_url=BASE, timeout=30) as http:
         g = (await http.post("/api/games", json={"sport": "table_tennis"})).json()
@@ -198,7 +204,7 @@ async def main(path: Path, start: float, seconds: float) -> None:
             seg = Path(td) / "seg.mp4"
             subprocess.run(
                 [
-                    "ffmpeg",
+                    ffmpeg_binary(),
                     "-v",
                     "error",
                     "-y",
@@ -230,7 +236,62 @@ async def main(path: Path, start: float, seconds: float) -> None:
             meta = r.json()
         await ctl.close()
 
-    rows = redis.Redis().xrange(f"frames:{cam}")
+    replay_check = None
+    if check_replay:
+        from gateway.tokens import mint
+
+        service_token, _ = mint(e["TROPHY_TOKEN_SECRET"], gid, "engine", "service", 600)
+        params = {"cam": cam, "t0": t_call_game - 4, "t1": t_call_game - 2}
+        async with httpx.AsyncClient(base_url=BASE, timeout=60) as http:
+            auth = {"Authorization": f"Bearer {tok}"}
+            clip = await http.get(f"/api/replay/{gid}/clip", params=params, headers=auth)
+            clip.raise_for_status()
+            overlay = await http.get(f"/api/replay/{gid}/overlay", params={**params, "call_id": call_id}, headers=auth)
+            overlay.raise_for_status()
+            crops = await http.get(
+                f"/api/replay/{gid}/frames",
+                params={**params, "n": 4},
+                headers={"Authorization": f"Bearer {service_token}"},
+            )
+            crops.raise_for_status()
+            manifest = await http.get(f"/api/watch/{gid}/manifest", headers=auth)
+            manifest.raise_for_status()
+            playlist = await http.get(manifest.json()["cams"][0]["hls_url"])
+            playlist.raise_for_status()
+            tracks = await http.get(f"/api/watch/{gid}/tracks", params={"cam": cam}, headers=auth)
+            tracks.raise_for_status()
+            assert tracks.json()["schema"] == "replay.tracks.v1"
+            assert 1 <= len(crops.json()["frames"]) <= 4
+            assert all(len(f["jpeg_b64"]) < 1_000_000 for f in crops.json()["frames"])
+            replay_check = {
+                "clip_bytes": len(clip.content),
+                "crop_frames": len(crops.json()["frames"]),
+                "max_crop_base64_bytes": max(len(f["jpeg_b64"]) for f in crops.json()["frames"]),
+                "hls_playlist": playlist.status_code,
+                "track_frames": len(tracks.json()["frames"]),
+                "overlay_warnings": overlay.json()["warnings"],
+            }
+            print("replay check: " + json.dumps(replay_check))
+    if report:
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_text(
+            json.dumps(
+                {
+                    "game_id": gid,
+                    "cam_id": cam,
+                    "call_id": call_id,
+                    "t_call_game_s": t_call_game,
+                    "frames_sent": sent,
+                    "source": path.name,
+                    "synthetic_call": True,
+                    "replay": replay_check,
+                },
+                indent=2,
+            )
+            + "\n"
+        )
+
+    rows = redis.Redis.from_url(REDIS_URL).xrange(f"frames:{cam}")
     tsrv = [float(f[b"t_srv_ms"]) for _, f in rows]
     span = (tsrv[-1] - tsrv[0]) / 1000 if len(tsrv) > 1 else 0
     print(f"game {gid} cam {cam}: streamed {sent} frames of {path.name} [{start:.1f}-{start + seconds:.1f}s]")
@@ -242,7 +303,7 @@ async def main(path: Path, start: float, seconds: float) -> None:
         f"{meta.get('bytes', 0) / 1e6:.1f} MB, {meta.get('duration_s')} s, upload {up_s:.2f} s (localhost), "
         f"game {meta.get('t_game_start_s', 0):.2f}-{meta.get('t_game_end_s', 0):.2f}s vs call at {t_call_game:.2f}s"
     )
-    print(f"call {call_id}; view as judge: join game {gid} with key {g['join_key']} and tap Watch replay")
+    print(f"call {call_id}; use the local game session to review it (join credentials are not logged)")
 
 
 if __name__ == "__main__":
@@ -250,5 +311,15 @@ if __name__ == "__main__":
     ap.add_argument("clip", type=Path)
     ap.add_argument("--start", type=float, default=5.0)
     ap.add_argument("--seconds", type=float, default=12.0)
+    ap.add_argument("--base", default=BASE)
+    ap.add_argument("--stdb", default=STDB)
+    ap.add_argument("--module", default=MODULE)
+    ap.add_argument("--redis-url", default=REDIS_URL)
+    ap.add_argument("--env-file", type=Path, default=ENV_PATH)
+    ap.add_argument("--check-replay", action="store_true")
+    ap.add_argument("--report", type=Path)
     a = ap.parse_args()
-    asyncio.run(main(a.clip, a.start, a.seconds))
+    if a.check_replay and a.seconds < 6:
+        ap.error("--check-replay requires at least 6 seconds")
+    BASE, STDB, MODULE, REDIS_URL, ENV_PATH = a.base, a.stdb, a.module, a.redis_url, a.env_file
+    asyncio.run(main(a.clip, a.start, a.seconds, a.check_replay, a.report))

@@ -10,6 +10,7 @@ import asyncio
 import hmac
 import json
 import logging
+import math
 import re
 import time
 from contextlib import asynccontextmanager
@@ -23,13 +24,16 @@ from pydantic import BaseModel, Field, ValidationError
 from trophy import ids
 from trophy.contracts import (
     AdjustScoreArgs,
+    BookmarkArgs,
     Calibration,
     CalibrationRequest,
     ChallengeArgs,
+    ClipThatArgs,
     CtlCommand,
     EmptyArgs,
     HouseRuleVersionArgs,
     ResolveChallengeArgs,
+    ReviewCallArgs,
     SetServerArgs,
     StartGameArgs,
     SubmitHouseRuleArgs,
@@ -53,6 +57,7 @@ from trophy.timebase import ClockFit, now_ms
 
 from . import calib_stub
 from .config import Settings
+from .replay import replay_router
 from .tokens import Claims, TokenError, mint, normalize_role, verify
 
 log = logging.getLogger("trophy.gateway")
@@ -78,6 +83,9 @@ CLIENT_ARGS = {
     "submit_house_rule": SubmitHouseRuleArgs,
     "approve_house_rule": HouseRuleVersionArgs,
     "reject_house_rule": HouseRuleVersionArgs,
+    "bookmark": BookmarkArgs,
+    "clip_that": ClipThatArgs,
+    "review_call": ReviewCallArgs,
 }
 
 
@@ -293,6 +301,16 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
             args = CLIENT_ARGS[body.cmd].model_validate(body.args).model_dump(exclude_none=True)
         except ValidationError as e:
             raise HTTPException(422, json.loads(e.json())) from None
+        if body.cmd in {"bookmark", "clip_that", "review_call"}:
+            allowed = {
+                "bookmark": {"t_game_s", "label"},
+                "clip_that": {"t_game_s"},
+                "review_call": {"call_id", "result", "replacement"},
+            }[body.cmd]
+            if set(body.args) - allowed or ("t_game_s" in args and not math.isfinite(args["t_game_s"])):
+                raise HTTPException(422, "invalid command arguments")
+            if body.cmd == "review_call" and args["result"] == "correct" and not args.get("replacement"):
+                raise HTTPException(422, "correct requires a replacement outcome")
         await game(c.game_id)
         req_id = await publish(make_ctl(body.cmd, c.game_id, args, by_cam_id=c.cam_id))
         jlog("ctl", game_id=c.game_id, cam_id=c.cam_id, cmd=body.cmd, req_id=req_id)
@@ -751,4 +769,5 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         }
         return JSONResponse(body, status_code=200 if redis_ok else 503)
 
+    app.include_router(replay_router(st))
     return app
