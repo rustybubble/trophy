@@ -287,3 +287,60 @@ def test_healthz(env):
     client, _, _ = env
     body = client.get("/api/healthz").json()
     assert body["redis"] is True and body["recorder"] is False
+
+
+# ---------------------------------------------------------------- challenge clips
+def sync_clock(client, token, offset=0.0):
+    with client.websocket_connect(f"/api/ws/ctl?token={token}") as ws:
+        prev = None
+        for _ in range(4):
+            t0 = now_ms() - offset
+            ws.send_json({"type": "ping", "t0": t0, **({"prev": prev} if prev else {})})
+            pong = ws.receive_json()
+            if prev:
+                ws.receive_json()
+            prev = {"t0": t0, "t1": pong["t1"], "t2": pong["t2"], "t3": now_ms() - offset}
+
+
+def test_clip_upload_list_and_ranged_get(env, tmp_path):
+    client, _, _ = env
+    g, j = new_game(client, role="cam,judge")
+    h = {"Authorization": f"Bearer {j['cam_token']}", "Content-Type": "video/mp4"}
+    q = "call_id=01JCALL0002&seg=7&t_start_phone_ms={}&t_end_phone_ms={}"
+    body = b"\x00\x00\x00\x18ftypmp42" + b"x" * 5000
+    t = now_ms() - 3000.0
+    # no clock fit yet: refused, because the clip couldn't be placed on the game clock
+    assert client.post("/api/clips?" + q.format(t, t + 6000), content=body, headers=h).status_code == 409
+    sync_clock(client, j["cam_token"], offset=2000.0)
+    r = client.post("/api/clips?" + q.format(t, t + 6000), content=body, headers=h)
+    assert r.status_code == 201, r.text
+    meta = r.json()
+    assert meta["name"] == f"{j['cam_id']}_00007.mp4" and meta["bytes"] == len(body)
+    assert meta["t_game_end_s"] - meta["t_game_start_s"] == pytest.approx(6.0, abs=0.01)
+    t0_ms = client.get(f"/api/games/{g['game_id']}/public").json()["t0_ms"]
+    assert meta["t_game_start_s"] == pytest.approx((t + 2000.0 - t0_ms) / 1000, abs=0.05)  # phone clock is 2 s behind
+    assert (
+        client.post(
+            "/api/clips?" + q.format(t, t + 6000), content=body, headers={**h, "Content-Type": "text/plain"}
+        ).status_code
+        == 415
+    )
+
+    listed = client.get(f"/api/clips/{g['game_id']}/01JCALL0002", headers={"Authorization": h["Authorization"]}).json()
+    assert [c["name"] for c in listed["clips"]] == [meta["name"]]
+    url = listed["clips"][0]["url"]
+    assert client.get(url).status_code == 401
+    full = client.get(f"{url}?token={j['cam_token']}")
+    assert full.status_code == 200 and full.content == body and full.headers["content-type"] == "video/mp4"
+    part = client.get(f"{url}?token={j['cam_token']}", headers={"Range": "bytes=0-15"})
+    assert part.status_code == 206 and part.content == body[:16]
+    assert (
+        client.get(f"/api/clips/{g['game_id']}/01JCALL0002/..%2F..%2Fsecret.mp4?token={j['cam_token']}").status_code
+        == 404
+    )
+
+    _, other = new_game(client)
+    assert client.get(f"{url}?token={other['cam_token']}").status_code == 403
+    _, display = new_game(client, role="display")
+    dh = {"Authorization": f"Bearer {display['cam_token']}", "Content-Type": "video/mp4"}
+    assert client.post("/api/clips?" + q.format(t, t + 6000), content=body, headers=dh).status_code == 403

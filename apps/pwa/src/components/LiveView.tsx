@@ -5,10 +5,12 @@ import { beep, startOnsets } from "../lib/audio.ts";
 import { fakeCamera, openRearCamera, type CameraInfo } from "../lib/camera.ts";
 import { CtlSocket, type SyncState } from "../lib/ctl.ts";
 import { parseIntent } from "../lib/intent.ts";
+import { QUALITY, SegmentRecorder, type Quality } from "../lib/recorder.ts";
 import { FrameStreamer, type StreamStats } from "../lib/streamer.ts";
 import { useGame } from "../lib/useGame.ts";
 import { Voice } from "../lib/voice.ts";
 import { CalibrateView } from "./CalibrateView.tsx";
+import { ClipViewer } from "./ClipViewer.tsx";
 import { JudgePanel } from "./JudgePanel.tsx";
 import { PushToTalk } from "./PushToTalk.tsx";
 import { Scoreboard } from "./Scoreboard.tsx";
@@ -51,6 +53,20 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
     params.get("test") === "1" ? "stats" : undefined,
   );
   const [hiddenGuide, setHiddenGuide] = useState<string>();
+  const [quality, setQuality] = useState<Quality>(() => {
+    try {
+      const q = localStorage.getItem("trophy.pref.quality");
+      return q && q in QUALITY ? (q as Quality) : "1080p";
+    } catch {
+      return "1080p";
+    }
+  });
+  const [recording, setRecording] = useState<string>();
+  const [replayCall, setReplayCall] = useState<string>();
+  const recorderRef = useRef<SegmentRecorder | undefined>(undefined);
+  const uploaded = useRef(new Set<string>());
+  const syncRef = useRef(sync);
+  syncRef.current = sync;
   const videoRef = useRef<HTMLVideoElement>(null);
   const g = useGame(session, { voice, ctl, readEverything: readAll, mock });
 
@@ -96,17 +112,35 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
     let stopped = false;
     (async () => {
       try {
-        const info =
-          params.get("fake") === "1"
-            ? fakeCamera()
-            : await openRearCamera(session.frame.w, session.frame.h, session.frame.fps);
+        // capture at the recording quality; the live stream is scaled down to the session's frame size
+        const cap = QUALITY[quality] ?? { w: session.frame.w, h: session.frame.h };
+        const info = params.get("fake") === "1" ? fakeCamera() : await openRearCamera(cap.w, cap.h, session.frame.fps);
         if (stopped) return;
         setCam(info);
         const v = videoRef.current!;
         v.srcObject = info.stream;
         await v.play();
-        streamer = new FrameStreamer(v, api.wsUrl("frames"), session.frame.quality, setStats);
+        streamer = new FrameStreamer(
+          v,
+          api.wsUrl("frames"),
+          session.frame.quality,
+          setStats,
+          session.frame.w,
+          session.frame.h,
+        );
         streamer.start();
+        const q = QUALITY[quality];
+        if (q) {
+          try {
+            const rec = new SegmentRecorder(info.stream, q.bps);
+            rec.start();
+            recorderRef.current = rec;
+            const s = info.stream.getVideoTracks()[0]?.getSettings();
+            setRecording(`${s?.width ?? "?"}×${s?.height ?? "?"} ${rec.mime.split(";")[0]}`);
+          } catch (e) {
+            say(`High-quality recording unavailable: ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
         try {
           stopOnsets = await startOnsets((t, peak, energy) => {
             ctl?.onset(t, peak, energy);
@@ -122,10 +156,13 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
     return () => {
       stopped = true;
       streamer?.stop();
+      recorderRef.current?.stop();
+      recorderRef.current = undefined;
+      setRecording(undefined);
       stopOnsets?.();
       (videoRef.current?.srcObject as MediaStream | null)?.getTracks().forEach((t) => t.stop());
     };
-  }, [isCam, api, ctl, session.frame]);
+  }, [isCam, api, ctl, session.frame, quality]);
 
   // health every 5 s
   useEffect(() => {
@@ -135,6 +172,38 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
     }, 5000);
     return () => clearInterval(id);
   }, [ctl, isCam, stats]);
+
+  // a challenge opened: upload this camera's high-quality segments around the call's evidence window
+  useEffect(() => {
+    const rec = recorderRef.current;
+    if (!rec) return;
+    for (const ch of g.challenges) {
+      if (ch.status !== "open" || uploaded.current.has(ch.challenge_id)) continue;
+      const call = g.calls.find((c) => c.id === ch.call_id);
+      if (!call) continue;
+      uploaded.current.add(ch.challenge_id);
+      void (async () => {
+        const off = syncRef.current.offsetMs;
+        if (off === null) return say("Can't send the replay clip: the clock isn't synced yet");
+        const ev = call.evidence.find((e) => e.cam_id === session.camId) ?? call.evidence[0];
+        const g0 = (ev?.t0_s ?? call.t_game_s - 3) - 1;
+        const g1 = (ev?.t1_s ?? call.t_game_s) + 1;
+        const toPhone = (tGameS: number) => session.t0Ms + tGameS * 1000 - off; // offset = server - phone
+        const t = performance.now();
+        await rec.covered(toPhone(g1));
+        const segs = rec.pick(toPhone(g0), toPhone(g1));
+        let bytes = 0;
+        try {
+          for (const s of segs) bytes += (await api.uploadClip(call.id, s)).bytes;
+          say(
+            `Replay clip sent: ${segs.length} part(s), ${(bytes / 1e6).toFixed(1)} MB in ${((performance.now() - t) / 1000).toFixed(1)} s`,
+          );
+        } catch (e) {
+          say(`Replay clip upload failed: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      })();
+    }
+  }, [g.challenges, g.calls, api, session.camId, session.t0Ms]);
 
   const latestChallengeable = g.calls.find((c) => c.tier === "BETA" && c.status === "final" && c.kind !== "info");
 
@@ -231,6 +300,11 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
       : isCam && stats
         ? { cls: stats.sentFps >= 25 ? "ok" : "warn", text: `Live · ${stats.sentFps.toFixed(0)} fps` }
         : { cls: "ok", text: "Live" };
+
+  const lastChallengedCall = [...g.challenges]
+    .sort((a, b) => b.created_at_ms - a.created_at_ms)
+    .map((ch) => g.calls.find((c) => c.id === ch.call_id))
+    .find((c) => c !== undefined);
 
   const leave = () => {
     forgetSession(session.gameId);
@@ -369,6 +443,32 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
               />
               Also read every score change
             </label>
+            {isCam && (
+              <label className="toggle">
+                Replay recording
+                <select
+                  value={quality}
+                  onChange={(e) => {
+                    const q = e.target.value as Quality;
+                    setQuality(q);
+                    try {
+                      localStorage.setItem("trophy.pref.quality", q);
+                    } catch {
+                      /* storage unavailable */
+                    }
+                  }}
+                >
+                  <option value="off">Off</option>
+                  <option value="1080p">1080p</option>
+                  <option value="4k">4K (hotter, bigger uploads)</option>
+                </select>
+              </label>
+            )}
+            {lastChallengedCall && (
+              <button onClick={() => (setSheet(undefined), setReplayCall(lastChallengedCall.id))}>
+                Replay last challenge
+              </button>
+            )}
             <button onClick={() => setSheet("stats")}>Connection details</button>
             {onLeave && (
               <button className="ghost" onClick={leave}>
@@ -383,13 +483,20 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
       )}
 
       {isJudge && (sheet === "judge" || needsDecision) && (
-        <JudgePanel api={mock ? undefined : api} g={g} onError={say} onClose={() => setSheet(undefined)} />
+        <JudgePanel
+          api={mock ? undefined : api}
+          g={g}
+          onError={say}
+          onClose={() => setSheet(undefined)}
+          onReplay={mock ? undefined : setReplayCall}
+        />
       )}
 
       {sheet === "stats" && (
         <div className="sheet-wrap" onClick={() => setSheet(undefined)}>
           <aside className="sheet stats mono small" onClick={(e) => e.stopPropagation()}>
             <div>camera: {cam ? cam.label : "—"}</div>
+            <div>replay recording: {recording ?? "off"}</div>
             {stats && (
               <div>
                 sending {stats.sentFps.toFixed(1)} fps · {stats.w}×{stats.h} · encode {stats.encodeMs.toFixed(1)} ms ·{" "}
@@ -425,6 +532,13 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
 
       {toast && <div className="toast">{toast}</div>}
       {isCam && <div className="rotate">Turn the phone sideways (landscape)</div>}
+      {replayCall && g.calls.find((c) => c.id === replayCall) && (
+        <ClipViewer
+          api={api}
+          call={g.calls.find((c) => c.id === replayCall)!}
+          onClose={() => setReplayCall(undefined)}
+        />
+      )}
       {calibrating && (
         <CalibrateView
           api={api}

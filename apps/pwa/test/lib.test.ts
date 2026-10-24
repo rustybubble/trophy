@@ -3,6 +3,7 @@ import { FLAG_FIRST_AFTER_START, packFrame } from "../src/lib/frame.ts";
 import { apply, invert3 } from "../src/lib/homography.ts";
 import { parseIntent } from "../src/lib/intent.ts";
 import { OnsetDetector } from "../src/lib/onset.ts";
+import { pickSegments } from "../src/lib/recorder.ts";
 
 describe("packFrame", () => {
   it("matches the 16-byte little-endian header in interfaces-v1 §5.1 (and trophy.framebus)", () => {
@@ -65,5 +66,21 @@ describe("homography", () => {
     const [x, y] = apply(inv, fx, fy);
     expect(x).toBeCloseTo(640, 6);
     expect(y).toBeCloseTo(400, 6);
+  });
+});
+
+describe("pickSegments", () => {
+  const seg = (index: number, t0: number, t1: number) => ({
+    blob: new Blob(),
+    mime: "video/mp4",
+    tStartPhoneMs: t0,
+    tEndPhoneMs: t1,
+    index,
+  });
+  it("returns the segments overlapping a window, oldest first", () => {
+    const segs = [seg(3, 18_000, 24_000), seg(1, 6_000, 12_000), seg(2, 12_020, 18_000), seg(0, 0, 6_000)];
+    expect(pickSegments(segs, 11_000, 13_000).map((s) => s.index)).toEqual([1, 2]);
+    expect(pickSegments(segs, 30_000, 31_000)).toEqual([]);
+    expect(pickSegments(segs, 12_005, 12_010).map((s) => s.index)).toEqual([]); // inside the restart gap
   });
 });

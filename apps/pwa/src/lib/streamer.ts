@@ -38,6 +38,9 @@ export class FrameStreamer {
     private readonly url: string,
     private readonly quality = 0.7,
     private readonly onStats: (s: StreamStats) => void = () => {},
+    /** the live stream's size; a larger camera track (recorded for challenges) is scaled down to fit */
+    private readonly maxW = 1280,
+    private readonly maxH = 720,
   ) {}
 
   start(): void {
@@ -89,9 +92,12 @@ export class FrameStreamer {
       if (ws?.readyState === WebSocket.OPEN) this.stats.skipped++;
       return;
     }
-    const w = this.video.videoWidth;
-    const h = this.video.videoHeight;
-    if (!w || !h) return;
+    const vw = this.video.videoWidth;
+    const vh = this.video.videoHeight;
+    if (!vw || !vh) return;
+    const scale = Math.min(1, this.maxW / Math.max(vw, vh), this.maxH / Math.min(vw, vh));
+    const w = Math.round(vw * scale);
+    const h = Math.round(vh * scale);
     this.busy = true;
     const t = phoneMs(perfTime);
     try {

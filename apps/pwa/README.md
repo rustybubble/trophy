@@ -15,4 +15,5 @@ URL flags: `?mock=1` plays the labelled-synthetic demo with no backend; `&fake=1
 - **Push-to-talk → Ink-2:** "challenge", "undo", "what's the score", "house rule: …", and anything else as an ask-the-ref question (answer spoken in the ref voice, citations shown).
 - **Judge:** start game, uphold/overturn an open challenge, undo, score ±, submit and approve/reject house rules.
 - **Calibration:** tap the 4 table corners on the latest still (team A's end first), drag to adjust, solve via `/api/calibrate`, see the projected outline and whether it's trusted, then confirm.
-- **Not yet:** the replay viewer (with the recorder), the QR clock board, `audio_offset_ms` clap test.
+- **Challenge replay in high quality (D-27):** a camera phone captures at 1080p (default) or 4K (menu → Replay recording), streams 720p live, and records the full-quality track locally in rolling 6 s segments (last 5 kept). When a challenge opens, it uploads only the segments covering the call's evidence window ±1 s. "Watch replay" (judge) or "Replay last challenge" (menu) plays them at 1×, ½×, ¼× with frame steps.
+- **Not yet:** the recorder-based replay with ball/bounce overlays (§12), the QR clock board, `audio_offset_ms` clap test.

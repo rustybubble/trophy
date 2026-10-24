@@ -8,11 +8,13 @@ export function JudgePanel({
   g,
   onError,
   onClose,
+  onReplay,
 }: {
   api?: Api;
   g: GameView;
   onError: (m: string) => void;
   onClose: () => void;
+  onReplay?: (callId: string) => void;
 }) {
   const [rule, setRule] = useState("");
   const send = async (cmd: string, args: Record<string, unknown> = {}) => {
@@ -52,6 +54,7 @@ export function JudgePanel({
             >
               Uphold
             </button>
+            {onReplay && <button onClick={() => onReplay(open.call_id)}>Watch replay</button>}
             <button
               onClick={() => void send("resolve_challenge", { challenge_id: open.challenge_id, result: "overturned" })}
             >

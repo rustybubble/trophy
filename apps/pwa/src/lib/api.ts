@@ -29,6 +29,20 @@ export interface AskAnswer {
   moss_ms?: number;
 }
 
+export interface ClipMeta {
+  name: string;
+  url: string;
+  cam_id: string;
+  seg: number;
+  mime: string;
+  bytes: number;
+  t_game_start_s: number;
+  t_game_end_s: number;
+  w?: number;
+  h?: number;
+  duration_s?: number;
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -151,6 +165,30 @@ export class Api {
   }
   saveCalibration(c: Calibration): Promise<{ ok: boolean; trusted: boolean }> {
     return req(`/cams/${this.s.camId}/calibration`, { method: "POST", body: JSON.stringify(c) }, this.s.token);
+  }
+  async uploadClip(
+    callId: string,
+    seg: { blob: Blob; mime: string; tStartPhoneMs: number; tEndPhoneMs: number; index: number },
+  ) {
+    const q = new URLSearchParams({
+      call_id: callId,
+      seg: String(seg.index),
+      t_start_phone_ms: String(seg.tStartPhoneMs),
+      t_end_phone_ms: String(seg.tEndPhoneMs),
+    });
+    const res = await fetch(`/api/clips?${q}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${this.s.token}`, "Content-Type": seg.mime.split(";")[0]! },
+      body: seg.blob,
+    });
+    if (!res.ok) throw new ApiError(res.status, await res.text());
+    return (await res.json()) as ClipMeta;
+  }
+  listClips(callId: string): Promise<{ clips: ClipMeta[] }> {
+    return req(`/clips/${this.s.gameId}/${callId}`, {}, this.s.token);
+  }
+  clipSrc(c: ClipMeta): string {
+    return `${c.url}?token=${encodeURIComponent(this.s.token)}`;
   }
   wsUrl(path: "frames" | "ctl"): string {
     const proto = location.protocol === "https:" ? "wss" : "ws";

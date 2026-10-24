@@ -321,6 +321,9 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 | `GET /voice/token` | → `{access_token, expires_at_ms}`: a short-lived Cartesia token minted server-side (§16). Never the API key |
 | `POST /ask` | `{question, sport?}` → proxied to the `rules` service `POST /ask` (§17) → `{answer, speech, citations, latency_ms}`; the gateway then sends an `ask_logged` ctl command |
 | `GET /healthz` | → `{ok, redis, adapter, recorder}` |
+| `POST /clips?call_id=&seg=&t_start_phone_ms=&t_end_phone_ms=` | body = one video segment (`video/mp4`, `video/webm` or `video/quicktime`, ≤ 250 MB); `cam` role; needs the camera's clock fit (409 otherwise) → `201` meta `{name, cam_id, seg, bytes, t_game_start_s, t_game_end_s, w, h, codec, duration_s}` (D-27) |
+| `GET /clips/{game_id}/{call_id}` | → `{clips: [meta + url]}` for that call, every camera |
+| `GET /clips/{game_id}/{call_id}/{name}` | the segment, with HTTP Range; `?token=` allowed because `<video>` can't send headers |
 
 **As built (2026-10-24, `services/gateway`):** join and `/public` also return `t0_ms`; `/healthz` also reports `spacetime` and `rules`; client `ctl` args are validated against the `*Args` schemas (422 otherwise); frames that arrive before the clock fit exists are stamped by arrival time with `sync_err_ms = 1000`; onsets need a fit and are dropped before one exists; audio onsets go to `ev:audio` only (not mirrored into `observation`); `call_ack` latencies go to `data/local/logs/call_ack.jsonl`. Replay routes come with the recorder.
 

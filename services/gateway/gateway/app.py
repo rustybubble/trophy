@@ -18,7 +18,7 @@ from typing import Any
 import httpx
 import redis.asyncio as aioredis
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field, ValidationError
 from trophy import ids
 from trophy.contracts import (
@@ -62,6 +62,9 @@ HEALTH_EVERY_MS = 2000.0
 GAME_TTL_S = 2 * 86400
 CALL_ID_RE = re.compile(r"^[0-9A-Za-z_-]{6,64}$")
 FRAME_DEFAULTS = {"w": 1280, "h": 720, "fps": 30, "quality": 0.7}
+CLIP_MAX_BYTES = 250 * 1024 * 1024
+CLIP_TYPES = {"video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov"}
+CLIP_NAME_RE = re.compile(r"^c_[0-9a-hjkmnp-tv-z]{6}_\d{5}\.(mp4|webm|mov)$")
 
 CLIENT_ARGS = {
     "start_game": StartGameArgs,
@@ -596,6 +599,130 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         except ValidationError:
             jlog("ask_logged skipped: rules response doesn't match the contract", game_id=c.game_id)
         return out
+
+    # ------------------------------------------------------------ challenge clips (phone-side high-quality recording)
+    def clip_dir(game_id: str, call_id: str):
+        return st.data_dir / "clips" / game_id / call_id
+
+    async def probe(path) -> dict[str, Any]:
+        """w, h, duration and codec via ffprobe; empty if ffprobe isn't installed or fails."""
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=width,height,codec_name:format=duration",
+                "-of",
+                "json",
+                str(path),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            out, _ = await asyncio.wait_for(proc.communicate(), timeout=10)
+            d = json.loads(out)
+            v = (d.get("streams") or [{}])[0]
+            return {
+                "w": v.get("width"),
+                "h": v.get("height"),
+                "codec": v.get("codec_name"),
+                "duration_s": float(d.get("format", {}).get("duration") or 0) or None,
+            }
+        except (TimeoutError, OSError, ValueError):
+            return {}
+
+    @app.post("/api/clips", status_code=201)
+    async def upload_clip(
+        request: Request,
+        call_id: str,
+        seg: int,
+        t_start_phone_ms: float,
+        t_end_phone_ms: float,
+        c: Claims = Depends(auth),
+    ) -> dict[str, Any]:
+        """One high-quality segment from a camera phone, covering part of a challenged call's evidence window."""
+        if not c.has("cam"):
+            raise HTTPException(403, "only cameras upload clips")
+        if not CALL_ID_RE.match(call_id) or not 0 <= seg < 100000 or t_end_phone_ms <= t_start_phone_ms:
+            raise HTTPException(422, "bad clip parameters")
+        ctype = (request.headers.get("content-type") or "").split(";")[0].strip()
+        if ctype not in CLIP_TYPES:
+            raise HTTPException(415, f"clip type must be one of {sorted(CLIP_TYPES)}")
+        cam = rt(c.cam_id)
+        if not cam.clock.ready:
+            raise HTTPException(409, "no clock sync for this camera yet")
+        t0_ms = float((await game(c.game_id))["t0_ms"])
+        d = clip_dir(c.game_id, call_id)
+        d.mkdir(parents=True, exist_ok=True)
+        name = f"{c.cam_id}_{seg:05d}.{CLIP_TYPES[ctype]}"
+        tmp = d / (name + ".part")
+        size = 0
+        with tmp.open("wb") as f:
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > CLIP_MAX_BYTES:
+                    f.close()
+                    tmp.unlink(missing_ok=True)
+                    raise HTTPException(413, "clip too large")
+                f.write(chunk)
+        if size == 0:
+            tmp.unlink(missing_ok=True)
+            raise HTTPException(422, "empty clip")
+        tmp.replace(d / name)
+        t_start = cam.clock.to_srv(t_start_phone_ms)
+        t_end = cam.clock.to_srv(t_end_phone_ms)
+        meta = {
+            "name": name,
+            "cam_id": c.cam_id,
+            "call_id": call_id,
+            "seg": seg,
+            "mime": ctype,
+            "bytes": size,
+            "t_start_srv_ms": t_start,
+            "t_end_srv_ms": t_end,
+            "t_game_start_s": (t_start - t0_ms) / 1000.0,
+            "t_game_end_s": (t_end - t0_ms) / 1000.0,
+            "sync_err_ms": cam.clock.sync_err_ms,
+            "uploaded_at_ms": now_ms(),
+            **await probe(d / name),
+        }
+        (d / (name + ".json")).write_text(json.dumps(meta), encoding="utf8")
+        jlog("clip uploaded", game_id=c.game_id, cam_id=c.cam_id, call_id=call_id, seg=seg, bytes=size)
+        return meta
+
+    @app.get("/api/clips/{game_id}/{call_id}")
+    async def list_clips(game_id: str, call_id: str, c: Claims = Depends(auth)) -> dict[str, Any]:
+        if game_id != c.game_id and not c.has("service"):
+            raise HTTPException(403, "clips of another game")
+        if not CALL_ID_RE.match(call_id):
+            raise HTTPException(422, "bad call id")
+        d = clip_dir(game_id, call_id)
+        clips = []
+        for meta in sorted(d.glob("*.json")) if d.exists() else []:
+            m = json.loads(meta.read_text(encoding="utf8"))
+            m["url"] = f"/api/clips/{game_id}/{call_id}/{m['name']}"
+            clips.append(m)
+        clips.sort(key=lambda m: (m["cam_id"], m["seg"]))
+        return {"game_id": game_id, "call_id": call_id, "clips": clips}
+
+    @app.get("/api/clips/{game_id}/{call_id}/{name}")
+    async def get_clip(
+        game_id: str, call_id: str, name: str, token: str | None = None, authorization: str | None = Header(None)
+    ) -> FileResponse:
+        # <video> can't send headers, so the token may come as ?token=
+        c = claims_from(token or (authorization[7:] if authorization and authorization.startswith("Bearer ") else None))
+        if game_id != c.game_id and not c.has("service"):
+            raise HTTPException(403, "clips of another game")
+        if not CALL_ID_RE.match(call_id) or not CLIP_NAME_RE.match(name):
+            raise HTTPException(404, "no such clip")
+        path = clip_dir(game_id, call_id) / name
+        if not path.exists():
+            raise HTTPException(404, "no such clip")
+        ext = name.rsplit(".", 1)[1]
+        mime = {v: k for k, v in CLIP_TYPES.items()}[ext]
+        return FileResponse(path, media_type=mime, headers={"Cache-Control": "private, max-age=3600"})
 
     # ------------------------------------------------------------ health
     @app.get("/api/healthz")
