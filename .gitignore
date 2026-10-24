@@ -44,3 +44,6 @@ data/local/
 .DS_Store
 Thumbs.db
 .idea/
+
+# runtime outputs
+rulepacks/house/

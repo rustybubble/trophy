@@ -1,24 +1,19 @@
-# Model and dependency licenses
+# Licenses: code, models, data and services
 
-This is a research inventory, not proof that each component has been integrated or cleared for every use. Verify terms for the revision, weights and assets selected. Agents may use any component whose terms fit the intended deployment; MIT/Apache are convenient defaults, not an exclusive list. Record source/revision, local use and required notices when incorporating third-party code. Follow [reuse and media guidance](rules-compliance.md); a demo setting does not waive license terms.
+This lists **candidates and adopted components**. When you adopt one, add its revision and where it's used, and keep the required notices. Code, weights and media have separate terms. See [reuse and media guidance](rules-compliance.md).
 
-| Component | License | Use |
-|---|---|---|
-| subatomic-hamster/replay | MIT per research inventory; verify selected revision | ideas and compatible code may be reused/adapted; retain notices and record incorporated source/revision |
-| courtcam core | MIT | planned dependency/adapter; retain notices and record incorporated source/revision |
-| RF-DETR | Apache-2.0 | core detector |
-| roboflow/trackers, supervision | Apache-2.0 / MIT | tracking, zones |
-| rtmlib | Apache-2.0 | pose with feet |
-| BlurBall, WASB-SBDT, TrackNetV3 | MIT code; **weight licenses unstated** | flight tracking; verify weight permissions separately |
-| TT3D, tt_tracker | MIT | table-tennis 3D/calibration references |
-| aiortc | BSD-3 | WebRTC ingest |
-| Practical-RIFE | MIT | slow-mo |
-| SAM 2.1 | Apache-2.0 | 2.5D cutouts (post-game) |
-| GVHMR / SMPL | non-commercial | optional 3D players |
-| ReCamMaster | MIT (Wan2.1 weights under their own license) | stretch |
-| deface | MIT | privacy blur |
-| PANNs | MIT | audio tags |
-| Remotion | free for teams of 3 or fewer employees | trophy clips |
-| Ultralytics YOLO, BaseballCV weights, pocket-drs | AGPL per research inventory | allowed where applicable terms can be met; document deployment implications |
-| Stockfish | not used | — |
-| OpenTTGames, CalTennis, PadelVic | non-commercial / research; check each dataset | use only within the selected dataset's permissions |
+| Component | License / terms | Use this weekend | Status |
+|---|---|---|---|
+| subatomic-hamster/replay @ `2db92c0` | MIT ("Copyright (c) 2026 Replay") | Player and auth code to adapt; **never** `docs/media/` or `samples/real/` (private game footage) | candidate |
+| courtcam @ `b2f5ff5` | MIT (core). The `[yolo]` extra pulls in AGPL ultralytics, so **don't install it** | Calibration (`calibrate`, `camera_calibration`), basketball make/miss; **don't redistribute its `docs/demo.gif`** | candidate |
+| BlurBall (cogsys-tuebingen) @ `2f0f549` | MIT code; **weights license unstated** (issue #2) | Ping-pong ball tracker; the user decides about public-demo use; no redistribution | candidate |
+| RF-DETR (Nano–Large) | Apache-2.0 (XL/2XL/Atto–Pico are PML) | People and ball detection (SHOULD) | candidate |
+| roboflow/trackers, supervision 0.30.9 | Apache-2.0 / MIT | Tracking | candidate |
+| rtmlib 0.0.16 | Apache-2.0 | Pose with feet (SHOULD) | candidate |
+| aiortc 1.15.0, PyAV 17.1.0 | BSD-3 / BSD-3 (FFmpeg components LGPL/GPL by build) | WebRTC ingest, only if needed | candidate |
+| SpacetimeDB 2.13 | BSL 1.1 for the server (check current terms) / client SDK license per npm | Shared world state | candidate |
+| Factory Droid SDK | Factory terms | House-rule compiler | candidate |
+| Cartesia, Anthropic, Google Gemini, Bitdeer AI Model Studio, Moss, Apify | Each provider's API terms | Voice, voters and answers, rulebook index and actor | candidate |
+| Rulebook text (ITTF, USA Pickleball, FIBA/NFHS, BWF, FIVB) | Each publisher's terms | Scraped only from public pages, quoted briefly with links and attribution | candidate |
+| CC BY clips (`docs/plan/clip-library.md`) | CC BY (credits in `data/clips/credits.json`) | Development, the backup demo and labels | candidate |
+| OpenTTGames | CC BY-NC | Evaluation only | optional |

@@ -1,6 +1,6 @@
 # Replay and courtcam: direct source review (2026-10-23)
 
-*The planning lead reviewed both repositories directly, reading fresh clones without running any code from them. This review supersedes the parts of [replay-repo-inventory.md](replay-repo-inventory.md) that it corrects. Every number quoted here is **Replay's own figure**, measured on Replay's private AMD RX 9070 XT ROCm box. None of them has been reproduced in Trophy.*
+*The planning lead reviewed both repositories directly, reading fresh clones without running any code from them. This review supersedes the parts of [the earlier inventory](../archive/replay-repo-inventory.md) that it corrects. Every number quoted here is **Replay's own figure**, measured on Replay's private AMD RX 9070 XT ROCm box. None of them has been reproduced in Trophy.*
 
 | Repo | Commit reviewed | Date | License |
 |---|---|---|---|

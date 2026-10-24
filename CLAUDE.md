@@ -1,151 +1,113 @@
 # CLAUDE.md: context for every agent working on Trophy
 
-Read this file for project context, then consult the plan and research relevant to the task. Explicit user instructions take precedence over repository guidance. The plans, ownership table, stack and priorities are starting points that agents may improve as they work.
+Read this file for project context, then the plan docs listed below. Explicit user instructions take precedence over repository guidance. Plans, owners, stack and priorities are starting points that agents may improve as they work.
 
 ## What we're building
-**Trophy** is a universal AI referee and post-game analyzer for casual pickup sports.
+**Trophy** is a universal AI referee for pickup games, built for **Cal Hacks 13.0 (Fri 10/23 to Sun 10/25, 2026)**.
+- **Phones become cameras.** Players open a link, and each phone streams video to the Mac.
+- **It keeps score and identifies fouls with honest confidence:**
+  - **AUTO** at p ≥ 0.90, called automatically;
+  - **BETA** shows p and can be challenged;
+  - **PLAYERS DECIDE** for what the sensors can't judge;
+  - judgment fouls are flagged as `foul_flag`, capped at BETA (D-17).
+- **Every call is spoken** (Cartesia).
+- **A challenge** opens an instant replay with an AI second opinion: Claude, Gemini and Bitdeer Model Studio vote in the background and never delay a call.
+- **Ask the ref:** a voice question gets an answer drawn from official rulebooks (an Apify actor → Moss → Claude, with citations).
+- **House rules** can be typed or spoken; a Factory Droid compiles them into the rule pack, tests them, and applies them after the judge approves.
 
-**During the game:** 2–4 phones open a PWA link and become cameras.
-- Trophy tracks the ball, players and objects and makes calls with **honest confidence**:
-  - **AUTO** at ≥ 0.90, called automatically;
-  - **BETA**, which stands but can be challenged and shows its uncertainty;
-  - **PLAYERS DECIDE**: rules the sensors can't judge.
-  - **Fouls are identified** (D-17): measurable violations go through the normal gate, and judgment fouls are flagged as `foul_flag` calls capped at BETA, with evidence.
-- Players challenge by voice, gesture or button, and get a multi-angle replay with an error ellipse.
-- Calls are **spoken** (Trophy is a voice referee).
-- House rules can be typed or spoken and are compiled into the rule pack by a Factory Droid.
+**Scope** (the user's outline): basketball (2/3-pointers, fouls, outs); ping pong (illegal serves: the toss rises **more than 6 in** off the open palm, and the path **from the hand to the hit stays within 30° of vertical**; the edge rule); two-hand touch football; pickleball (kitchen, outs); tennis and badminton (outs); volleyball (hand over the net, outs); the Droid; replay.
 
-**After the game:** the **Trophy Watch** web app (any browser) offers follow-a-player, moments, the ★ best play, a condensed game, broadcast mode, replay angles, play search, stats and coach cards, clips and 9:16 reels, and a watch party.
+**The weekend cut** (`docs/plan/three-agent-plan.md`):
+- **MUST:** live ping pong (scoring, the edge rule, illegal serves), spoken calls, challenge → replay → AI votes, Droid house rules, voice ask-the-ref.
+- **SHOULD:** recorded basketball 2s/3s on a CC BY clip.
+- Everything else is "coming next", and is labelled as not built.
 
-**28 sports, three perception families:**
-- **Flight:** table tennis, pickleball, badminton, tennis, volleyball, roundnet, padel, squash, four square, cup pong.
-- **Possession:** basketball, two-hand touch, soccer, ultimate, wiffle, kickball, cricket, dodgeball, hockey, touch rugby, handball.
-- **Resting object:** cornhole, mini golf, bowling, darts, bocce, horseshoes, Kan Jam, ladder toss, disc golf.
+**Prize tracks targeted:** Factory Droid SDK, Cartesia, Spacetime, Anthropic, Meta, Moss, Bitdeer AI Model Studio, Apify, and MLH (Gemini, Vultr, the GoDaddy/.Tech domain, Commit Fellowship), plus Cal Hacks overall. SubQ, Firecrawl, Deepgram and Convex are **not used**.
 
-Each sport is a **rule pack** (YAML) on top of one family pipeline.
-
-**Demo:**
-- **Current scope (user outline, 2026-10-23; see `docs/plan/three-agent-plan.md`):** basketball (2/3-pointers, fouls, outs); ping pong (illegal serves, the edge rule); two-hand touch football; pickleball (kitchen, outs); tennis/badminton (outs); volleyball (hand over the net, outs); the Droid "add your own rule"; replay features. **Cornhole and the other catalog sports are out of scope for now.**
-- **Live demo:** table tennis and a typed house rule.
-- **Recorded examples:** pickleball kitchen fault, badminton, two-hand touch rush count and touch, basketball.
-- **Sport wall:** 28 tiles marked LIVE / VERIFIED / PACK, each verified sport showing its measured accuracy.
-
-## Source-of-truth docs (in this repo)
-- `docs/plan/three-agent-plan.md`, `docs/plan/interfaces-v1.md` and `docs/plan/prompts/`: the current scope, three-agent split, Milestone 1, checkpoints and wire contracts. They take precedence over older plan text. Read these first when you are one of the three implementation agents.
-- `docs/plan/build-plan.md`: the working implementation plan: features F1–F19, §0 deployment architecture, §5B Trophy Watch, §7 milestones, §8 smoke tests.
-- `docs/plan/concept-v3.md`: the product, sport catalog, demo script and §9 integration priorities.
-- `docs/plan/clip-library.md`: licensed public clips per sport, and the license rules.
-- `docs/research/`: integration cards with exact pins, weights, input/output shapes and known bugs for every model. **Check here before guessing an API.**
-- `docs/decisions.md`: why things are the way they are. Record significant architecture changes so later agents have context.
-- `docs/progress.md`: the milestone checklist. Tick items and write measured numbers.
-- `docs/rules-compliance.md`: reuse, attribution and media permissions.
+## Read these first
+- `docs/plan/three-agent-plan.md`: scope, cut, track evidence, architecture, phases, checkpoints, workflow, open decisions.
+- `docs/plan/interfaces-v1.md`: the wire contracts (ids, time, coordinates, frame bus, calibration, events, observations, calls, Spacetime tables, replay, gateway API, `decide()`, voice, ask the ref, the Droid compiler).
+- `docs/plan/prompts/`: one prompt per implementation agent, plus `KICKOFF.md`.
+- `docs/decisions.md`: why things are the way they are (D-1 to D-23). Record significant changes there.
+- `docs/progress.md`: the weekend checklist. Write **measured** numbers only.
+- `docs/research/`: integration cards with exact pins, shapes and known bugs. **Check here before guessing an API.** These are dated evidence; re-verify before relying on them.
+- `docs/research/replay-source-review-2026-10-23.md`: what to reuse from Replay and courtcam, from a direct source review.
+- `docs/plan/clip-library.md`: CC BY clips per sport. `docs/rules-compliance.md`: reuse and media permissions.
+- `docs/archive/`: superseded plans, kept for history. **Don't treat them as current.**
 
 ## Agent autonomy
-- **Build on prior work.** Agents may learn from, extend, adapt, copy or vendor compatible licensed code from `subatomic-hamster/replay`, including its apps, renderers, services and infrastructure, as well as `courtcam`. There is no reference-only rule, mandatory rewrite or event-based implementation window. Preserve required notices and record the source/revision when incorporating code; see `docs/rules-compliance.md`.
-- **Choose the implementation.** Change architecture, dependencies, models, priorities and directory boundaries when that helps the task. Owners are coordination hints, not exclusive permissions. Explain substantial departures in `docs/decisions.md` and update affected consumers and docs.
-- **Choose where to run.** Local development, tests, inference, training and rendering are allowed when the hardware can handle them. GCP L4 and Vultr L40S remain useful defaults for GPU work; other providers are fine within the user's authorized resources and budget. Historical credit estimates are not spending authorization.
-- **Proceed with routine work.** Make reversible implementation choices and run relevant checks without asking for approval. Ask only for missing information that blocks progress or actions outside the user's authorization, such as destructive operations or new spending commitments.
-- **Treat research as dated evidence.** Verify APIs, compatibility and license terms when adopting them. Old recommendations, version pins and demo schedules are not permanent constraints.
+- **Build on prior work.** Agents may learn from, extend, adapt, copy or vendor compatible licensed code from `subatomic-hamster/replay` and `courtcam`. Preserve required notices and record the source and revision; see `docs/rules-compliance.md`.
+- **Choose the implementation.** Change architecture, dependencies and boundaries when that helps the task. Owners are coordination hints. Explain substantial departures in `docs/decisions.md` and update the affected consumers.
+- **Choose where to run.** The M5 Pro Mac is the default. Vultr is the GPU fallback. Any cloud spend needs the user's per-resource approval.
+- **Proceed with routine work.** Make reversible choices and run checks without asking. Ask only when information is missing and blocks progress, or for actions outside your authorization: spend, account actions, publishing, downloading third-party media, or filming people.
+- **Treat research as dated evidence.** Verify APIs and license terms when adopting them.
 
 ## Safeguards to retain
-1. **Protect credentials and access.** Keep secrets out of source control and logs; use environment variables or a secret store. Clients get scoped, short-lived tokens rather than server credentials. This prevents account and data exposure.
-2. **Represent results honestly.** Label mock data, synthetic fixtures and generated views. Report accuracy from labelled evaluations and distinguish measured results from estimates or upstream benchmarks. This keeps users and later agents from relying on invented evidence.
-3. **Respect licenses and permissions.** Preserve required notices and attribution. Check code, weights and media separately; record adopted components in `docs/licenses.md`. Copyleft and non-commercial components are allowed where their terms fit the intended use. A public repository or demo does not by itself grant reuse rights.
-4. **Protect participant privacy.** Use consented identity and face data, keep private footage private, and anonymize or blur non-consenting people in shared clips. Use media involving minors only with appropriate permission. These protections apply regardless of which pipeline or hosting provider is chosen.
-5. **Preserve user work and resource limits.** Keep unrelated changes and data intact, stay within authorized access and spending, and isolate experiments that could damage shared systems. Routine edits and checks need no extra approval.
+1. **Protect credentials and access.** Keep secrets out of source control and logs; use `.env` or a secret store. Clients get scoped, short-lived tokens (for example, Cartesia access tokens), never server keys.
+2. **Represent results honestly.** Label mock data, synthetic fixtures and generated views. Report accuracy only from labelled evaluations, and distinguish measurements from estimates and upstream benchmarks. Label uncalibrated AI vote probabilities as uncalibrated.
+3. **Respect licenses and permissions.** Preserve notices and attribution, check code, weights and media separately, and record adopted components in `docs/licenses.md`. BlurBall/WASB weights have unstated licenses, so the user decides whether to use them in the public demo.
+4. **Protect participant privacy.** Get consent from everyone filmed. Keep footage in `data/local/` (gitignored), and blur non-consenting people in anything shared. Never copy Replay's `docs/media/` or `samples/real/`, or courtcam's `docs/demo.gif` (real people).
+5. **Preserve user work and resource limits.** Keep unrelated changes intact, stay within authorized spending, and isolate risky experiments.
 
-Geometry-first measurable calls, calibrated decision models and the AUTO / BETA / PLAYERS DECIDE tiers are current product defaults. Agents may experiment with alternatives, but should validate changes before presenting them as reliable calls and continue to show uncertainty.
+Geometry-first measurable calls, the confidence gate and the AUTO / BETA / PLAYERS DECIDE tiers are product defaults. AI models never make a line call alone; they vote alongside geometry, and the judge decides.
 
-## Architecture at a glance
-Full details are in build-plan §0.
-
+## Architecture at a glance (details in the plan §2 and interfaces-v1)
 ```
-Phones (PWA) ──WebRTC 720p / WS-JPEG fallback + audio onsets──▶ GCP g2-standard-8 (L4), docker compose:
-  ingest (aiortc) → shared-memory frame rings → flight | possession | resting | audio  ──Redis Streams──▶ engine
-  engine (rule packs, CEL, tiers, decide(): Snap → Gemini → Claude votes → geometry) ──reducers (HTTP)──▶ spacetimedb
-  spacetimedb (live game state) ──TS SDK subscriptions──▶ phones (beep/flash/voice), dashboard, watch app
-  broadcast (Claude commentary → fact validator → Cartesia), compiler (Factory Droid), rules-index (Firecrawl → Moss)
-  gateway (FastAPI: WebRTC signaling, clock sync, signed GCS URLs) behind Caddy (HTTPS)
-Post-game: Vultr L40S (RIFE, SAM 2.1 2.5D angles, GVHMR) · Remotion Lambda (AWS) · GCS (recordings, clips)
+Phones (PWA, HTTPS via the MLH domain → Caddy on the Mac) ─JPEG over WSS + audio onsets─▶ gateway ─▶ Redis frames:{cam}
+   video stays on Redis + the local recorder; it NEVER goes into Spacetime
+vision module (flight: ball tracker, bounce, edge, serve toss) ─▶ observations ─▶ Spacetime observation/track_sample  (+ Redis ev:* hot path)
+engine (rule packs, CEL, scoring, gate; background decide(): Claude ‖ Gemini ‖ Bitdeer + geometry) ─reducers─▶ Spacetime
+compiler (Factory Droid; trigger = house_rule row) ─▶ Spacetime ; rules (Apify actor → Moss → Claude) ◀─ gateway /api/ask
+Spacetime ─subscriptions─▶ phones (Cartesia voice, banner, replay), dashboard (score, votes, Droid panel, ask transcript, world view)
 ```
+- **Spacetime is the shared world state:** metadata from every camera plus game state, synced to every device and agent (D-21).
+- **Writers are backend services only:** vision (observations), engine (game state), compiler (house-rule progress).
+- **Perception emits measurements; only rule packs decide** (D-18).
 
 | Service | Dir | Port | Env |
 |---|---|---|---|
-| gateway | `services/gateway` | 8000 | py3.11 FastAPI |
-| ingest | `services/ingest` | host network, UDP 32768–60999 | py3.11 aiortc 1.15.0, av ≥ 17 |
-| flight | `services/flight` | — | py3.11, numpy 1.26.4, opencv-contrib 4.10.0.84, torch CUDA 12 |
-| possession, resting | `services/possession`, `services/resting` | — | py3.11, rfdetr[train] 1.11.2, trackers 2.6.1, supervision 0.30.9, rtmlib 0.0.16 + onnxruntime-gpu |
-| courtcam adapter | `services/courtcam-adapter` | 8050 | **py3.12** (courtcam needs `>=3.12,<3.13`) |
-| audio | `services/audio` | — | py3.11, librosa 0.11.0, panns_inference |
-| engine | `services/engine` | — | py3.11, cel-python, transitions |
-| broadcast | `services/broadcast` | 8300 | py3.11 + Node (Remotion) |
+| gateway (frames, clock, ctl, calibrate proxy, voice token, ask proxy, replay) | `services/gateway` | 8000 | py3.11 FastAPI |
+| recorder | `services/recorder` | — | py3.11 + ffmpeg (`h264_videotoolbox`) |
+| ingest (WebRTC; only if JPEG-WS < 25 fps) | `services/ingest` | — | py3.11, `aiortc==1.15.0`, `av==17.1.0` |
+| courtcam-adapter (`/calibrate`) | `services/courtcam-adapter` | 8050 | **py3.12**, courtcam @ `b2f5ff5` (no extras) |
+| flight (vision module, ping pong) | `services/flight` | — | py3.11, numpy 1.26.4, opencv-contrib 4.10.0.84, torch (MPS) |
+| engine (+ `decide/`) | `services/engine` | — | py3.11, cel-python |
 | compiler | `services/compiler` | 8200 | Node 20, `@factory/droid-sdk` |
-| rules-index | `services/rules-index` | 8100 | py3.11, Firecrawl, Moss SDK |
-| spacetimedb | `spacetime/` | 3000 | `spacetime start` + our module |
-| redis | — | 6379 | redis:7 |
-| postgame | `services/postgame` | — | Vultr; py3.10/3.11 |
-| PWA, dashboard, watch | `apps/pwa`, `apps/dashboard`, `apps/watch` | served by Caddy at `/cam`, `/`, `/watch` | Vite + React + TS (+ Three.js, Spark) |
+| rules (+ `actors/rulebook-scraper`) | `services/rules` | 8100 | py3.11, Apify SDK, Moss SDK |
+| players / possession (SHOULD: basketball) | `services/players`, `services/possession` | — | py3.11, rfdetr 1.11.2 (CoreML), trackers 2.6.1, supervision 0.30.9, rtmlib 0.0.16 |
+| spacetimedb | `spacetime/` (TS module) | 3000 | SpacetimeDB 2.13 (`spacetime start`) |
+| redis | — | 6379 | redis 7 |
+| PWA, dashboard | `apps/pwa`, `apps/dashboard` | `/cam`, `/` | Vite 7 + React 19 + strict TS |
 
-**Contracts** live in `packages/contracts/` (JSON Schema): Event, Call, Decide, RulePack. Agents may evolve them; update affected producers, consumers and checks together, and document breaking changes in `docs/decisions.md`.
+Everything runs **natively on the M5 Pro** (D-12) under a `Procfile` (`make dev`). Docker on a Mac can't reach the GPU, so `docker-compose.yml` is only the later Linux path.
 
-**Redis streams:** `ev:flight`, `ev:possession`, `ev:resting`, `ev:audio` (family → engine); `ctl:engine` (control).
-
-## Suggested owners
-| Owner | Area |
+## Owners (this weekend)
+| Agent | Area |
 |---|---|
-| **A** | PWA + ingest + clock sync + resting family + replays (challenge UI, auto-director, trophy clip) + Trophy Watch app |
-| **B** | Flight family + audio + calibration (via courtcam) + 3D |
-| **C** | Possession family (basketball, two-hand touch, soccer, ultimate, dodgeball) |
-| **D** | Engine + rule packs + `decide()` / Snap / calibration + Droid compiler + Moss / ask-the-ref + commentary + sport wall + search/stats/review |
-
-## Priorities and gates
-- **P0:**
-  - PWA join, record and stream; clock sync; beep/flash; challenge replay.
-  - Flight on table tennis (live); possession on basketball (recorded). M1 is defined in `docs/plan/three-agent-plan.md` §3.
-  - Engine + 3 packs; `decide()`; commentary.
-- **P1:**
-  - Pickleball, badminton and two-hand touch verified; roundnet live.
-  - House-rule Droid; ask-the-ref; coach.
-  - Sport wall; trophy clip; Trophy Watch core (moments, best play, condensed, follow, search, stats, review queue); calibration slide.
-- **P2:**
-  - More verified sports; 3D / 2.5D angles; ReCamMaster; blur; watch party.
-- **Milestones:**
-  - Each P0 family makes at least 1 correct call; use "calls within 2 s after the point" as a fallback while improving latency.
-  - Stabilize the selected demo or release scope and record measured results before sharing it.
-  - Adjust scope and sequencing to the current task; there is no fixed submission deadline.
+| **1: platform, capture, voice and replay** (integration owner) | Contracts, py-trophy, state client, Spacetime module, gateway, recorder, PWA, dashboard, Cartesia client, domain + Caddy, `make dev`/`e2e`, CI, checkpoints, video + README |
+| **2: ball and court** | Calibration, the ping-pong vision module (ball, bounce, edge, serve toss), observations, clip tools, labels, Vultr fallback |
+| **3: rules, AI and Droid** | Engine, rule packs + scoring, `decide()` voters, Factory Droid compiler, Apify actor + Moss + ask the ref, sponsor README sections; basketball (SHOULD) |
 
 ## Gotchas
-These are compatibility notes from earlier research; check whether they still apply.
-- **Use reproducible versions; upgrades are welcome after compatibility checks.**
-  - numpy 2.x, OpenCV 5, librosa 1.0 and torch 2.14 break BlurBall and WASB.
-  - supervision 0.31 removed `sv.ByteTrack`.
-  - Keep Roboflow's `inference` package out of the live environments.
-- **BlurBall:** fix the BGR→RGB bug in its inference script, turn its duplicate-frame filter **on**, and use **white** table-tennis balls.
-- **WASB has no inference code:** run its weights through BlurBall's runners. TrackNetV3 is post-game only.
-- **onnxruntime-gpu can silently run on the CPU.** Check that VRAM is actually used.
-- **RF-DETR:** use TensorRT, because the ONNX CUDA path is slow. Print COCO `class_id`s before hard-coding them.
-- **ByteTrack ignores class:** run separate person and ball trackers, and lower the ball activation threshold.
-- **aiortc:** drain receive queues into a latest-frame slot (they're unbounded). It offers only H.264 Constrained Baseline or VP8.
-- **iOS Safari capture:**
-  - About 30 fps; Safari ignores `max` frameRate above 16, so read back `getSettings()`.
-  - No vibration; use a beep plus a full-screen flash instead.
-  - Pin the rear lens by `deviceId`, and use landscape only.
-- **Claude API (2026-10-21+):** `temperature` is rejected, and forced `tool_choice` returns 400 on Opus/Sonnet 5.5, so use `output_config.format`. Model IDs: `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`.
-- **SubQ Snap:**
-  - Endpoint `POST https://api.subq.ai/v1/systemone`, model `subq-snap-1.1`.
-  - Use `probabilities[choice]`, not `confidence`.
-  - At most 4 images, which it downscales.
-  - Retry only 429 and 5xx.
-- **Cartesia:** `sonic-3.6` WebSocket. Lower `max_buffer_delay_ms`; use the inline `<emotion value="excited"/>` tag; test both auth header forms.
-- **vLLM:** `guided_choice` was removed in 0.12; use `structured_outputs.choice`.
-- **Remotion:** pin 4.0.538; `--props` must be a file path on Windows. Lambda concurrency on a new account may be 10.
+These are compatibility notes from research; check whether they still apply.
+- **Pins:** numpy 2.x, OpenCV 5 and torch ≥ 2.6 (`torch.load` `weights_only`) break BlurBall. supervision 0.31 removed `sv.ByteTrack`. Keep Roboflow's `inference` package out of live environments.
+- **BlurBall:** it asserts `device == "cuda"` (patch it for MPS); fix the BGR→RGB bug; dedupe frames by `seq`; use **white** balls.
+- **On the Mac, onnxruntime/CoreML can silently fall back to the CPU.** Log the providers actually used.
+- **RF-DETR:** on the Mac, use the CoreML fp32 export (not fp16). Print COCO `class_id`s before hard-coding them.
+- **ByteTrack ignores class:** run separate person and ball trackers.
+- **aiortc:** drain receive queues into a latest-frame slot. It offers only H.264 CB or VP8. Tunnels don't carry its UDP.
+- **iOS Safari:** about 30 fps (read back `getSettings()`); no vibration; pin the rear lens by `deviceId`; landscape only; HTTPS is required.
+- **Claude API:** `temperature` is rejected, and forced `tool_choice` returns 400 on Opus/Sonnet 5.5, so use `output_config.format`. Models: `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`.
+- **Bitdeer Model Studio:** OpenAI-compatible at `https://api-inference.bitdeer.ai/v1`; vision via `image_url`; base64 images < 1 MB.
+- **Cartesia:** Sonic TTS over WebSocket (`context_id` continuations, `cancel`, inline `<emotion value="excited"/>`). Ink-2 STT at `wss://api.cartesia.ai/stt/turns/websocket` (turn detection, English only). Browsers use an access token + version as query params; verify the current version string.
+- **Factory Droid SDK:** `@factory/droid-sdk` (Node ≥ 18) drives the `droid` CLI. The import path differs between the docs and the README, so check the shipped types.
+- **Moss:** package names conflict between sources; check docs.moss.dev before pinning.
+- **SpacetimeDB 2.13:** `spacetime start` has no TLS (proxy it at `/stdb/*`). Reducers over HTTP: `POST /v1/database/{db}/call/{reducer}`.
 
 ## How to work in this repo
-- Consult the matching F-section and research card when useful; update the plan if the task needs a different approach.
-- Use the feature's **"Done when"** criteria as a starting point. Run checks proportional to the change and record relevant measured results in `docs/progress.md`; documentation-only changes do not need inference runs.
-- Work across directories as needed. Follow the active user's or environment's branch convention; owner-prefixed branches are optional.
-- Prefer focused changes and keep shared workflows usable. Preserve unrelated work and report any checks you could not run.
-- Suggested commit format: `<feat|fix|chore|docs>: message`.
-- Current tooling: Python uses ruff + pytest and per-service `pyproject.toml`; TypeScript uses Vite + React + strict TS, prettier + eslint. Adapt tooling when justified.
-- For services deployed through Compose, update the `Dockerfile` and `docker-compose.yml` together. The current GPU, frame-ring and ingest design needs GPU device reservations, `ipc: host` and `network_mode: host` respectively; revisit these when changing the design.
-- Store large weights, footage and recordings in ignored local paths or suitable object storage. Small licensed, non-sensitive test fixtures may be versioned when useful; avoid bloating git with generated media.
+- Work in your agent worktree, on short-lived branches, with small PRs to `main`. Rebase before each PR, and merge at least every ~2 h this weekend (plan §6).
+- Contract changes go through `contracts/*` PRs, which Agent 1 merges.
+- Run checks proportional to the change. Report the checks you couldn't run.
+- Commit format: `<feat|fix|chore|docs>: message`.
+- Tooling: Python uses `uv`, ruff and pytest, with a `pyproject.toml` per service. TypeScript uses Vite + React + strict TS, prettier and eslint.
+- Store weights, footage and recordings in ignored local paths. Only small, licensed, non-identifying synthetic fixtures (≤ 5 MB) are versioned.

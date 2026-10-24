@@ -1,91 +1,22 @@
-# Live stack for the GCP g2-standard-8 (1x L4) VM. Post-game services run on Vultr (see infra/vultr).
-# Each service builds from its own directory/Dockerfile (agents create the Dockerfiles; pins are in each README).
+# Linux deployment sketch for after the weekend. NOT used at Cal Hacks: on the Mac every service runs
+# natively via `make dev` (Docker on macOS has no GPU access). Agents create the Dockerfiles when deploying.
+# Video frames stay on Redis + the recorder; SpacetimeDB holds metadata only (D-21).
 x-gpu: &gpu
   deploy:
     resources:
       reservations:
-        devices:
-          - driver: nvidia
-            count: 1
-            capabilities: [gpu]
+        devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
 
 services:
-  redis:
-    image: redis:7
-    ports: ["6379:6379"]
-
-  spacetimedb:
-    build: ./spacetime
-    ports: ["3000:3000"]
-    volumes: ["spacetime-data:/var/lib/spacetime"]
-
-  gateway:
-    build: ./services/gateway
-    env_file: .env
-    ports: ["8000:8000"]
-    depends_on: [redis, spacetimedb]
-
-  ingest:
-    build: ./services/ingest
-    env_file: .env
-    network_mode: host      # WebRTC needs UDP 32768-60999 on the host
-    ipc: host               # shared-memory frame rings
-    depends_on: [redis]
-
-  flight:
-    build: ./services/flight
-    <<: *gpu
-    env_file: .env
-    ipc: host
-    depends_on: [redis, ingest]
-
-  possession:
-    build: ./services/possession
-    <<: *gpu
-    env_file: .env
-    ipc: host
-    depends_on: [redis, ingest]
-
-  resting:
-    build: ./services/resting
-    <<: *gpu
-    env_file: .env
-    ipc: host
-    depends_on: [redis, ingest]
-
-  courtcam-adapter:
-    build: ./services/courtcam-adapter
-    env_file: .env
-    ipc: host
-    ports: ["8050:8050"]
-
-  audio:
-    build: ./services/audio
-    env_file: .env
-    depends_on: [redis]
-
-  engine:
-    build: ./services/engine
-    env_file: .env
-    depends_on: [redis, spacetimedb]
-
-  broadcast:
-    build: ./services/broadcast
-    env_file: .env
-    ports: ["8300:8300"]
-    depends_on: [spacetimedb]
-
-  compiler:
-    build: ./services/compiler
-    env_file: .env
-    ports: ["8200:8200"]
-    depends_on: [spacetimedb]
-
-  rules-index:
-    build: ./services/rules-index
-    env_file: .env
-    ports: ["8100:8100"]
-
+  redis: {image: "redis:7"}
+  spacetimedb: {build: ./spacetime, ports: ["3000:3000"], volumes: ["spacetime-data:/var/lib/spacetime"]}
+  gateway: {build: ./services/gateway, env_file: .env, depends_on: [redis]}
+  recorder: {build: ./services/recorder, env_file: .env, depends_on: [redis], volumes: ["./data/local:/data/local"]}
+  courtcam-adapter: {build: ./services/courtcam-adapter, env_file: .env}
+  flight: {build: ./services/flight, <<: *gpu, env_file: .env, depends_on: [redis, spacetimedb]}
+  engine: {build: ./services/engine, env_file: .env, depends_on: [redis, spacetimedb]}
+  compiler: {build: ./services/compiler, env_file: .env, depends_on: [spacetimedb]}
+  rules: {build: ./services/rules, env_file: .env}
   caddy:
     image: caddy:2
     ports: ["80:80", "443:443"]
@@ -93,7 +24,6 @@ services:
       - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./apps/pwa/dist:/srv/cam:ro
       - ./apps/dashboard/dist:/srv/dashboard:ro
-      - ./apps/watch/dist:/srv/watch:ro
       - caddy-data:/data
     env_file: .env
     depends_on: [gateway]

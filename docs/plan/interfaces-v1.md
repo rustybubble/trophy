@@ -1,6 +1,6 @@
 # Trophy interfaces v1: the contracts the three agents build against
 
-*Planning lead, 2026-10-23. Status: **v1 agreed for Milestone 1** (live ping pong + recorded basketball). Companion to [three-agent-plan.md](three-agent-plan.md).*
+*Planning lead, 2026-10-23; revised 2026-10-24 for the **Cal Hacks demo weekend**. Status: **v1 agreed**. Companion to [three-agent-plan.md](three-agent-plan.md). The weekend additions are §15 (`decide()` voters: Claude, Gemini, Bitdeer), §16 (Cartesia voice), §17 (ask the ref: Apify → Moss → Claude) and §18 (the Factory Droid compiler). SubQ, Firecrawl and Deepgram are not used.*
 
 This file is the source of truth for wire formats **until Agent 1 lands checkpoint C0**. After that, the JSON Schemas in `packages/contracts/` and the generated types win, and this file is the narrative. If they disagree, whoever notices fixes this file. **[OPEN]** marks unresolved items.
 
@@ -74,8 +74,13 @@ recorder (A1)     reads frames, trk:* → writes data/local/recordings/{game}/{c
 engine (A3)       reads ev:*, ctl:engine → reducers → SpacetimeDB (A1 module) → subscriptions → PWA, dashboard
 courtcam-adapter (A2) ← POST /calibrate from the gateway
 ```
+```
+compiler (A3, Node + Factory Droid SDK) ◀─subscribes─ Spacetime house_rule rows ─▶ reducers (plan/diff/results) ; writes rulepacks/house/…
+rules (A3, py3.11) ◀─ gateway POST /api/ask ; Apify actor output → Moss index ; Claude answers from retrieved clauses
+engine (A3) ─ on challenge: decide() fan-out to Claude ‖ Gemini ‖ Bitdeer (crops from gateway /api/replay/.../frames)
+```
 **Rules:**
-1. Only the engine writes to SpacetimeDB; the reducers accept only the engine's service identity.
+1. Only **backend services** write to SpacetimeDB: the **vision modules** (`observation` and `track_sample` only, D-21), the **engine** (game state, calls, votes, ask log) and the **compiler** (house-rule plan, diff and results only). Reducers check the caller's service identity. **Video frames never go into Spacetime.** They stay on the Redis frame bus and in the local recorder.
 2. Clients read through `@trophy/state-client` and write through the gateway (`POST /api/ctl` → `ctl:engine`).
 3. Perception reads Redis only.
 4. The frame bus is transport-agnostic: JPEG-WS, aiortc and the clip player all write the same format.
@@ -151,7 +156,7 @@ Streams `ev:flight` (A2), `ev:players` (A3), `ev:possession` (A3) and `ev:audio`
 | `contact` | A2 | `{side, kind: "racket"\|"hand"\|"body"\|"unknown", height_m?, onset_id?}` | A ball reversal near a player, plus an onset |
 | `net` | A2 | `{kind: "touch"\|"into"\|"over", from_side}` | |
 | `ball_dead` | A2 | `{reason: "lost"\|"floor"\|"stopped"\|"out_of_view", last_side}` | A hint that the rally has ended |
-| `serve_toss` (M2) | A2 | `{height_m, sigma_height_m, angle_from_vertical_rad, sigma_angle_rad, server_side}` | Measured from the palm-release frame to the apex |
+| `serve_toss` | A2 | `{server_side, release: {t_s, pos_m}, apex: {t_s, pos_m}, contact: {t_s, pos_m}, height_m, sigma_height_m, rise_angle_rad, fall_angle_rad, angle_from_vertical_rad, sigma_angle_rad, palm_still_s, observable_plane: "xz"\|"yz"\|"mixed"}` | **Weekend MUST.** `release` is the first frame the ball rises from the still open palm behind the end line; `apex` is the top of the toss; `contact` is the racket hit (onset + reversal). `height_m = apex.z − release.z`. `angle_from_vertical_rad = max(rise, fall)`, the angles of the release→apex and apex→contact segments from vertical (the **"30° from the hand to the hit"** rule). With one camera, depth comes from the ball's known 40 mm diameter + calibration; σ is larger for motion toward or away from the camera, and `observable_plane` says which plane is well measured. **Put the camera side-on at the net line** |
 | `person_feet` (M2) | A3 | `{player_id?, team_id?, feet_m: [[x,y], …], min_signed_dist_m: {<zone>: m}, sigma_m, airborne_p, ref_event_id}` | Emitted for referenced contacts (kitchen rule) |
 | `shot` | A3 | `{shooter_track_id, team_id?, release_pos_m: [x,y], behind_arc_p, on_line_p, made: true\|false\|null, made_p, attempt_points_hint: 2\|3}` | `made = null` means courtcam's "can't tell", which caps at BETA |
 | `line_cross` (M2) | A2/A3 | `{object: "ball"\|"player", boundary, holder_track_id?, p_out}` | Basketball and football outs |
@@ -160,10 +165,14 @@ Streams `ev:flight` (A2), `ev:players` (A3), `ev:possession` (A3) and `ev:audio`
 | `touch` (M3) | A3 | `{defender_track_id, carrier_track_id, both_hands_p, dt_s}` | Two-hand touch |
 | `heartbeat` | all | `{service, fps, lag_ms, model, device, ep}` | At most 1 per 5 s per service per camera |
 
+### 7.1 Observations in Spacetime (the shared world state, D-21)
+Every event a vision module puts on `ev:*` is **also** written to the Spacetime `observation` table via `trophy.world.ObservationWriter` (py-trophy). That writer batches every 100 ms, or immediately for rally-ending types, through the reducer `post_observations(json[])`. Phones, the dashboard and the AI agents (LLM judge, Droid, ask the ref) all read this one sport-agnostic record. The engine keeps reading Redis `ev:*` for its millisecond hot path. The two carry identical event JSON, keyed by `id`, so they can't disagree.
+
 ## 8. Track streams (for replay overlays and later Watch)
 - `trk:ball:{cam}` (A2), one entry per processed frame: `json = {t_game_s, seq, px: [x,y] | null, conf, pos_m?: [x,y,z], blur_len_px?, blur_angle_rad?}`. MAXLEN ~ 20000.
 - `trk:players:{cam}` (A3), at 10–15 Hz: `json = {t_game_s, seq, players: [{track_id, team_id?, bb_px: [x,y,w,h], feet_m?: [[x,y],…], kp_px?: [[x,y,c]×26 Halpe-26]}]}`.
 - The recorder (A1) persists both alongside the video for replay overlays.
+- **Spacetime `track_sample`:** the vision module also writes the ball track **down-sampled to 10 Hz** (`{cam_id, t_game_s, pos_m?, px?, conf}`), with a rolling retention of the last 120 s that the engine prunes, so every device and agent can draw or reason about the live trajectory without video.
 
 ## 9. Control commands (gateway → engine): `ctl:engine`, `trophy.ctl.v1`
 Each entry has one field, `json`: `{schema, req_id, cmd, game_id, t_srv_ms, by_cam_id, args{}}`. Clients may send only the commands their role allows (✓ below); the gateway enforces this.
@@ -180,8 +189,10 @@ Each entry has one field, `json`: `{schema, req_id, cmd, game_id, t_srv_ms, by_c
 | `adjust_score` | `{team_id, delta}` | ✓ judge | A manual correction, logged as an `info` call |
 | `end_period` | `{}` | ✓ judge | End the game, set or half |
 | `end_game` | `{}` | ✓ judge | |
-| `submit_house_rule` (M2) | `{text}` | ✓ judge | Triggers the Droid compiler |
-| `approve_house_rule` (M2) | `{rule_version}` | ✓ judge | Hot-loads the pack version |
+| `submit_house_rule` | `{text, source: "typed"\|"voice"}` | ✓ judge | The engine inserts a `house_rule` row (status `pending`). **That row is the Droid's trigger** (§18) |
+| `approve_house_rule` | `{rule_version}` | ✓ judge | The engine validates and hot-loads `rulepacks/house/{game_id}/{sport}.v{n}.yaml` from the next rally; an `info` call is spoken: "House rule added: …" |
+| `reject_house_rule` | `{rule_version}` | ✓ judge | Status `rejected` |
+| `ask_logged` | `{question, answer, citations, latency_ms}` | gateway only | The engine writes an `ask` row (dashboard transcript) |
 
 ## 10. Calls: `trophy.call.v1` (engine → SpacetimeDB `call` table)
 | Field | Req | Notes |
@@ -191,7 +202,7 @@ Each entry has one field, `json`: `{schema, req_id, cmd, game_id, t_srv_ms, by_c
 | `outcome` | ✓ | For example `point_A`, `in`, `out`, `edge_good`, `side_fault`, `made_3`, `made_2`, `illegal_toss_height` |
 | `team_id`, `points` | | Who it favours and the points awarded |
 | `p` | ✓ | Probability of `outcome`, calibrated where a calibration exists, otherwise labelled `p_source: "heuristic"` |
-| `p_source` | ✓ | `geometry`, `heuristic`, `decide:<backend>` or `manual` |
+| `p_source` | ✓ | `geometry`, `heuristic`, `decide:ensemble` (geometry + voters, §15) or `manual` |
 | `tier` / `shown` | ✓ | The gate (below) |
 | `text` | ✓ | Display line (≤ 80 chars), e.g. `"Edge ball — good. Point A (71%)"` |
 | `speech` | ✓ | Plain spoken line, e.g. `"Edge ball. Good. Point, A."` |
@@ -225,10 +236,17 @@ Each entry has one field, `json`: `{schema, req_id, cmd, game_id, t_srv_ms, by_c
 | `call` | `call_id` | the full Call (§10); `evidence_json`, `overlay_json`, `cue_json` |
 | `score` | `(game_id, team_id)` | `points, games?, sets?, display, updated_at_ms` (`display` is a sport-formatted string, e.g. `"10–9"` or `"40–30, 3–2"`) |
 | `challenge` | `challenge_id` | `game_id, call_id, by_cam_id, status, result?, created_at_ms, resolved_at_ms?` |
-| `house_rule` (M2) | `rule_version` | `game_id, text, status (pending\|compiling\|ready\|approved\|failed), plan, diff, results_json` |
-| `player` (M2) | `player_id` | `game_id, name, team_id, consent_name, consent_face` |
+| `house_rule` | `rule_version` | `game_id, sport, text, source, status (pending\|compiling\|ready\|approved\|rejected\|failed), backend (droid\|claude-fallback), plan_md, steps_json (streamed), diff, results_json ({tests:[{name, before, after, pass}], calls_changed:[…]}), pack_path, error?, created_at_ms, updated_at_ms` |
+| `ai_vote` | `(challenge_id, backend)` | `call_id, backend (claude\|gemini\|bitdeer), model, choice, probs_json, latency_ms, error?, rationale (≤ 140 chars)` |
+| `observation` | `event_id` | `game_id, cam_id(s), t_game_s, sport, type, source, track_id?, team_id?, side?, pos_json?, sigma_m?, conf, payload_json, supersedes?` (one row per Event, §7.1) |
+| `track_sample` | `(cam_id, t_game_s)` | `game_id, object (ball\|player:<id>), pos_json?, px_json?, conf` (10 Hz, rolling 120 s) |
+| `ask` | `ask_id` | `game_id, sport, question, answer, citations_json ([{rule_id, title, url, quote}]), latency_ms, created_at_ms` |
+| `player` (later) | `player_id` | `game_id, name, team_id, consent_name, consent_face` |
 
-**Reducers** (engine identity only): `upsert_game`, `upsert_camera`, `open_rally`, `close_rally`, `post_call`, `update_call_status`, `set_score`, `open_challenge`, `resolve_challenge`, `upsert_house_rule`.
+**Reducers.**
+- *Engine identity:* `upsert_game`, `upsert_camera`, `open_rally`, `close_rally`, `post_call`, `update_call_status`, `set_score`, `open_challenge`, `resolve_challenge`, `post_ai_vote`, `insert_house_rule`, `set_house_rule_status`, `post_ask`.
+- *Compiler identity:* `update_house_rule_progress` (plan, steps, diff, results, status ∈ compiling/ready/failed only).
+- *Vision identity:* `post_observations`, `post_track_samples`. *Engine:* `prune_track_samples`.
 
 **Client interface** (`@trophy/state-client`; the apps code only against this):
 ```ts
@@ -241,7 +259,9 @@ export interface TrophyState {
   onScore(cb: (s: Score[]) => void): () => void;
   onRally(cb: (r: Rally) => void): () => void;
   onChallenge(cb: (c: Challenge) => void): () => void;
-  onHouseRule?(cb: (h: HouseRule) => void): () => void;   // M2
+  onHouseRule(cb: (h: HouseRule) => void): () => void;
+  onAiVote(cb: (v: AiVote) => void): () => void;
+  onAsk(cb: (a: Ask) => void): () => void;
 }
 export function createState(impl: "mock" | "spacetime" | "ws", opts?: {uri?: string; module?: string; script?: MockScript}): TrophyState;
 ```
@@ -272,11 +292,66 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 | `WS /ws/frames` | §5.1 |
 | `WS /ws/ctl` | Client → server: `ping {t0}`, `health {…}`, `onset {t_phone_ms, peak, energy}`, `call_ack {…}`. Server → client: `pong {t0, t1, t2}`, `sync {offset_ms, sync_err_ms}`, `cmd {…}` |
 | `GET /replay/...` | §12 |
+| `GET /replay/{game_id}/frames?cam=&t0=&t1=&n=4&crop=x,y,w,h` | → JSON `{frames: [{t_game_s, jpeg_b64}]}`. Internal (engine service token); used for `decide()` crops, each JPEG kept < 1 MB |
+| `GET /voice/token` | → `{access_token, expires_at_ms}`: a short-lived Cartesia token minted server-side (§16). Never the API key |
+| `POST /ask` | `{question, sport?}` → proxied to the `rules` service `POST /ask` (§17) → `{answer, speech, citations, latency_ms}`; the gateway then sends an `ask_logged` ctl command |
 | `GET /healthz` | → `{ok, redis, adapter, recorder}` |
 
 ## 14. Dev and runtime conventions (M5 Pro)
 - **One HTTPS origin for phones** (OPEN-2). Caddy + a DNS-01 certificate for a real domain pointing at the Mac's LAN IP is required for WebRTC and best for 720p30. A tunnel (cloudflared/ngrok) works for WebSocket only and adds latency, so it's acceptable for day-1 UI work only.
 - **Ports:** gateway 8000, courtcam-adapter 8050, SpacetimeDB 3000, Redis 6379, PWA 5173, dashboard 5174. Each worktree adds its offset (A1 +0, A2 +100, A3 +200).
 - **Native processes** in per-service `uv` venvs, run under a `Procfile` (`make dev`). The `docker-compose.yml` is the Linux/AWS path.
-- **`.env`** is never committed: `TROPHY_TOKEN_SECRET`, `REDIS_URL`, `SPACETIME_URI`, `SPACETIME_MODULE`, `SPACETIME_SERVICE_TOKEN`, plus optional keys (Anthropic, SubQ, Factory, Cartesia, Roboflow).
+- **`.env`** is never committed: `TROPHY_TOKEN_SECRET`, `REDIS_URL`, `SPACETIME_URI`, `SPACETIME_MODULE`, `SPACETIME_ENGINE_TOKEN`, `SPACETIME_COMPILER_TOKEN`, `ANTHROPIC_API_KEY`, `CLAUDE_MODEL`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `BITDEER_API_KEY`, `BITDEER_BASE_URL=https://api-inference.bitdeer.ai/v1`, `BITDEER_VISION_MODEL`, `CARTESIA_API_KEY`, `CARTESIA_VERSION`, `CARTESIA_VOICE_CALLS`, `CARTESIA_VOICE_REF`, `FACTORY_API_KEY`, `MOSS_PROJECT_ID`, `MOSS_PROJECT_KEY`, `APIFY_TOKEN`, optional `ROBOFLOW_API_KEY`. Ports for the new services: `rules` 8100, `compiler` 8200.
+
+---
+
+## 15. `decide()`: the AI second opinion on challenges (Agent 3)
+- **When and how fast: never on the live path.**
+  - The engine **speculatively** starts the voters **in the background** when it posts a call whose rule declares `check: ensemble` with 0.35 < p < 0.75 (the edge rule, serve-toss calls near the limits, can't-tell baskets), or when any such call is challenged and hasn't been voted on yet.
+  - The spoken call is never delayed. The voters run **in parallel** (so the cost is the slowest one, not the sum), each with a **4 s timeout**.
+  - A challenge's replay starts immediately, and votes stream into the panel as they arrive.
+  - **Measure the voter latencies in P0.** If one stays slow, switch it to a faster model.
+  - **Decision models never make a line call alone** (D-5): they vote on crops, and geometry stays in the blend.
+- **Request** (`trophy.decide.v1`): `{question, options: ["EDGE_GOOD", "SIDE_FAULT"], context (event facts as text: distance to edge, σ, trajectory after contact, audio class if any), images: ≤ 4 JPEG crops from /api/replay/.../frames around the bounce or toss (each < 1 MB), observations: [the relevant `observation` rows as JSON], timeout_s: 4}`.
+- **Fan out in parallel** to three voters through one `Voter` interface:
+  - **Claude** (`claude-opus-5-5`; structured output via `output_config.format` = `{choice, probs{opt: p}, rationale}`; no `temperature`, no forced `tool_choice`);
+  - **Gemini** (`GEMINI_MODEL`; enum or JSON structured output);
+  - **Bitdeer Model Studio** (OpenAI-compatible `chat.completions` at `BITDEER_BASE_URL`, model `BITDEER_VISION_MODEL`, for example `Qwen/Qwen3.5-397B-A17B`; `image_url` with base64 data; JSON response parsed and validated).
+- **Shuffle the option order per voter** to cancel position bias. On a timeout or error, the voter is recorded with `error`, and the others still count.
+- **Blend:** `p_final = w_geo·p_geometry + Σ w_i·p_i`, normalised over the voters that answered. The default weights are geometry 0.5 and each voter 0.5/3. **These are uncalibrated heuristics until ≥ 60 labelled challenges exist; say so in the UI** (`p_source: "decide:ensemble"`, with a "votes" panel showing each backend's choice, p and latency).
+- **Effect:** the engine posts one `ai_vote` row per voter and a *suggested* verdict. **The judge still taps Uphold or Overturn.** The AI advises and players decide.
+
+## 16. Voice (Cartesia; Agent 1 client, Agent 3 text)
+- **TTS:** **Sonic** over WebSocket from the phone and the dashboard, authenticated with a short-lived token from `GET /api/voice/token`. One `context_id` per game with `continue: true` for flowing speech; `cancel` lines that a newer call makes stale. Lower `max_buffer_delay_ms`. Two voices: **calls** (crisp) and **ref** (verdicts and ask-the-ref answers). Inline `<emotion value="excited"/>` only on game point and match point. Calls arrive with `speech` text from the engine.
+- **STT:** **Ink-2** via `wss://api.cartesia.ai/stt/turns/websocket?model=ink-2&encoding=pcm_s16le&sample_rate=16000&access_token=…&cartesia_version=…`. It has built-in turn detection (`turn.end` gives the transcript) and is English only. **Push-to-talk** in the PWA (a big button; hands-free wake word is out for the weekend). Use a separate mic track with echo cancellation ON, because the onset detector's track has it OFF.
+- **Intent parse** (client-side regex first, then the gateway falls back to a Claude Haiku classification): `challenge` · `ask:<question>` · `house_rule:<text>` · `score?` · `undo`. Each maps to `/api/ctl` or `/api/ask`.
+- **Verify on day 1:** the header vs. query auth forms, and the current `cartesia_version` value (search results show `2026-03-01`). Record what worked in `docs/status/a1.md`.
+- **Accessibility:** a "read everything" mode speaks every call and score change (Cartesia's "impact and responsibility" criterion).
+
+## 17. Ask the ref: Apify → Moss → Claude (Agent 3, `services/rules`)
+- **Apify actor "Sports Rulebook Scraper"** (`actors/rulebook-scraper/`, Python Apify SDK + Crawlee):
+  - Input: `{sources: [{sport, url, kind: "html"|"pdf"}]}`.
+  - Output dataset items, **one per rule**: `{sport, rule_id, title, text, url, source, license_note, fetched_at}`.
+  - Sources to start with: ITTF Statutes/Laws (ping pong), USA Pickleball rulebook, FIBA or NFHS basketball, BWF laws, FIVB rules.
+  - **Public pages only; no login or paywall.** Respect robots and terms.
+  - Publish it on the Apify Store **after the user OKs it** (Best Actor).
+- **Index:** a `rules index build` command pulls the dataset and builds **one Moss index per sport** (`moss-minilm`; metadata `{rule_id, title, url}`). Check the package name at docs.moss.dev.
+- **`POST /ask {question, sport}`:**
+  1. Moss `query(top_k=5)` (hybrid if available); log the Moss latency.
+  2. Claude answers **only from the retrieved clauses**, citing `rule_id`s, ≤ 3 sentences, and says "I couldn't find that rule" when retrieval is weak.
+  3. Return `{answer, speech, citations: [{rule_id, title, url, quote ≤ 25 words}], moss_ms, latency_ms}`.
+- **Uses beyond ask-the-ref:** challenge verdicts and house-rule diffs show the closest official clause (`rule_ref`), and the Droid workspace gets the top-k clauses (§18).
+
+## 18. Factory Droid house-rule compiler (Agent 3, `services/compiler`, Node 20 + `@factory/droid-sdk`)
+- **Trigger** (the track's "trigger you designed"): the compiler subscribes to Spacetime `house_rule WHERE status = 'pending'`. A judge's typed or spoken `submit_house_rule` creates that row through the engine.
+- **Sandbox** (the track's "control over what Droid can touch"): a fresh temp workspace per rule containing **only** the following. No network beyond the Factory API; a **90 s timeout**; autonomy limited to editing that one YAML and running the test command.
+  - `rules/<sport>.yaml`, a copy of the current pack;
+  - `schema/rulepack.schema.json`;
+  - `replay_test`, a CLI from the engine package that replays the last ≤ 10 recorded rally event logs through the engine with the candidate pack, prints a before/after call table, and validates the schema;
+  - `context/clauses.md`, the top-k official clauses from §17.
+- **Loop:** Droid drafts the change (CEL `when`, outcome, tier ceiling, or scoring params), runs `replay_test`, reads the failures, and repairs, for at most 3 attempts.
+- **Visible work** (the track's "plans, steps, diffs, results"): stream the plan, each step, the YAML diff and the test table into the `house_rule` row via `update_house_rule_progress`. The dashboard panel renders them live with "Calls that would change: rally 7 (point A → let)".
+- **Human approval:** the judge taps Approve, then `approve_house_rule`, then the engine hot-loads it. Every later call carries `rule_version`.
+- **Fallback:** a Claude-only compiler (`claude-opus-5-5`, structured output, same tests). The row records `backend`.
+- **The README must explain where and how Droid is used** (a Factory requirement).
 - **Logs** are JSON lines with `svc`, `game_id`, `cam_id`, `t_srv_ms` and `msg`. No frames, tokens or personal data.

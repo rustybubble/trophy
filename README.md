@@ -1,37 +1,42 @@
 # Trophy 🏆
 
-**A universal AI referee and post-game analyzer for casual sports.** Open a link on 2–4 phones, point them at any pickup game, and Trophy referees it:
-- live calls with honest confidence;
-- challenges with multi-angle replays;
-- a spoken voice referee;
-- house rules compiled on the fly.
+**A universal AI referee for pickup games, built at Cal Hacks 13.0.**
 
-After the game, **Trophy Watch** turns it into a broadcast you can replay in any browser.
+Point a phone at a ping-pong table and Trophy referees the game:
+- It **keeps score**.
+- It **calls the edge rule and illegal serves**: the toss must rise more than 6 in off the palm and stay within 30° of vertical from the hand to the hit.
+- It **speaks every call** in a referee voice.
+- Close calls show their probability and can be **challenged**. A challenge brings an **instant replay** and a second opinion from three AI models.
+- Players can **ask the ref** about any rule by voice and get an answer quoted from the official rulebook.
+- Players can **add their own house rule** in plain English, and a Factory Droid compiles, tests and applies it.
+
+> **Status:** under construction this weekend. The plan is in [`docs/plan/three-agent-plan.md`](docs/plan/three-agent-plan.md). Each prize-track section below gets filled in with what actually shipped and what was measured.
 
 ## Repo map
 | Path | What |
 |---|---|
-| `apps/pwa` | Phone capture PWA (join by QR, stream, record, beep/flash, challenge) |
-| `apps/dashboard` | Live dashboard: scoreboard, calls, challenges, sport wall, Droid compiler view |
-| `apps/watch` | **Trophy Watch** post-game web app |
-| `services/*` | Backend services (see each README) |
-| `spacetime/` | SpacetimeDB module (live game state) |
-| `packages/contracts` | JSON Schemas: Event, Call, Decide, RulePack |
-| `rulepacks/` | One YAML per sport + `sports.yaml` catalog |
-| `infra/` | GCP VM, Vultr, Caddy, Remotion Lambda setup |
-| `data/clips` | Clip manifest + credits (no footage in git) |
-| `evals/` | Labelled calls and accuracy reports |
-| `docs/` | Plan, research, decisions, progress, compliance |
+| `apps/pwa` | Phone app: camera, calls, voice, challenge, replay |
+| `apps/dashboard` | Judges' screen: score, calls, AI votes, Droid panel, ask-the-ref, live world state |
+| `services/gateway`, `services/recorder`, `services/ingest` | Phone API, replay recording, optional WebRTC |
+| `services/courtcam-adapter`, `services/flight` | Calibration and the ping-pong vision module |
+| `services/engine`, `services/compiler`, `services/rules` | Rule engine + AI votes, Factory Droid house rules, ask the ref (Apify → Moss → Claude) |
+| `services/players`, `services/possession` | Basketball (if time allows) |
+| `spacetime/` | SpacetimeDB module: the shared world state (metadata only, no video) |
+| `packages/` | Contracts (JSON Schema), generated types, shared Python lib, state client |
+| `rulepacks/` | One YAML per sport |
+| `docs/` | Plan, interfaces, decisions, progress, research; `docs/archive/` is superseded |
 
-## Building on prior work
-Agents are encouraged to build on the ideas and compatible licensed code in [subatomic-hamster/replay](https://github.com/subatomic-hamster/replay) and its **courtcam** computer-vision library. Reuse, adaptation and new implementations are all welcome; preserve required notices and record incorporated sources. See [reuse and media guidance](docs/rules-compliance.md) and [agent guidance](CLAUDE.md).
+## Run it (macOS, M5 Pro)
+`make dev` starts everything natively. Phones connect to `https://$TROPHY_DOMAIN/cam/`. Copy `.env.example` to `.env` and fill in the keys; never commit `.env`. Full setup instructions will land here once the services exist.
 
-## Quick start (local machine or development VM)
-```bash
-cp .env.example .env          # fill in keys; never commit .env
-docker compose up -d redis spacetimedb gateway
-```
-Per-service instructions are in each `services/*/README.md`.
+## Prize-track sections (filled in at submission)
+- **Factory Droid:** where Droid runs, its trigger, its sandbox and what it can touch, and what the dashboard shows.
+- **Cartesia:** the features used (Sonic WebSocket TTS, `context_id`, `cancel`, emotion, two voices, Ink-2 STT with turn detection) and known limitations.
+- **Spacetime:** the shared world state (vision observations, game state, votes, house rules, ask log).
+- **Anthropic:** our community and their problem, how Claude is used, and **where it could go wrong** and how we contain it.
+- **Bitdeer AI Model Studio, Gemini:** each one's role as a challenge voter.
+- **Moss, Apify:** the rulebook actor → Moss index → cited answers.
+- **Meta:** how Trophy brings people closer.
 
 ## License
-MIT (see [LICENSE](LICENSE)). Third-party models keep their own licenses: [docs/licenses.md](docs/licenses.md).
+MIT (see [LICENSE](LICENSE)). Third-party code, models and media keep their own terms: see [docs/licenses.md](docs/licenses.md).

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Hour-0 smoke tests (build plan section 8). Each owner fills in their check.
+# P0 spikes for the Cal Hacks weekend (docs/plan/three-agent-plan.md §3). Each agent replaces its TODO
+# with a real check and records the measured result in docs/progress.md.
 set -euo pipefail
-echo "TODO(A): phone 5G -> https://$TROPHY_DOMAIN + WebRTC RTT"
-echo "TODO(B): BlurBall heatmap on sample; WASB weights load"
-echo "TODO(C): RF-DETR-S TensorRT FPS at 720p"
-echo "TODO(D): SubQ /v1/models; Cartesia speaks; SpacetimeDB reducer->subscription < 100 ms; Droid sandbox; Moss p95"
+echo "TODO(A1): Spacetime reducer -> TS subscription latency; Cartesia TTS + Ink STT on an iPhone; https://\$TROPHY_DOMAIN/cam/ reachable"
+echo "TODO(A2): ball tracker FPS on 720p (classical vs BlurBall MPS); /calibrate round trip"
+echo "TODO(A3): Claude / Gemini / Bitdeer vision call latency; Droid SDK sandbox hello; Moss query latency; Apify actor run"

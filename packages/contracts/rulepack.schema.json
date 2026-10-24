@@ -17,8 +17,7 @@
     "family": {
       "enum": [
         "flight",
-        "possession",
-        "resting"
+        "possession"
       ]
     },
     "version": {
@@ -86,17 +85,17 @@
           "check": {
             "enum": [
               "code",
-              "snap"
+              "ensemble"
             ]
           },
-          "snap": {
+          "ensemble": {
             "type": "object",
+            "description": "question + options for the background AI voters (interfaces-v1 §15)",
             "properties": {
               "type": {
                 "enum": [
                   "choice",
-                  "noul",
-                  "score"
+                  "yes_no"
                 ]
               },
               "question": {

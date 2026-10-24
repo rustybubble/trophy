@@ -1,9 +1,10 @@
-# Live dashboard (owner D)
-
-**Stack:** Vite + React + strict TypeScript (+ Three.js/Spark where 3D is needed), SpacetimeDB TypeScript SDK. Built to `dist/` and served by Caddy.
-
-## Responsibilities
-- Scoreboard, live calls with tier badges, challenge replays (multi-angle, slow-mo, 3D bounce mark + error ellipse), evidence mode for fouls.
-- House-rule panel: the Droid's live plan, diff, test table, and an Approve button.
-- Ask-the-ref transcript with quoted rule clauses. **Sport wall:** 28 tiles (LIVE / VERIFIED / PACK) with measured accuracy and the reliability diagram.
-- Everything subscribes to SpacetimeDB.
+# Dashboard (Agent 1, with panels fed by Agent 3)
+The judges' screen at `/`:
+- create a game + QR;
+- the scoreboard and call feed with tiers and replays;
+- the **AI votes panel** (Claude, Gemini, Bitdeer; labelled uncalibrated);
+- the **Factory Droid panel** (plan, steps, diff, tests, Approve);
+- the **ask-the-ref transcript** with citations;
+- the **live world-state view** (Spacetime observations + ball trail, no video);
+- camera health;
+- an honest sport wall (built vs. coming next).

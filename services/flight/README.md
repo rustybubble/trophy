@@ -1,16 +1,6 @@
-# Flight family (owner B)
-
-**Env:** py3.11 · numpy 1.26.4 · opencv-contrib-python 4.10.0.84 · torch CUDA 12 · GPU
-
-## Responsibilities
-- Ball/shuttle tracking:
-  - **BlurBall** for table tennis (fix the BGR→RGB bug; turn duplicate-frame filtering on; white balls).
-  - **WASB** weights for tennis, pickleball, badminton and volleyball, run through BlurBall's runners.
-  - **TrackNetV3** for badminton, post-game only.
-- Calibration comes from `courtcam-adapter`. Triangulate across 2+ cameras (OpenCV DLT / aniposelib) and fit gravity parabolas between bounces.
-- Bounce time comes from the nearest audio onset. σ = fit + calibration + blur + timing. Emit `bounce`, `net`, `contact_height`, `touch_count`, `wall_bounce` to `ev:flight`.
-- Priority calls: pickleball near-line in/out, table-tennis edge vs. side, badminton in/out, roundnet rim (with audio). See build plan F4 and §3.
+# Flight: the ping-pong vision module (Agent 2)
+**py3.11, numpy 1.26.4, opencv-contrib 4.10.0.84, torch (MPS); Vultr GPU as the fallback.** Reads every frame from `frames:{cam}`, tracks the ball (a classical baseline or BlurBall), fits flights, times bounces with phone audio onsets, and emits **measurements**: `bounce` (with edge-class probabilities), `contact`, `net`, `ball_dead`, and **`serve_toss`** (height above the palm, angle from vertical from the hand to the hit, with σ).
+- It writes `ev:flight` (the engine's hot path) **and** mirrors every event into Spacetime `observation` + a 10 Hz `track_sample` (the shared world state). It never writes frames there.
 - Cards: `docs/research/build-cards-flight-family.md`.
 
-## Done when
-See the matching feature in `docs/plan/build-plan.md` ("Done when"). Record measured numbers in `docs/progress.md`.
+Contracts: `docs/plan/interfaces-v1.md`. Plan and checkpoints: `docs/plan/three-agent-plan.md`. Record measured numbers in `docs/progress.md`.

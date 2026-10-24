@@ -1,12 +1,4 @@
-# courtcam adapter (owner B)
+# courtcam-adapter (Agent 2)
+**py3.12, port 8050.** `POST /calibrate`: tapped landmarks → homography + camera pose (K, R, t) + overlay + `trusted` gate, using **courtcam @ `b2f5ff5`** (MIT; installed **without extras**, never via Replay's workspace, in its own venv because of an OpenCV clash). Templates come from `rulepacks/<sport>.yaml` → `field:`. API notes: `docs/research/replay-source-review-2026-10-23.md` §2.
 
-**Env:** **py3.12** · courtcam (MIT, pinned, disclosed) · port 8050
-
-## Responsibilities
-- Wraps the published **courtcam** library: `calibrate.py` (4+ landmarks, reprojection gate, mirrored-label fix), `distortion.py` (one-parameter lens model), `camera_calibration` (focal length from homography + solvePnP), `court.fit_check` (untrusted calibration → engine demotes calls), team assignment, the on-court filter, basketball `ball.py` make/miss, the X-gesture detector, the rally segmenter, sport-profile grammars and eval tools.
-- Plug RF-DETR detections in through courtcam's `Detector` interface (the current permissive-license default; other backends are allowed when their terms fit the deployment).
-- **Reuse and adapt Replay/courtcam code where useful.** Record incorporated sources/revisions in `docs/licenses.md` and preserve required notices; see `docs/rules-compliance.md`.
-- Inventory: `docs/research/replay-repo-inventory.md`.
-
-## Done when
-See the matching feature in `docs/plan/build-plan.md` ("Done when"). Record measured numbers in `docs/progress.md`.
+Contracts: `docs/plan/interfaces-v1.md`. Plan and checkpoints: `docs/plan/three-agent-plan.md`. Record measured numbers in `docs/progress.md`.

@@ -1,19 +1,2 @@
-# Trophy Watch: post-game web app (owner A + D)
-
-**Stack:** Vite + React + strict TypeScript (+ Three.js/Spark where 3D is needed), SpacetimeDB TypeScript SDK. Built to `dist/` and served by Caddy.
-
-## Responsibilities
-- Opens from the recap link (AgentMail/QR) once processing finishes. Works in any browser (phone, laptop, TV browser); touch, mouse and keyboard controls. The web is the current target; other interfaces can be added when useful.
-- Features (reuse and extend Replay ideas and compatible licensed code; build plan §5B):
-  - follow a player;
-  - moments browser + ★ best play;
-  - condensed game + rally browser;
-  - broadcast mode (score bug, captions, commentary, Trophy's calls);
-  - replay angles (real + 2.5D virtual), 0.5× slow-mo;
-  - plain-English play search (Moss);
-  - stats panel + player card + coach cards;
-  - "can't tell" review queue (feeds calibration);
-  - clips: trim, share, 9:16 reels;
-  - pickup scoring modes;
-  - consented naming;
-  - **watch party** (synced playback and reactions through SpacetimeDB).
+# Trophy Watch (after the weekend)
+The post-game web app: moments, best play, condensed game, follow a player, clips. **Not part of the Cal Hacks cut.** When built, vendor Replay's `packages/tv-core` and adapt its `apps/web` components (see `docs/research/replay-source-review-2026-10-23.md`).

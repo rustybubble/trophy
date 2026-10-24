@@ -1,35 +1,9 @@
-# Sport catalog: target badge per sport (see concept-v3 §2 for calls by tier).
-# badge: LIVE (demoed live) | VERIFIED (accuracy measured on footage) | PACK (rule pack on the generic pipeline)
+# Sport catalog for the Cal Hacks build (scope from the user's outline). status: built | should | next
 sports:
-  - {id: table_tennis, family: flight, target_badge: LIVE, priority: P0}
-  - {id: pickleball, family: flight, target_badge: VERIFIED, priority: P1}
-  - {id: badminton, family: flight, target_badge: VERIFIED, priority: P1}
-  - {id: tennis, family: flight, target_badge: PACK, priority: P2}
-  - {id: volleyball, family: flight, target_badge: VERIFIED, priority: P2}
-  - {id: beach_volleyball, family: flight, target_badge: PACK, priority: P2}
-  - {id: roundnet, family: flight, target_badge: LIVE, priority: P1}
-  - {id: padel, family: flight, target_badge: PACK, priority: P2}
-  - {id: squash, family: flight, target_badge: PACK, priority: P2}
-  - {id: racquetball, family: flight, target_badge: PACK, priority: P2}
-  - {id: four_square, family: flight, target_badge: PACK, priority: P2}
-  - {id: cup_pong, family: flight, target_badge: LIVE, priority: P2}
-  - {id: basketball, family: possession, target_badge: VERIFIED, priority: P0}
-  - {id: two_hand_touch, family: possession, target_badge: VERIFIED, priority: P1}
-  - {id: soccer, family: possession, target_badge: VERIFIED, priority: P2}
-  - {id: ultimate, family: possession, target_badge: VERIFIED, priority: P2}
-  - {id: wiffle, family: possession, target_badge: PACK, priority: P2}
-  - {id: kickball, family: possession, target_badge: PACK, priority: P2}
-  - {id: cricket, family: possession, target_badge: PACK, priority: P2}
-  - {id: dodgeball, family: possession, target_badge: VERIFIED, priority: P2}
-  - {id: street_hockey, family: possession, target_badge: PACK, priority: P2}
-  - {id: touch_rugby, family: possession, target_badge: PACK, priority: P2}
-  - {id: handball, family: possession, target_badge: PACK, priority: P2}
-  - {id: cornhole, family: resting, target_badge: LIVE, priority: P0}
-  - {id: mini_golf, family: resting, target_badge: LIVE, priority: P2}
-  - {id: bowling, family: resting, target_badge: PACK, priority: P2}
-  - {id: darts, family: resting, target_badge: PACK, priority: P2}
-  - {id: bocce, family: resting, target_badge: PACK, priority: P2}
-  - {id: horseshoes, family: resting, target_badge: PACK, priority: P2}
-  - {id: kan_jam, family: resting, target_badge: PACK, priority: P2}
-  - {id: ladder_toss, family: resting, target_badge: PACK, priority: P2}
-  - {id: disc_golf_putting, family: resting, target_badge: PACK, priority: P2}
+  - {id: table_tennis, family: flight, status: built, calls: [rally scoring, edge rule, illegal serve (toss > 6 in, path within 30 deg of vertical)]}
+  - {id: basketball, family: possession, status: should, calls: [2 vs 3 pointers + score, outs (next), foul flags (next)]}
+  - {id: pickleball, family: flight, status: next, calls: [kitchen rule, outs]}
+  - {id: tennis, family: flight, status: next, calls: [outs]}
+  - {id: badminton, family: flight, status: next, calls: [outs]}
+  - {id: volleyball, family: flight, status: next, calls: [hand over the net, outs]}
+  - {id: two_hand_touch, family: possession, status: next, calls: [two-hand touch, outs, scoring]}

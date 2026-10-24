@@ -2,7 +2,7 @@
 # Conditions are CEL expressions over `ev` (the current event), `rally` (rally state) and `game` (game state).
 # Copy to <sport>.yaml. Hand-write the P0 packs; Claude drafts the others; a human reviews the P1 ones.
 sport: example_sport
-family: flight            # flight | possession | resting
+family: flight            # flight | possession
 version: 1
 field:
   units: m
@@ -18,7 +18,7 @@ rules:
     name: Ball in or out
     tier: BETA            # AUTO | BETA | PLAYERS
     when: "ev.type == 'bounce'"
-    check: code           # code (geometry, P(in) = Phi(d/sigma)) | snap (decision model)
+    check: code           # code (geometry, P(in) = Phi(d/sigma)) | ensemble (geometry + background AI votes on close calls)
     outcome: "in_or_out"
     rule_ref: ""          # official rule id, filled from Moss
 coach:

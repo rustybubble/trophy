@@ -1,11 +1,12 @@
-# SpacetimeDB module: live game state (owner D)
+# SpacetimeDB module: the shared world state (Agent 1)
 
-Self-hosted with `spacetime start` in a container on the live VM; the same module is published to Maincloud as a fallback. Write the module in Rust or C# (or TypeScript if the current SpacetimeDB version supports TypeScript modules; check the docs). Clients use the **TypeScript SDK**. The Python engine calls reducers through the **HTTP API**.
+**SpacetimeDB 2.13, TypeScript module**, run natively on the Mac with `spacetime start` (:3000, proxied at `/stdb/*`). Clients use the npm `spacetimedb` SDK through `@trophy/state-client`. Python services call reducers over HTTP.
 
-## Tables (first pass)
-`game` · `player` (enrolled name/face consent flag) · `camera` (phone, pose, clock-offset fit) · `rally` · `event_summary` · `call` (Call contract) · `challenge` · `score` · `house_rule` (text, status, plan, diff, results, pack_version) · `highlight` · `watch_session` (watch-party playback state, reactions)
+**What it holds:** **metadata only. Video frames never go in here** (D-21); they stay on Redis and in the local recorder.
+- **World state:** `observation` (every vision event: time, position in court metres, σ, confidence, camera) and `track_sample` (the ball at 10 Hz, rolling 120 s). Every phone, the dashboard and every agent see the same facts. Adding a camera adds rows, not schema.
+- **Game state:** `game`, `camera`, `rally`, `call`, `score`, `challenge`, `ai_vote`.
+- **Agents:** `house_rule` (the Factory Droid's trigger + streamed plan, diff and results) and `ask` (ask-the-ref transcripts with citations).
 
-## Reducers
-`join_game` · `register_camera` · `post_call` · `challenge` · `resolve_challenge` · `submit_house_rule` · `update_house_rule` · `approve_house_rule` · `post_highlight` · `watch_sync` · `react`
+**Writers are backend services only:** the vision module (observations), the engine (game state, votes, asks), and the compiler (house-rule progress). Reducers check the caller's identity. Clients only subscribe.
 
-Why SpacetimeDB is core: it's the single live shared state for phones, dashboard, engine, Droid and watch parties. This is the current architecture choice; alternatives can be evaluated against those needs.
+Exact tables and reducers: `docs/plan/interfaces-v1.md` §11.

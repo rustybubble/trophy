@@ -1,9 +1,5 @@
 # Rule packs
-
-One YAML file per sport, following `_template.yaml` and validated against `packages/contracts/rulepack.schema.json`. `sports.yaml` lists all 28 sports with their family, target badge and priority.
-
-- **P0 packs (hand-written first):** `table_tennis.yaml`, `basketball.yaml`, `cornhole.yaml`.
-- **P1 packs:** `pickleball.yaml`, `badminton.yaml`, `two_hand_touch.yaml`, `roundnet.yaml`.
-- **The rest:** drafted by Claude from the official rules (Firecrawl), then reviewed.
-- **Calls by tier for every sport** are in `docs/plan/concept-v3.md` §2. Any rule needing a signal we can't sense becomes `PLAYERS` automatically (engine).
-- **House rules** are added by the Droid compiler (`services/compiler`) as `house_rule: true` entries, versioned.
+One YAML per sport, validated by `packages/contracts/rulepack.schema.json`. **Perception emits measurements; only packs decide** (D-18), so the Factory Droid changes rules by editing these files.
+- `field:` (court template, landmarks in tap order, lines, zones; metres, z up) is owned by **Agent 2**. Everything else (teams, rules as CEL `when` + outcome + tier ceiling + `check: code|ensemble`, scoring template + params) is owned by **Agent 3**.
+- House rules approved during a game are written to `rulepacks/house/{game_id}/{sport}.v{n}.yaml` (gitignored runtime output).
+- Weekend packs: `table_tennis.yaml` (MUST), `basketball.yaml` (SHOULD). The catalog is `sports.yaml`.

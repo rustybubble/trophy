@@ -62,9 +62,9 @@
         },
         "backend": {
           "enum": [
-            "snap",
-            "gemini",
             "claude",
+            "gemini",
+            "bitdeer",
             "geometry"
           ]
         },

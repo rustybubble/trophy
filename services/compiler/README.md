@@ -1,12 +1,10 @@
-# House-rule compiler: Factory Droid (owner D)
+# Compiler: Factory Droid house rules (Agent 3)
+**Node 20, `@factory/droid-sdk`, port 8200.**
+- **Trigger:** a new `house_rule` row in Spacetime.
+- **Sandbox:** a throwaway workspace containing only the pack YAML, schema, `replay_test` and the relevant Moss rule clauses; no network beyond Factory; 90 s timeout.
+- **Loop:** draft → test → repair (max 3).
+- **Output:** the plan, steps, diff and test table are streamed to the dashboard; the judge approves; the engine hot-loads.
+- **Fallback:** a Claude-only compiler.
+- The root README must explain where and how Droid is used (a Factory requirement).
 
-**Env:** Node 20 · @factory/droid-sdk · port 8200
-
-## Responsibilities
-- **Trigger:** a new `house_rule` row with status=pending in SpacetimeDB.
-- **Sandbox:** a throwaway workspace with `rules/<sport>.yaml`, the JSON Schema, a `replay_test` harness (the last 10 rallies' event logs) and the top-k Moss rule clauses. Droid may edit only that YAML and run only `replay_test`; no network; 90 s timeout; autonomy appropriate to the scoped rule-compilation task. This runtime sandbox handles user-supplied rules; it does not restrict repository agents from changing the compiler or its design.
-- **Loop:** draft the rule → run tests → repair (max 3) → stream the plan, steps, diff and test table into `house_rule.plan/diff/results` → the judge taps Approve → a reducer hot-loads the pack.
-- **Fallback:** Claude-only compiler with the same schema and tests. Document the active compiler backend and its behavior.
-
-## Done when
-See the matching feature in `docs/plan/build-plan.md` ("Done when"). Record measured numbers in `docs/progress.md`.
+Contracts: `docs/plan/interfaces-v1.md`. Plan and checkpoints: `docs/plan/three-agent-plan.md`. Record measured numbers in `docs/progress.md`.

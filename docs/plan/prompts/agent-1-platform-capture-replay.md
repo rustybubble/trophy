@@ -1,142 +1,138 @@
-# Agent 1 prompt: platform, capture and replay (integration owner)
+# Agent 1 prompt: platform, capture, voice and replay (integration owner)
 
 *Copy everything below the line into a fresh chat opened in the Trophy repository on the Apple M5 Pro Mac.*
 
 ---
 
-You are **Agent 1 (platform, capture and replay)**, one of three implementation agents working at the same time on **Trophy**, and the **final integration owner**.
+You are **Agent 1 (platform, capture, voice and replay)**, one of three implementation agents building **Trophy** in parallel for **Cal Hacks 13.0 (this weekend, Fri 10/23 to Sun 10/25)**. You are also the **integration owner**. The submission deadline is in `docs/plan/three-agent-plan.md` → `DEADLINE`. If it's blank, ask the user for it first. **Feature freeze is DEADLINE − 4 h.**
 
-**Trophy** is a universal referee for pickup sports that **keeps score and identifies fouls**. Phones open a PWA link and become cameras. Perception turns frames into measured events. An engine applies per-sport rule packs and posts calls with honest confidence tiers (AUTO ≥ 0.90 / BETA, challengeable with its uncertainty shown / PLAYERS DECIDE). Phones speak every call, and anyone can challenge a call and get an instant replay.
+**Trophy** is a universal AI referee for pickup games. Phones become cameras. Trophy keeps score and identifies fouls with honest confidence (AUTO ≥ 0.90; BETA shows p and can be challenged; judgment fouls are flagged, never forced). Calls are **spoken** (Cartesia). Players can **challenge** a call and get an **instant replay** plus an AI second opinion (Claude, Gemini and Bitdeer Model Studio votes). They can **ask the ref** rules questions by voice (Moss over rulebooks scraped by our Apify actor, answered by Claude), and **add house rules** that a Factory Droid compiles live.
 
-**Sports in scope:**
-- **Basketball:** 2/3-pointers, fouls, outs.
-- **Ping pong:** illegal serves (toss ≥ 16 cm and within 30° of vertical), the edge rule, scoring.
-- **Two-hand touch football.**
-- **Pickleball:** kitchen, outs.
-- **Tennis / badminton:** outs.
-- **Volleyball:** hand over the net, outs.
+**The weekend demo is live ping pong on one phone**: rally scoring, the edge rule, and **illegal serves** (the toss must rise more than 6 in off the open palm, and the path from the hand to the hit must stay within 30° of vertical). Basketball 2s/3s on a CC BY clip is a SHOULD.
 
-There is also a **Droid "add your own rule"** feature, and **replay features**.
+**Spacetime is the shared world state, and video never goes into it.** Frames stay on Redis and the local recorder. Vision modules write **metadata observations** (`observation`, `track_sample`) to Spacetime, and every phone, the dashboard and every agent read the same facts (plan §2, interfaces §7.1).
 
-The other agents are **Agent 2 (ball and court)** and **Agent 3 (players, rules and Droid)**. You can't talk to them directly. Coordinate through PRs, `docs/status/*.md` and the user.
+The other agents: **Agent 2 (ball and court perception)** and **Agent 3 (rules, AI and Droid)**. You can't message them directly. Use PRs, `docs/status/*.md` and the user.
 
 ## 0. Read first
-1. `CLAUDE.md`: context, autonomy and the safeguards you must keep. Where it conflicts with the outline above (cornhole, "fouls are never called"), **the outline and `docs/plan/three-agent-plan.md` win**.
-2. `docs/plan/three-agent-plan.md`: the outline, architecture, milestones (M1 = live ping pong + recorded basketball), the split, **checkpoints C0–C4, which you run**, and the workflow.
-3. `docs/plan/interfaces-v1.md`: **you maintain these contracts** and turn them into JSON Schema + generated types at C0. All sections matter to you, especially §0, §2, §5, §6, §9–§14.
-4. `docs/research/replay-source-review-2026-10-23.md`: what to reuse from Replay and courtcam.
-5. `docs/research/build-cards-platform-and-post-game.md` §1–3 (ingest, browser recipes, clock sync, audio onsets) and `docs/research/pwa-capture.md` (iOS gotchas, the device-test page).
+1. `docs/plan/three-agent-plan.md`: the cut (MUST / SHOULD / STRETCH / CUT), the prize-track evidence table, phases, checkpoints C0–C4 (**you run them**), the workflow. **It overrides anything in `docs/archive/`.**
+2. `docs/plan/interfaces-v1.md`: **you maintain these contracts.** All sections matter, especially §0, §2, §5, §6, §9–§14 and §16 (Cartesia voice).
+3. `CLAUDE.md`: the safeguards (secrets, privacy, licenses, honest results, user approval for spend and accounts).
+4. `docs/research/build-cards-platform-and-post-game.md` §1–3 (WebSocket ingest, browser recipes, clock sync, AudioWorklet onsets) and §6 (Cartesia); `docs/research/pwa-capture.md` (iOS Safari gotchas).
+5. `docs/research/replay-source-review-2026-10-23.md`: what's reusable from Replay.
 
-If any of these files are missing, run `git fetch origin && git rebase origin/main`.
+## 1. Facts
+- **No code exists yet.** The Mac runs every service natively in per-service `uv` venvs (py3.11) under a `Procfile`. Docker on a Mac has no GPU access.
+- **Decisions:**
+  - frames travel as JPEG on Redis `frames:{cam}`;
+  - **only backend services (engine, compiler) write to Spacetime**; clients read subscriptions and write through your gateway → `ctl:engine`;
+  - perception emits measurements and packs decide;
+  - the Spacetime module is TypeScript;
+  - Spacetime is **the** backend (it's a prize track), with no Convex and no WS fallback unless it's truly blocked.
+- **Verified:**
+  - SpacetimeDB 2.13.0 has a macOS arm64 CLI and TS modules; the npm client is `spacetimedb`; reducers are called with `POST /v1/database/{db}/call/{reducer}`; `spacetime start` has no TLS, so proxy it at `/stdb/*`.
+  - iOS Safari gives about 30 fps, needs HTTPS, and can't vibrate. Tunnels carry no UDP.
+  - **Cartesia:**
+    - TTS is Sonic over WebSocket; browsers authenticate with a short-lived access token and the version as query params.
+    - STT is **Ink-2**: `wss://api.cartesia.ai/stt/turns/websocket?model=ink-2&encoding=pcm_s16le&sample_rate=16000`, with built-in turn detection (`turn.end`), English only.
+    - Verify the current `cartesia_version` (search results showed `2026-03-01`) and the token endpoint in the docs on day 1, and record what worked.
+  - Replay's web stack is React 19.2 + Vite 7.1 + TS 5.9 strict; match it.
+- **Replay** (MIT, `https://github.com/subatomic-hamster/replay` @ `2db92c0`): clone it outside the repo; read it, don't run it. `services/api/replay_api/auth.py` (HMAC tokens) and the `apps/web` player components are worth adapting. **Never copy `docs/media/` or `samples/real/`.** Keep MIT notices and add rows to `docs/licenses.md`.
 
-## 1. Facts you can rely on
-- **The repository has no code.** You start your directories from scratch.
-- **Machine:** Apple M5 Pro (macOS arm64). Run services **natively** in per-service `uv` venvs (py3.11) under a `Procfile`. Docker on a Mac has no GPU access; keep `docker-compose.yml` as the later Linux/AWS path.
-- **Architecture decisions (D-12 to D-18):**
-  - Frames travel as JPEG on Redis streams (`frames:{cam}`).
-  - **Only the engine (Agent 3) writes to SpacetimeDB.** Clients read through `@trophy/state-client` and write through your gateway → `ctl:engine`.
-  - Perception emits measurements and rule packs decide.
-  - The SpacetimeDB module is **TypeScript**.
-  - Judgment fouls are `foul_flag` calls, capped at BETA.
-- **Verified 2026-10-23:**
-  - **SpacetimeDB 2.13.0** has a native `aarch64-apple-darwin` CLI and supports TypeScript modules. The npm client is `spacetimedb`; `@clockworklabs/spacetimedb-sdk` is deprecated. Reducers are called with `POST /v1/database/{db}/call/{reducer}` (JSON args array, `Authorization: Bearer`). `spacetime start` has no TLS, so proxy it at `/stdb/*`.
-  - aiortc 1.15.0 needs `av<18`, so pin `av==17.1.0`. Its receive queues are unbounded: drain them into a latest-frame slot. It offers only H.264 Constrained Baseline or VP8.
-  - iOS Safari gives about 30 fps, has no vibration, and needs HTTPS for `getUserMedia`/`wss`. **Tunnels (cloudflared, ngrok, Tailscale Funnel) don't carry UDP**, so WebRTC needs a LAN/Caddy origin.
-  - Replay's web stack is React 19.2 + Vite 7.1 + TS 5.9 strict; match it so `packages/tv-core` vendors cleanly later.
-- **Replay** (MIT, `https://github.com/subatomic-hamster/replay` @ `2db92c0`). Clone it into a scratch directory **outside** the repo; read it, never run it. Relevant to you:
-  - `services/api/replay_api/auth.py`: HMAC tokens; adapt for `cam_token`.
-  - `apps/web` (`PlayerSurface.tsx`, `SeekBarEvents`, `Clips`, `Review`) and `packages/tv-core/src/{types,replays,clock,retry}.ts`: for the replay viewer and Watch.
-  - `infra/lib/cloud-stack.ts`: S3/CloudFront/IAM (M3).
-  - `render/replay_render` (director, condensed, vertical): M3.
-  - **Never copy `docs/media/` or `samples/real/`** (a private game with identifiable people).
-  - Keep the MIT notice on anything you copy and add a row (path + commit) to `docs/licenses.md`.
+## 2. Scope and directories
+`apps/pwa`, `apps/dashboard`, `services/gateway`, `services/recorder`, `spacetime/`, `packages/contracts`, `packages/py-trophy`, `packages/state-client`, `infra/` (Caddy, domain), and the root `Makefile`/`Procfile`/`package.json`/CI/`.env.example`. You approve PRs that touch these shared areas.
 
-## 2. Scope and primary directories
-`apps/pwa`, `apps/dashboard`, `apps/watch`, `services/gateway`, `services/ingest`, `services/recorder`, `spacetime/`, `packages/contracts`, `packages/py-trophy`, `packages/state-client`, `infra/`, and the root `Makefile`/`Procfile`/`package.json` workspace, CI and compose. **You approve PRs that touch these shared areas, and you merge contract PRs.**
+## 3. Tasks in priority order (MUST first; open small PRs; merge at least every ~2 h)
 
-## 3. M1 tasks (in order; open a PR for each coherent slice)
-1. **Set up.** Create your worktree (`git worktree add ../trophy-a1 -b a1/m1-platform origin/main`) and `docs/status/a1.md`. Update the status file at every PR.
-2. **C0: contracts first** (aim for about half a day; the other agents wait on it).
-   - **Schemas** (draft 2020-12) for everything in interfaces-v1:
-     - Event v1, with the §7 types and their payload `$defs`;
-     - Call v1;
-     - CalibrationRequest and Calibration;
-     - FrameMeta;
-     - the track samples (`trk:ball`, `trk:players`);
-     - Ctl commands (one per `cmd`);
-     - the game-state rows;
-     - an updated RulePack (teams, `field.frame/landmarks/lines/zones/measured`, scoring template + params, rule `tier` ceilings, `kind`).
-     - Keep Decide.
-   - **`make contracts`:** `json-schema-to-typescript` → `@trophy/contracts`, and `datamodel-code-generator` → `packages/py-trophy/trophy/contracts`. Commit the generated output; CI fails if it's stale.
-   - **`packages/py-trophy`:** `ids`, `timebase`, `framebus` (`FramePublisher`, `FrameReader.latest()` / `.iter(every_frame | fps)`), `streams` (event and ctl writers/readers with consumer groups) and `tracks`, with tests against a real Redis.
-   - **`@trophy/state-client`:** the `TrophyState` interface, `MockState` with `fixtures/table-tennis-demo.json` + `basketball-demo.json` (**labelled synthetic**), and a stub `SpacetimeState`.
-   - **CI** (GitHub Actions): ruff + pytest, tsc + eslint, schema validation of every fixture, codegen staleness.
-   - Get acknowledgement from Agents 2 and 3 in the PR (ask the user to relay), then tag `m1-c0`.
-3. **SpacetimeDB module** (`spacetime/`, TypeScript) per interfaces §11. Reducers check `ctx.sender` against the engine's service identity, which is stored at init. Generate bindings, then implement `SpacetimeState`. **Measure Python HTTP reducer → TS subscription latency on the Mac** (target < 100 ms) and record it. Resolve OPEN-1 by C2.
-4. **Gateway** (`services/gateway`, py3.11, FastAPI): every route in interfaces §13.
-   - `cam_token` (HMAC, adapted from Replay's `auth.py`) and role allowlists.
-   - `WS /ws/frames`: parse the 16-byte header and the JPEG SOF, map time through the clock fit, then `XADD frames:{cam}`.
-   - `WS /ws/ctl`:
-     - NTP ping/pong (stamp `t1` first), a min-RTT filter and a weighted drift fit → `sync_err_ms`;
-     - `onset` → an `audio_onset` Event on `ev:audio` (map with the fit + `audio_offset_ms`);
-     - `health`;
-     - `call_ack` → log `ack_latency_ms` and `event_to_ack_ms`.
-   - The `/calibrate` proxy to `:8050`, with a `cv2.findHomography` stub fallback marked `solver: "gateway-stub"`.
-   - `/cams/{cam}/calibration` → `calib:{cam}` + `ctl:calib` + `set_calibration`.
-   - `/ctl` → `ctl:engine`.
-   - **pytest:** tokens (tamper, expiry, wrong game), header and SOF parsing, the clock fit (recovers the offset ≤ 2 ms at 5 ms jitter with 20 ppm drift), allowlists. Never log join keys, tokens or frames.
-5. **PWA** (`apps/pwa`, Vite + React 19 + strict TS, `base: "/cam/"`; a single page with a tiny router).
-   - **Device-test page first.** It reports lens labels, `getSettings()` fps/resolution at 1280×720, codecs, wake lock, beep, `speechSynthesis`, `audioSession`, storage and the measured canvas → JPEG encode time at 720p. Save one report per phone to `evals/devices/`, with no personal data.
-   - **Join by QR.** On the Join tap: unlock the AudioContext and speech, set `audioSession = "playback"`, take the wake lock, **pin the rear wide lens by `deviceId`**, and use landscape.
-   - **Stream** 1280×720 at 30 fps: rVFC → OffscreenCanvas → JPEG 0.7, sent only when `bufferedAmount === 0`, with a clock-ping burst then one ping every 2 s.
-   - **The AudioWorklet onset detector** (high-pass → per-128-sample energy → adaptive median + k·MAD threshold → 60 ms refractory; [X] §2D) sends `onset` messages. A **clap test** in the PWA measures `audio_offset_ms`.
-   - **Calibration screen:** taps in pack order (ping pong: "tap team A's end first": `A_left, A_right, B_right, B_left`), draggable, with the overlay and `trusted` + warnings, then Confirm.
-   - **Call UX:** a banner (text, tier badge, p for BETA), beep, a full-screen team-colour flash, `speechSynthesis.speak(call.speech)`, then `call_ack`. A sport-aware **scoreboard** (from `score.display`).
-   - **Buttons:** Challenge (any role); Uphold / Overturn, Undo, Score ± and Set server (judge).
-   - If the device test or C1 shows < 25 fps at 720p on JPEG-WS, add the **aiortc path** (`services/ingest`) for that phone, writing the same frame bus.
-6. **Recorder + replay** (`services/recorder` + gateway routes + viewer) per interfaces §12.
-   - 2 s H.264 segments via ffmpeg `h264_videotoolbox`, with a per-frame index; copy `trk:*` alongside.
-   - `GET /replay/.../clip` and `/overlay`: project `bounce_marks` with the camera calibration into ellipses in px.
-   - **Viewer** (shared component in PWA and dashboard): 1×/0.5×/0.25×, frame-step, overlay canvas synced with rVFC `mediaTime`, the call + p + tier, Uphold/Overturn.
-   - Works the same for live and clip games.
-7. **Dashboard** (`apps/dashboard`, at `/`): create a game (sport picker for the in-scope sports, team names), the QR code, the scoreboard, a call feed with tiers and replay buttons, camera tiles (fps, `sync_err_ms`, calibration trusted, thumbnail), and a challenge queue.
-8. **Dev orchestration.**
-   - A `Procfile` covering Redis, `spacetime start` + module publish, gateway, recorder, courtcam-adapter (A2), flight (A2), players + possession (A3) and engine (A3). Run it with `make dev`.
-   - `make e2e`: headless; Agent 2's clip player on the CC BY ping-pong and basketball fixture segments → services → engine → SpacetimeDB → a headless state-client subscriber asserting the expected calls + a replay API check. This is **C2**.
-   - `.env.example` additions and port offsets.
-9. **HTTPS origin (OPEN-2).** Start with a tunnel for UI work. **Ask the user** for a domain and DNS provider, then set up Caddy on the Mac with a DNS-01 certificate and an A record pointing at the LAN IP (`infra/caddy/Caddyfile.dev`: `/cam/*`, `/`, `/api/*`, `/stdb/*`). Watch for router DNS-rebind protection and guest-Wi-Fi isolation. Never commit DNS tokens.
-10. **Integration.** Run **C1–C4** (plan §6): rebase-merge, run the checks, tag `m1-cN`, and record **measured** results in `docs/progress.md`. Add decisions as they happen. Read `docs/status/a2.md` and `a3.md` at every checkpoint, and answer their interface requests.
-11. **AWS prep (no spend):** write `infra/aws/README.md` with the G/VT quota request (8 vCPU, us-west-2, on-demand + spot; exact `aws service-quotas` commands) and a g6.xlarge spot recipe for Agent 2's possible BlurBall fallback. **Ask the user before filing or launching anything**, and state the cost.
+**P0: contracts + spikes (the first ~3 h)**
+1. Create your worktree (`git worktree add ../trophy-a1 -b a1/wk-platform origin/main`) and `docs/status/a1.md`.
+2. **C0 (target ≤ 2 h; the others wait on it):**
+   - JSON Schemas for everything in interfaces-v1: Event v1 + payload `$defs`, Call v1, Calibration(+Request), FrameMeta, tracks, Ctl (including `submit/approve/reject_house_rule` and `ask_logged`), game-state rows (`game`, `camera`, `rally`, `call`, `score`, `challenge`, `house_rule`, `ai_vote`, `ask`), RulePack (teams, field, scoring params, rule `check: code|ensemble`), and **Decide v1 with backends `claude|gemini|bitdeer|geometry`** (remove `snap`).
+   - `make contracts` → `@trophy/contracts` (TS) + Pydantic in `packages/py-trophy`.
+   - py-trophy: `ids`, `timebase`, `framebus`, `streams`, `tracks`, and **`world.ObservationWriter`** (100 ms batching → reducer `post_observations` / `post_track_samples`), with tests.
+   - `@trophy/state-client`: the `TrophyState` interface (including `onHouseRule`, `onAiVote`, `onAsk`), plus `MockState` with a **labelled-synthetic** ping-pong demo script.
+   - CI: ruff, pytest, tsc, eslint, fixture validation, codegen staleness.
+   - Tag `wk-c0`.
+3. **Spikes:**
+   - Spacetime reducer (Python HTTP) → TS subscription latency on the Mac.
+   - **One Cartesia TTS line and one Ink STT transcript from an iPhone**, via a server-minted token.
+   - The domain: **ask the user** to register it with the MLH partner (GoDaddy Registry or .Tech), then put Caddy on the Mac with a DNS-01 certificate and an A record pointing at the LAN IP. Use `infra/caddy/Caddyfile.dev` with `/cam/*`, `/`, `/api/*`, `/stdb/*`. Watch for router DNS-rebind protection and guest-Wi-Fi isolation. Never commit DNS tokens.
 
-## 4. Inputs you consume and outputs you produce
-- **Consume:** courtcam-adapter `/calibrate` (A2); `trk:ball` (A2) and `trk:players` (A3) for overlays; calls, score and state written by A3's engine; field landmark orders (A2, in the packs); CC BY fixture segments + expected calls (A2/A3).
-- **Produce:** contracts, types, py-trophy and state-client (C0); the SpacetimeDB module; `frames:{cam}`; `ev:audio`; `ctl:engine`; `calib:{cam}`; the replay API; the PWA, dashboard and viewer; `make dev`, `make e2e` and CI; the HTTPS origin; checkpoint tags and sign-offs.
+**P1: the slice**
+4. **Spacetime module** (TS) per interfaces §11. Tables include **`observation` and `track_sample`** (no video, ever), `house_rule`, `ai_vote` and `ask`. Reducers check the vision, engine and compiler identities. Generate bindings, then implement `SpacetimeState`.
+5. **Gateway** (FastAPI, py3.11), covering every route in §13:
+   - `cam_token` (HMAC);
+   - `WS /ws/frames` (16-byte header → clock fit → `frames:{cam}`);
+   - `WS /ws/ctl` (ping/pong min-RTT fit, `onset` → `ev:audio`, `health`, `call_ack` latency logging);
+   - `/calibrate` proxy (with a `findHomography` stub fallback);
+   - `/cams/{cam}/calibration`;
+   - `/ctl` with role allowlists;
+   - **`/voice/token`** (the Cartesia key never leaves the server);
+   - **`/ask`** → the `rules` service (:8100) + an `ask_logged` command;
+   - **`/replay/.../frames`** (crops for Agent 3's voters, each < 1 MB).
+   - pytest covers tokens, header parsing, the clock fit and the allowlists.
+6. **Recorder + replay** (§12): 2 s H.264 segments (`h264_videotoolbox`) + a per-frame index + copies of `trk:*`; `/replay/.../clip` and `/overlay` (bounce ellipses projected with the camera calibration).
+7. **`make dev`** (Procfile: Redis, Spacetime + publish, gateway, recorder, courtcam-adapter, flight, engine, rules, compiler) and **`make e2e`** (headless: Agent 2's clip player on the CC BY ping-pong segment → calls in a headless subscriber + a replay check). This is **C2**.
 
-## 5. Acceptance checks (your part of M1)
-- [ ] C0 is merged and acknowledged; CI is green; codegen is reproducible.
-- [ ] An iPhone (and an Android phone if available) streams **720p at ≥ 25 fps for 15 min** into `frames:{cam}`, with `sync_err_ms` < 15. Onsets arrive on `ev:audio`, and the clap test gives a stable `audio_offset_ms` (report its spread).
-- [ ] Banner, beep, flash and speech start ≤ 300 ms after a call insert (MockState, measured). Live `event_to_ack_ms` p50 ≤ 1500 and p95 ≤ 2500 (C3, shared).
-- [ ] **Replay:** challenge tap → clip playing on the judge's phone **≤ 4 s**, with overlays aligned to ±1 frame on a known bounce; works for live and clip games.
-- [ ] SpacetimeDB latency is measured; non-engine identities can't write (tested). `make dev` and `make e2e` pass on a clean checkout.
-- [ ] No server secret reaches clients; every protected route rejects bad tokens (tested); recordings stay out of git.
-- [ ] `docs/progress.md` holds every C1–C4 result as a measured number or as explicitly "not met".
+**P2: the phone, voice and dashboard**
+8. **PWA** (`apps/pwa`, Vite + React 19 + strict TS, `base: "/cam/"`).
+   - A minimal **device-test page**: fps and resolution, `getSettings()`, JPEG encode time at 720p, beep, Cartesia playback.
+   - **Join by QR.** On the Join tap: unlock audio, take the wake lock, pin the rear lens by `deviceId`, use landscape.
+   - **Stream 1280×720 at 30 fps over JPEG-WS**, sending only when `bufferedAmount === 0`.
+   - The **AudioWorklet onset detector** → `onset`. A clap test sets `audio_offset_ms`.
+   - The **calibration** tap screen ("tap team A's end first").
+   - **Call UX:** banner + tier badge + p, beep, flash, and **Cartesia TTS** of `call.speech` (one `context_id`, `cancel` stale lines).
+   - The **scoreboard**.
+   - A **push-to-talk** mic button → Ink STT → intent (`challenge`, `ask:`, `house_rule:`, `undo`) → `/api/ctl` or `/api/ask` → the answer is spoken in the "ref" voice.
+   - The judge's Uphold/Overturn/Undo/Score± buttons.
+   - The **replay viewer:** 1×, 0.5× and 0.25×, frame-step, overlays synced by rVFC. For serve calls it draws the **toss trace with a 6 in line and a 30° cone** from the `serve_toss` observation.
+   - A "read everything" accessibility toggle.
+9. **Dashboard** (`apps/dashboard`, at `/`; it is the judges' screen):
+   - create game + QR, the big scoreboard, the call feed + replay;
+   - **the AI votes panel** (each backend's choice, p and latency; votes stream in as they finish and never block the call or the replay; labelled "uncalibrated");
+   - **the Droid house-rule panel** (rule text, live plan, steps, YAML diff, test table, "calls that would change", Approve/Reject);
+   - **the ask-the-ref transcript** with citations and Moss latency;
+   - camera health and a **live world-state view** (the observation feed + the ball trail from `track_sample`, drawn on a court diagram without video, which shows the Spacetime design to judges);
+   - an honest sport wall: **"built this weekend"** vs. **"coming next"**.
 
-## 6. Coordination duties
-- **You are the merge gate for shared areas.** Keep `interfaces-v1.md` and the schemas in sync, and review contract PRs promptly.
-- Publish `MockState`, the fixtures and py-trophy before anything else.
-- Never write game logic in the gateway. Client actions become `ctl:engine` commands.
-- Keep the safeguards: secrets only in `.env`; short-lived scoped client tokens; consent for anyone filmed; no footage in git; mock and synthetic data labelled as such; no AWS spend or account action without the user's explicit OK.
+**P3: freeze and submission (you assemble; everyone contributes)**
+10. Run **C3** (live) and **C4** (§5 of the plan), and write the measured numbers to `docs/progress.md`.
+11. Assemble the **root README**:
+    - what it is, the community, setup on a Mac, the architecture;
+    - a **Cartesia section** (features used: Sonic WS streaming, `context_id` continuations, `cancel`, emotion tag, two voices, Ink-2 STT with turn detection; known limitations);
+    - a **Spacetime section** (what's in the module, why it's core);
+    - **limits and failure modes**;
+    - the sections Agent 3 writes (Factory Droid, Anthropic/Claude, Bitdeer, Moss, Apify, Gemini).
+12. **The 2-minute demo-first video:** one complete flow (rally → spoken call → edge ball → challenge → replay → AI votes → overturn → "Trophy, what's the rule on…" → house rule via the Droid → next point uses it), then the problem + how we built it. **No keys on screen**, and get the consent of everyone filmed.
+13. A Devpost writeup draft listing each prize track with its evidence. Give it to the user, who submits and opts into the tracks.
 
-## 7. Later backlog
-- **M2:** multi-angle replay with 2 phones (`/replay/cams`, best angle auto-picked by ball visibility, sharpness and distance); phone-side 1080p MediaRecorder → OPFS → upload for higher-quality replay; WebRTC for every phone; host the Droid house-rule panel (Agent 3 builds its contents); judge tools.
-- **M3: Trophy Watch** (vendor `tv-core`; adapt `apps/web` for pointer and touch): moments, best play, condensed game, follow a player, clips and share (9:16), RIFE slow-mo. AWS hosting from Replay's `cloud-stack.ts`. Voice commands ("Trophy, challenge") and the crossed-arms gesture trigger (the detector is Agent 3's). Consent and blur for shared clips.
+## 4. Consumes and produces
+- **Consume:** Agent 2's `/calibrate`, `trk:ball` and clip player; Agent 3's calls, scores, votes, house-rule rows, `ask` rows, and the `rules` `/ask` endpoint.
+- **Produce:** contracts, types and libraries; the Spacetime module; frames; `ev:audio`; `ctl:engine`; tokens; replay; the PWA and dashboard; dev tooling; checkpoints; the README, video and writeup.
 
-## 8. Completion report (in `docs/status/a1.md` and your final message)
-1. What works, with links to the merged PRs, commits and checkpoint tags.
-2. Measured numbers, each with method, device and date: fps, `sync_err_ms`, `audio_offset_ms` spread, reducer → subscription latency, `event_to_ack_ms` p50/p95, replay tap → play time.
+## 5. Acceptance (your part)
+- [ ] C0 merged and acknowledged.
+- [ ] The iPhone streams 720p at ≥ 25 fps for 15 min through the domain origin.
+- [ ] A call is spoken by Cartesia ≤ 1.5 s after the rally ends (p50, measured with `call_ack`).
+- [ ] Challenge tap → replay playing ≤ 4 s.
+- [ ] The votes panel, Droid panel and ask transcript update live from Spacetime.
+- [ ] Voice ask → the spoken answer starts ≤ 3 s after the question ends.
+- [ ] No secret in the repo or on the client (tested); recordings stay in `data/local/`.
+- [ ] The README sections, video and writeup are done before DEADLINE − 1 h.
+
+## 6. Coordination
+- You are the merge gate for shared areas and the keeper of interfaces-v1.
+- Ship C0 and `MockState` first.
+- Read `docs/status/a2.md` and `a3.md` at every checkpoint.
+- **At feature freeze, say no to new features.** Only fixes and rehearsal after that.
+- **Ask the user before:** registering the domain, any spend, filming people (consent), and publishing anything.
+
+## 7. Completion report (`docs/status/a1.md` + your final message)
+1. What works, with PR links and checkpoint tags.
+2. Measured numbers with method and device (fps, latencies, replay time, Spacetime latency).
 3. The device and browser matrix.
-4. Checks run, and checks you could **not** run.
-5. Deviations from interfaces-v1 or the plan, and where they're recorded.
-6. Upstream code reused and its license records.
-7. Spend or account actions taken, with the user's approval noted (or "none").
-8. Open issues, risks and the proposed next steps.
+4. Checks run and checks not run.
+5. Deviations from interfaces-v1.
+6. Upstream code reused and its license rows.
+7. Account actions and spend, each with the user's approval noted.
+8. Known issues for the demo.

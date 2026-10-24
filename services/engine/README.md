@@ -1,12 +1,4 @@
-# Engine (owner D)
+# Engine (Agent 3)
+**py3.11, cel-python.** Consumes `ev:*` and `ctl:engine`; applies `rulepacks/*.yaml` (CEL conditions, scoring templates, the confidence gate, the foul policy); writes calls, scores, rallies and challenges to Spacetime; hot-loads approved house rules. Its `decide/` module runs **background** AI votes (Claude ‖ Gemini ‖ Bitdeer Model Studio + geometry) on close or challenged calls, so voters never delay a call. `replay_test` replays event logs through a pack (used by tests and by the Droid).
 
-**Env:** py3.11 · cel-python · transitions · redis
-
-## Responsibilities
-- Fuses `ev:*` (dedupes across cameras), runs rule packs (CEL conditions, scoring templates), applies the confidence gate (≥ 0.90 auto / 0.60–0.90 challengeable / < 0.60 replay), and auto-tags PLAYERS rules.
-- **`decide()`**: SubQ Snap (`subq-snap-1.1`, `probabilities[choice]`, 2 s timeout, shuffled re-ask on borderline calls) → Gemini Flash → Claude votes (structured output, 5 shuffled votes) → geometry. Temperature calibration `softmax(log p / T)` from labelled calls. Trace everything in Langfuse.
-- Writes calls through SpacetimeDB reducers (HTTP). Coach (F11): candidate generators + a Snap choice + Claude explanation.
-- Tests: replay recorded event logs → expected calls.
-
-## Done when
-See the matching feature in `docs/plan/build-plan.md` ("Done when"). Record measured numbers in `docs/progress.md`.
+Contracts: `docs/plan/interfaces-v1.md`. Plan and checkpoints: `docs/plan/three-agent-plan.md`. Record measured numbers in `docs/progress.md`.
