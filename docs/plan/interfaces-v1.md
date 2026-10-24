@@ -241,6 +241,7 @@ Each entry has one field, `json`: `{schema, req_id, cmd, game_id, t_srv_ms, by_c
 ## 11. Game state (SpacetimeDB 2.13 TypeScript module, Agent 1)
 - Facts: native macOS arm64 CLI; npm client `spacetimedb`; reducers over HTTP with `POST /v1/database/{db}/call/{reducer}` (JSON args array, `Authorization: Bearer <token>`); `spacetime start` serves plain HTTP on :3000 behind the HTTPS origin's `/stdb/*`.
 - Bindings are generated with `spacetime generate --lang typescript` into `packages/state-client/src/bindings/`.
+- **As built (2026-10-24, `spacetime/src/index.ts`; full reducer table in `spacetime/README.md`):** every table has typed columns plus `json` (the full contract object), which `SpacetimeState` parses for clients. Composite keys are string columns (`rally_key = game_id:rally_no`, `score_key = game_id:team_id`, `vote_key = call_id:backend`); `track_sample` has an auto-increment id and the module itself keeps the last 120 s per camera. Roles: the owner registers service identities (`register_service`) as `engine`, `vision` or `compiler`; tokens come from `spacetime/scripts/provision.py`. `open_challenge` / `resolve_challenge` also update the call's status, and `open_challenge` links the call's speculative votes. The compiler's `update_house_rule_progress` takes `append_steps` for streaming. Caddy exposes only the subscription WebSocket, identity and ping at `/stdb`; reducer calls go to 127.0.0.1:3000.
 
 | Table | Key | Columns |
 |---|---|---|

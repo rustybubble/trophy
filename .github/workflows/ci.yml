@@ -27,7 +27,7 @@ jobs:
           /tmp/py312/bin/python -c "import trophy.world, trophy.framebus, trophy.contracts"
       - name: scripts lint + fixture validation
         run: |
-          uv run --project packages/py-trophy --frozen ruff check scripts
+          uv run --project packages/py-trophy --frozen ruff check scripts spacetime/scripts infra
           uv run --project packages/py-trophy --frozen python scripts/validate_fixtures.py
 
   node:

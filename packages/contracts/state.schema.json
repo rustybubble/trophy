@@ -41,7 +41,15 @@
         "rally_no": { "type": "integer" },
         "server_team_id": { "type": ["string", "null"] },
         "teams": { "type": "array", "items": { "$ref": "#/$defs/GameTeam" } },
-        "params": { "type": "object" },
+        "params": {
+          "type": "object",
+          "description": "Pack params for this game (e.g. points_to_win). Seeded/demo games set synthetic = true and a label the UI must show.",
+          "properties": {
+            "synthetic": { "type": "boolean" },
+            "label": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
         "created_at_ms": { "type": "number" }
       }
     },
