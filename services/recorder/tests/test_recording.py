@@ -148,3 +148,56 @@ def test_end_game_drains_pending_frames_before_finalizing(tmp_path, ffmpeg):
         assert rec.store.meta("game1", "cam1")["frame_count"] == 140
     finally:
         rec.close()
+
+
+def test_spacetime_end_monitor_reads_status_with_anonymous_identity(monkeypatch):
+    from recorder.state import GameEndMonitor
+
+    calls = []
+
+    def urlopen(request, timeout):
+        calls.append(request)
+        if request.full_url.endswith("/identity"):
+            return io.BytesIO(b'{"token":"synthetic-reader"}')
+        return io.BytesIO(
+            json.dumps([{"schema": {"elements": [{"name": {"some": "status"}}]}, "rows": [["ended"]]}]).encode()
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    monitor = GameEndMonitor("http://localhost:3100", "trophy-test")
+    try:
+        assert monitor._query({"game1"}) == {"game1"}
+        assert calls[1].data == b"SELECT * FROM game WHERE game_id = 'game1'"
+        assert calls[1].headers["Authorization"] == "Bearer synthetic-reader"
+    finally:
+        monitor.close()
+
+
+def test_automatic_spacetime_end_finalizes_without_control_command(tmp_path, ffmpeg):
+    class Monitor:
+        def check(self, games):
+            return {"game1"}
+
+        def close(self):
+            pass
+
+    r = fakeredis.FakeRedis()
+    f = frame()
+    FrameWriter(r).write(
+        game_id=f.game_id,
+        cam_id=f.cam_id,
+        seq=0,
+        t_phone_ms=0,
+        t_srv_ms=0,
+        t_game_s=f.t_game_s,
+        sync_err_ms=1,
+        jpeg=f.data,
+        source="file",
+    )
+    rec = Recorder(r, tmp_path, 30, "libx264", Monitor())
+    try:
+        assert rec.poll() == 1
+        assert rec.store.meta("game1", "cam1")["closed"]
+        assert not r.exists("ctl:engine")
+    finally:
+        rec.close()

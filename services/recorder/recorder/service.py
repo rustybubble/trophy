@@ -15,6 +15,8 @@ from PIL import Image
 from trophy.framebus import Frame, _decode
 from trophy.recordings import RecordingStore, atomic_json, ffmpeg_binary, sprite_thumbnail
 
+from .state import GameEndMonitor
+
 
 def text(value: bytes | str) -> str:
     return value.decode() if isinstance(value, bytes) else value
@@ -242,7 +244,7 @@ class CameraRecording:
 
 
 class Recorder:
-    def __init__(self, redis: Any, root: Path, fps: int, encoder: str) -> None:
+    def __init__(self, redis: Any, root: Path, fps: int, encoder: str, monitor: GameEndMonitor | None = None) -> None:
         self.redis, self.store, self.fps, self.encoder = redis, RecordingStore(root), fps, encoder
         self.cursors: dict[str, str] = {}
         self.sessions: dict[str, CameraRecording] = {}
@@ -250,6 +252,7 @@ class Recorder:
         self.ended_games: set[str] = set()
         self.ctl_cursor = "0-0"
         self.frames = 0
+        self.monitor = monitor
 
     def poll(self) -> int:
         for key in self.redis.scan_iter("frames:*"):
@@ -284,6 +287,8 @@ class Recorder:
                     }
                     atomic_json(session.path.parent / "game.json", {"game_id": frame.game_id, **game})
                 count += int(session.add(frame))
+        if self.monitor:
+            self.ended_games.update(self.monitor.check({s.meta["game_id"] for s in self.sessions.values()}))
         for cam, session in list(self.sessions.items()):
             session.copy_tracks(self.redis)
             status = self.redis.hget(f"game:{session.meta['game_id']}", "status")
@@ -305,3 +310,5 @@ class Recorder:
             finally:
                 session.close()
         self.redis.delete("recorder:heartbeat")
+        if self.monitor:
+            self.monitor.close()

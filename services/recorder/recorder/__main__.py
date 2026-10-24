@@ -11,6 +11,7 @@ import redis
 from trophy.recordings import ffmpeg_binary, select_encoder
 
 from .service import Recorder
+from .state import GameEndMonitor
 
 
 def main() -> None:
@@ -19,6 +20,8 @@ def main() -> None:
     parser.add_argument("--root", type=Path, default=Path("data/local/recordings"))
     parser.add_argument("--fps", type=int, default=30)
     parser.add_argument("--encoder", default="auto")
+    parser.add_argument("--stdb-uri", default=os.environ.get("SPACETIME_URI", "http://127.0.0.1:3000"))
+    parser.add_argument("--stdb-module", default=os.environ.get("SPACETIME_MODULE", "trophy"))
     parser.add_argument(
         "--idle-exit", type=float, default=0, help="finalize after this many idle seconds (smoke tests)"
     )
@@ -27,7 +30,8 @@ def main() -> None:
         parser.error("fps must be 1..60")
     encoder = select_encoder(ffmpeg_binary(), args.encoder)
     r = redis.Redis.from_url(args.redis_url)
-    recorder = Recorder(r, args.root, args.fps, encoder)
+    monitor = GameEndMonitor(args.stdb_uri, args.stdb_module)
+    recorder = Recorder(r, args.root, args.fps, encoder, monitor)
     stopping = False
 
     def stop(_sig: int, _frame: object) -> None:
@@ -38,10 +42,14 @@ def main() -> None:
     signal.signal(signal.SIGTERM, stop)
     print(json.dumps({"service": "recorder", "encoder": encoder, "fps": args.fps}), flush=True)
     last = time.monotonic()
+    last_monitor_error = None
     try:
         while not stopping:
             if recorder.poll():
                 last = time.monotonic()
+            if monitor.error != last_monitor_error:
+                print(json.dumps({"service": "recorder", "game_end_monitor_error": monitor.error}), flush=True)
+                last_monitor_error = monitor.error
             if args.idle_exit and recorder.frames and time.monotonic() - last > args.idle_exit:
                 break
             time.sleep(0.01)
