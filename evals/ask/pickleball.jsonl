@@ -1,0 +1,7 @@
+{"question": "Can I volley the ball while standing in the kitchen?", "expected_rule_ids": ["usap:11.A", "usap:11.B"], "notes": "non-volley zone faults; the NVZ rules moved to Section 11 in the 2026 rulebook (verify the sub-letters after indexing)"}
+{"question": "Does the serve have to be underhand?", "expected_rule_ids": ["usap:4.A.5", "usap:4.A"], "notes": "volley serve: upward arc, contact below the waist, paddle head below the wrist; verify the sub-number"}
+{"question": "Does the serve have to bounce before it is returned?", "expected_rule_ids": ["usap:7.A", "usap:7.B"], "notes": "the two-bounce rule: the serve and the return of serve must bounce; verify the 2026 numbering"}
+{"question": "Is a ball that lands on the line in or out?", "expected_rule_ids": ["usap:6.A", "usap:6.B", "usap:6.C"], "notes": "Section 6 line call rules: a ball touching any line is in, except a serve touching the NVZ line"}
+{"question": "How many points do you play to and do you have to win by two?", "expected_rule_ids": ["usap:12.A", "usap:12.B"], "notes": "games to 11, win by 2 (tournament variants 15 or 21); verify Section 12 numbering"}
+{"question": "Can my momentum carry me into the kitchen after a volley?", "expected_rule_ids": ["usap:11.C", "usap:11.D"], "notes": "a fault if momentum causes a touch of the NVZ after a volley; verify the sub-letters"}
+{"question": "What's a good restaurant near the courts?", "expected_rule_ids": [], "notes": "out of the rulebook: found must be false"}

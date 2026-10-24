@@ -1,0 +1,109 @@
+TROPHY TEST LAWS OF PADDLE PONG
+Synthetic fixture for Trophy's rulebook scraper and index tests. Paddle pong is an invented game and
+every clause below is made up. This is NOT an official rulebook of any federation. Numbering follows the
+hierarchical style used by real law books so that the splitter is exercised on headings, wrapped lines,
+page numbers, a table of contents and a national byelaw box.
+
+CONTENTS
+2.1 The Table ............................................................ 3
+2.2 The Net Assembly ............................................... 3
+2.6 The Service ............................................................ 4
+2.9 A Let ......................................................................... 5
+2.10 A Point ................................................................... 5
+2.11 A Game ................................................................... 6
+2.13 The Order of Serving ........................................... 6
+2.14 Equipment Checks ................................................ 7
+
+3
+
+2 THE TEST LAWS OF PADDLE PONG
+2.1 THE TABLE
+2.1.1 The upper surface of the table, known as the playing surface, shall be rectangular, 3.00 m long and
+1.50 m wide, and shall lie in a horizontal plane 80 cm above the floor.
+2.1.2 The playing surface shall not include the vertical sides of the tabletop; a ball that touches only a
+vertical side has left the playing surface.
+2.1.3 The playing surface shall yield a uniform bounce of about 25 cm when a standard paddle pong ball is
+dropped on to it from a height of 30 cm.
+2.2 THE NET ASSEMBLY
+2.2.1 The net assembly shall consist of the net, its suspension and the supporting posts, including the
+clamps attaching them to the table.
+2.2.2 The top of the net, along its whole length, shall be 16 cm above the playing surface.
+
+4
+
+2.6 THE SERVICE
+2.6.1 Service shall start with the ball resting freely on the open palm of the server's stationary free
+hand, held still for at least one second.
+2.6.2 The server shall then project the ball near vertically upwards, without imparting spin, so that it
+rises at least 20 cm after leaving the palm of the free hand and then falls without touching anything
+before being struck.
+2.6.3 As the ball is falling the server shall strike it so that it touches first the server's own court and
+then, after passing over or around the net assembly, touches directly the receiver's court.
+2.6.4 From the start of service until it is struck, the ball shall be above the level of the playing surface
+and behind the server's end line, and it shall not be hidden from the receiver.
+2.6.5 As soon as the ball has been projected, the server's free arm and hand shall be removed from the space
+between the ball and the net.
+National byelaw 2.6.5(a): in domestic league play the referee may waive the free-arm requirement for
+players under twelve. This paragraph is a byelaw box and must be skipped by the scraper.
+
+5
+
+2.9 A LET
+2.9.1 The rally shall be a let if in service the ball, in passing over or around the net assembly, touches
+it, provided the service is otherwise correct or the ball is obstructed by the receiver.
+2.9.2 The rally shall be a let if the service is delivered when the receiving player or pair is not ready,
+provided that neither the receiver nor the receiver's partner attempts to strike the ball.
+2.9.3 The rally shall be a let if play is interrupted by the umpire or assistant umpire for any reason.
+2.10 A POINT
+2.10.1 Unless the rally is a let, a player shall score a point if the opponent fails to make a correct
+service.
+2.10.2 Unless the rally is a let, a player shall score a point if the opponent fails to make a correct
+return.
+2.10.3 Unless the rally is a let, a player shall score a point if, after the player has made a service or a
+return, the ball touches anything other than the net assembly before being struck by the opponent.
+2.10.4 Unless the rally is a let, a player shall score a point if the ball passes beyond the player's end
+line without touching the player's court, after being struck by the opponent.
+2.10.5 Unless the rally is a let, a player shall score a point if the opponent's free hand touches the
+playing surface during the rally.
+2.10.6 Unless the rally is a let, a player shall score a point if the opponent, or anything the opponent
+wears or carries, touches the net assembly.
+
+6
+
+2.11 A GAME
+2.11.1 A game shall be won by the player or pair first scoring 15 points unless both players or pairs score
+14 points, when the game shall be won by the first player or pair subsequently gaining a lead of 2 points.
+2.13 THE ORDER OF SERVING
+2.13.1 After each 3 points have been scored the receiving player or pair shall become the serving player or
+pair and so on until the end of the game, unless both players or pairs score 14 points, when the sequence
+of serving and receiving shall be the same but each player shall serve for only 1 point in turn.
+2.13.2 The player or pair who served first in a game shall receive first in the next game of the match.
+
+7
+
+2.14 EQUIPMENT CHECKS
+2.14.1 Before a match the umpire shall inspect every racket. A racket may be of any size, shape or weight
+but the blade shall be flat and rigid. At least 85 percent of the blade by thickness shall be of natural wood;
+an adhesive layer within the blade may be reinforced with fibrous material such as carbon fibre, glass fibre
+or compressed paper, but shall not be thicker than 7.5 percent of the total thickness or 0.35 mm, whichever
+is the smaller. A side of the blade used for striking the ball shall be covered with either ordinary
+pimpled rubber, with pimples outwards having a total thickness including adhesive of not more than 2.0 mm,
+or sandwich rubber, with pimples inwards or outwards, having a total thickness including adhesive of not
+more than 4.0 mm. Ordinary pimpled rubber is a single layer of non-cellular rubber, natural or synthetic,
+with pimples evenly distributed over its surface at a density of not less than 10 per square centimetre and
+not more than 30 per square centimetre. Sandwich rubber is a single layer of cellular rubber covered with a
+single outer layer of ordinary pimpled rubber, the thickness of the pimpled rubber not being more than 2.0
+mm. The covering material shall extend up to but not beyond the limits of the blade, except that the part
+nearest the handle and gripped by the fingers may be left uncovered or covered with any material. The
+blade, any layer within the blade and any layer of covering material or adhesive on a side used for
+striking the ball shall be continuous and of even thickness. The surface of the covering material on a
+side of the blade, or of a side of the blade if it is left uncovered, shall be matt, bright red on one side
+and black on the other. The racket covering shall be used without any physical, chemical or other
+treatment. Slight deviations from continuity of surface or uniformity of colour due to accidental damage
+or wear may be allowed provided that they do not significantly change the characteristics of the surface.
+Before the start of a match and whenever a player changes a racket during a match the player shall show the
+opponent and the umpire the racket that is about to be used and shall allow them to examine it. The umpire
+shall record the colours used and shall report any racket that fails inspection to the referee, who shall
+decide whether it may be used for the remainder of the match or must be replaced before play continues.
+2.14.2 A ball shall be spherical, with a diameter of 42 mm, shall weigh 3.0 g and shall be made of
+celluloid or similar plastics material and shall be white or orange, and matt.

@@ -1,0 +1,32 @@
+{
+  "_note": "PROPOSED on 2026-10-24, awaiting the user's approval (Part 2 brief, task 4). Official, public rulebooks only: no login, no paywall, robots.txt respected, no retry on 403. ittf.com/handbook answered 403 to a plain fetch on 2026-10-24 and is NOT used (we never work around bot protection); Table Tennis England's PDF reproduces the ITTF Laws (chapter 2) with national byelaws in boxes, which skip_patterns drop. USA Pickleball's own rulebook page 404'd on 2026-10-24; Pickleball Canada hosts the 2026 USA Pickleball Official Rulebook. Verify every URL before a run.",
+  "sources": [
+    {
+      "sport": "table_tennis",
+      "url": "https://www.tabletennisengland.co.uk/content/uploads/2026/07/Laws-of-Table-Tennis-2026-27.pdf",
+      "kind": "pdf",
+      "source": "The Laws of Table Tennis 2026-27 (ITTF Laws, chapter 2 of the ITTF Statutes, as published by Table Tennis England)",
+      "slug": "ittf",
+      "license_note": "(c) ITTF / Table Tennis England. Scraped from a public PDF; quoted <= 25 words with a link and attribution; full text kept locally, not redistributed.",
+      "skip_patterns": ["^\\s*National byelaw", "^\\s*Table Tennis England byelaw", "^\\s*TTE byelaw"]
+    },
+    {
+      "sport": "pickleball",
+      "url": "https://pickleballcanada.org/wp-content/uploads/2026/03/2026-Official-Rulebook-EN.pdf",
+      "kind": "pdf",
+      "source": "2026 USA Pickleball Official Rulebook (as hosted by Pickleball Canada)",
+      "slug": "usap",
+      "license_note": "(c) USA Pickleball. Scraped from a public PDF; quoted <= 25 words with a link and attribution; full text kept locally, not redistributed.",
+      "skip_patterns": []
+    },
+    {
+      "sport": "basketball",
+      "url": "https://assets.fiba.basketball/image/upload/documents-corporate-fiba-official-rules-2024-v10.pdf",
+      "kind": "pdf",
+      "source": "FIBA Official Basketball Rules 2024",
+      "slug": "fiba",
+      "license_note": "(c) FIBA. Scraped from a public PDF; quoted <= 25 words with a link and attribution; full text kept locally, not redistributed.",
+      "skip_patterns": []
+    }
+  ]
+}

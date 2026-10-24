@@ -1,0 +1,42 @@
+{
+  "title": "Sports Rulebook Scraper input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "sources": {
+      "title": "Sources",
+      "type": "array",
+      "description": "Official, public rulebook pages or PDFs. Each item: {sport, url, kind: \"html\"|\"pdf\", source, slug, license_note, skip_patterns?: [regex]}. rule_id becomes \"<slug>:<number>\" (e.g. ittf:2.6.2). Leave empty to use the bundled sources.json.",
+      "editor": "json",
+      "prefill": [
+        {
+          "sport": "table_tennis",
+          "url": "https://www.tabletennisengland.co.uk/content/uploads/2026/07/Laws-of-Table-Tennis-2026-27.pdf",
+          "kind": "pdf",
+          "source": "The Laws of Table Tennis 2026-27 (ITTF Laws as published by Table Tennis England)",
+          "slug": "ittf",
+          "license_note": "(c) ITTF / Table Tennis England. Public PDF; quoted briefly with a link.",
+          "skip_patterns": [
+            "^\\s*National byelaw"
+          ]
+        }
+      ]
+    },
+    "max_pages": {
+      "title": "Max pages",
+      "type": "integer",
+      "description": "Hard cap on HTTP requests for the whole run (one request per source; nothing is followed).",
+      "default": 25,
+      "minimum": 1,
+      "maximum": 200
+    },
+    "user_agent": {
+      "title": "User agent",
+      "type": "string",
+      "description": "Sent on every request. Keep it descriptive, with a contact URL.",
+      "default": "TrophyRulebookScraper/0.1 (Cal Hacks 13.0 project; +https://github.com/rustybubble/trophy)",
+      "editor": "textfield"
+    }
+  },
+  "required": []
+}

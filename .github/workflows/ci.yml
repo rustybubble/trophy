@@ -69,3 +69,32 @@ jobs:
           node scripts/gen-contracts.mjs
           node --experimental-strip-types packages/state-client/scripts/build-fixtures.ts
           git diff --exit-code -- packages/contracts/gen packages/py-trophy/trophy/contracts packages/state-client/fixtures
+
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: rules service lint + tests (pure parts; live Moss/Claude tests are skipped without keys)
+        working-directory: services/rules
+        run: |
+          uv sync --frozen
+          uv run --frozen ruff check .
+          uv run --frozen ruff format --check .
+          uv run --frozen pytest -q -rs
+      - name: rulebook-scraper actor lint + tests (splitter on the synthetic fixtures; no network)
+        working-directory: actors/rulebook-scraper
+        run: |
+          uv sync --frozen
+          uv run --frozen ruff check .
+          uv run --frozen ruff format --check .
+          uv run --frozen pytest -q
+          uv run --frozen python tools/make_synthetic_pdf.py && git diff --exit-code -- ../../evals/fixtures/rulebooks
+      - name: actor input schema is valid (Apify CLI)
+        working-directory: actors/rulebook-scraper
+        run: APIFY_CLI_DISABLE_TELEMETRY=1 npx --yes apify-cli@1.10.0 validate-schema .actor/input_schema.json

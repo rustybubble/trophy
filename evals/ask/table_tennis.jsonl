@@ -1,0 +1,17 @@
+{"question": "Does the ball have to go up 16 cm on a serve?", "expected_rule_ids": ["ittf:2.6.2"], "notes": "demo 1: the toss must rise at least 16 cm after leaving the palm, near vertically, without spin"}
+{"question": "What if the ball hits the edge of the table?", "expected_rule_ids": ["ittf:2.1.2", "ittf:2.1.1"], "notes": "demo 2: the playing surface includes the top edges but not the vertical sides"}
+{"question": "What happens if the serve clips the net and lands in?", "expected_rule_ids": ["ittf:2.9.1", "ittf:2.9.1.1"], "notes": "demo 3: a let when the ball touches the net assembly in service and the service is otherwise correct; the 2026 numbering may be 2.9.1 or 2.9.1.1"}
+{"question": "Can I touch the table with my free hand during a rally?", "expected_rule_ids": ["ittf:2.10.1.11", "ittf:2.10.1"], "notes": "demo 4: a point to the opponent if the free hand touches the playing surface; verify the sub-number"}
+{"question": "How many serves does each player get at 10-10?", "expected_rule_ids": ["ittf:2.13.6", "ittf:2.13.3"], "notes": "demo 5: from 10-10 each player serves for only one point in turn; verify the sub-number"}
+{"question": "How many points do you need to win a game?", "expected_rule_ids": ["ittf:2.11.1"], "notes": "11 points, win by 2 after 10-10"}
+{"question": "How often does the serve change?", "expected_rule_ids": ["ittf:2.13.3"], "notes": "after each 2 points, except at 10-10"}
+{"question": "Does the serve have to start on an open palm?", "expected_rule_ids": ["ittf:2.6.1"], "notes": "the ball rests freely on the open palm of the stationary free hand"}
+{"question": "Can the ball be hidden from the receiver when serving?", "expected_rule_ids": ["ittf:2.6.4", "ittf:2.6.5"], "notes": "not hidden by the server or partner or anything they wear; verify 2.6.4 vs 2.6.5 in 2026"}
+{"question": "What if my opponent hits the ball twice in a row?", "expected_rule_ids": ["ittf:2.10.1.7", "ittf:2.10.1"], "notes": "a point if the opponent deliberately strikes the ball twice in succession; verify the sub-number"}
+{"question": "Is it a point if the ball bounces twice on my opponent's side?", "expected_rule_ids": ["ittf:2.10.1.2", "ittf:2.7.1", "ittf:2.10.1"], "notes": "the opponent failed to make a correct return (2.7.1 defines a return)"}
+{"question": "What happens if the ball goes around the net instead of over it?", "expected_rule_ids": ["ittf:2.7.1"], "notes": "a return may pass over or around the net assembly"}
+{"question": "What happens if I touch the net during a point?", "expected_rule_ids": ["ittf:2.10.1.10", "ittf:2.10.1"], "notes": "a point to the opponent if a player or anything worn touches the net assembly; verify the sub-number"}
+{"question": "How high is the net?", "expected_rule_ids": ["ittf:2.2.3"], "notes": "15.25 cm; verify the sub-number of the net height clause"}
+{"question": "Does the server have to strike the ball behind the end line?", "expected_rule_ids": ["ittf:2.6.4"], "notes": "above the playing surface and behind the server's end line from the start of service until struck"}
+{"question": "What's the weather going to be like tonight?", "expected_rule_ids": [], "notes": "out of the rulebook: found must be false, no citations, no fabricated answer"}
+{"question": "Who won the last world championship?", "expected_rule_ids": [], "notes": "out of the rulebook: found must be false"}
