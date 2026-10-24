@@ -33,6 +33,8 @@ export interface CompilerConfig {
   /** Path of the droid executable; undefined = `droid` on PATH */
   droidExecPath: string | undefined;
   model: string;
+  /** Droid reasoning effort (none|minimal|low|medium|high|xhigh); low keeps a 90 s budget realistic */
+  reasoningEffort: string;
   timeoutMs: number;
   maxAttempts: number;
   /** Python interpreter of the engine venv (runs replay_test) */
@@ -57,7 +59,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, root = REPO_ROO
   return {
     factoryApiKey: key,
     droidExecPath: e.DROID_EXEC_PATH || undefined,
-    model: e.DROID_MODEL || "claude-opus-5-5",
+    model: e.DROID_MODEL || "claude-sonnet-5",
+    reasoningEffort: e.DROID_REASONING_EFFORT || "low",
     timeoutMs: Number(e.DROID_TIMEOUT_S || 90) * 1000,
     maxAttempts: Number(e.DROID_MAX_ATTEMPTS || 3),
     enginePython,

@@ -37,8 +37,19 @@ export function isAllowedEdit(sandboxRoot: string, filePath: string, allowed: re
 /** The one command the Droid may run: the test gate, optionally with flags. */
 const TEST_CMD = /^(\.\/)?replay_test(\s+--?[a-z-]+(=\S+|\s+\S+)?)*\s*$/;
 
-export function isAllowedCommand(command: string): boolean {
-  const c = command.trim();
+export function isAllowedCommand(command: string, sandboxRoot?: string): boolean {
+  let c = command.trim();
+  if (sandboxRoot) {
+    // Agents like to prefix `cd <sandbox> && ./replay_test`; allow exactly that directory, quoted or not.
+    const dir = sandboxRoot.replace(/\/$/, "");
+    for (const q of ['"', "'", ""]) {
+      const prefix = `cd ${q}${dir}${q} && `;
+      if (c.startsWith(prefix)) {
+        c = c.slice(prefix.length);
+        break;
+      }
+    }
+  }
   if (
     c.includes("&&") ||
     c.includes("||") ||

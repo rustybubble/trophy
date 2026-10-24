@@ -19,6 +19,7 @@ export interface AgentContext {
   sandboxDir: string;
   allowlist: readonly string[];
   model: string;
+  reasoningEffort?: string;
 }
 
 export type AgentFactory = (ctx: AgentContext) => Promise<Agent>;

@@ -22,7 +22,6 @@ export const DISABLED_TOOLS = [
   "WebSearch",
   "Task",
   "Skill",
-  "ToolSearch",
   "GenerateImage",
   "Loop",
   "StageSettingsChanges",
@@ -50,13 +49,22 @@ interface Opts {
   execPath: string | undefined;
 }
 
-type ToolUse = { details: { type: string; filePath?: string; fullCommand?: string; command?: string } };
+type Details = { type: string; filePath?: string; fullCommand?: string; command?: string; calls?: ScriptCall[] };
+type ScriptCall = { toolName?: string; confirmation?: Details };
+type ToolUse = { details: Details };
 
 export function decide(ctx: AgentContext, toolUses: ToolUse[], onBlocked: (what: string) => void): boolean {
   if (!toolUses.length) return false;
   for (const tu of toolUses) {
     const d = tu.details;
     switch (d.type) {
+      case ToolConfirmationType.Script: {
+        // Script mode (claude-opus-5-5, claude-fable-5.1, gpt-6-sol in SDK sessions, measured 2026-10-24) runs file
+        // edits inside a script the handler can only partly inspect, so the compiler refuses it and uses a model that
+        // runs in direct tool mode (claude-sonnet-5, claude-opus-4-8). DROID_MODEL picks it.
+        onBlocked("script refused: script-mode tool execution is not supported; use a direct-tool model");
+        return false;
+      }
       case ToolConfirmationType.Edit:
       case ToolConfirmationType.Create:
       case ToolConfirmationType.ApplyPatch: {
@@ -68,7 +76,7 @@ export function decide(ctx: AgentContext, toolUses: ToolUse[], onBlocked: (what:
       }
       case ToolConfirmationType.Execute: {
         const cmd = d.fullCommand ?? d.command ?? "";
-        if (!isAllowedCommand(cmd)) {
+        if (!isAllowedCommand(cmd, ctx.sandboxDir)) {
           onBlocked(`command refused: ${cmd.slice(0, 160)}`);
           return false;
         }
@@ -105,7 +113,10 @@ export function droidAgentFactory(opts: Opts): AgentFactory {
       apiKey: opts.apiKey,
       execPath: opts.execPath,
       modelId: ctx.model,
-      autonomyLevel: AutonomyLevel.Off,
+      reasoningEffort: ctx.reasoningEffort as CreateSessionOptions["reasoningEffort"],
+      // "low" is the lowest level that offers the Edit/Create tools; it auto-approves edits, so the sandbox's
+      // PreToolUse hook (hooks/guard.py) is the enforcement point and this handler is the second line.
+      autonomyLevel: AutonomyLevel.Low,
       disableBuiltinSkills: true,
       disabledToolIds: DISABLED_TOOLS,
       systemPrompt: { type: "preset", preset: "droid", append: SYSTEM_APPEND },
@@ -150,6 +161,14 @@ export function droidAgentFactory(opts: Opts): AgentFactory {
                 onEvent({ kind: "error", tool: msg.toolName, text: `${msg.toolName} failed: ${c.slice(0, 400)}` });
               }
               break;
+            case DroidMessageType.Hook: {
+              // The sandbox's PreToolUse guard: exit 2 blocked the call, with the reason on stderr.
+              const h = msg as { status?: string; exitCode?: number | null; stderr?: string; eventName?: string };
+              if (h.status !== "started" && h.exitCode === 2) {
+                onEvent({ kind: "blocked", text: `guard: ${(h.stderr ?? "").trim().slice(0, 200)}` });
+              }
+              break;
+            }
             case DroidMessageType.Error:
               onEvent({ kind: "error", text: msg.message });
               break;

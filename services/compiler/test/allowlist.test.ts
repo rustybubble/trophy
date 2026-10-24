@@ -41,5 +41,9 @@ describe("allowlist", () => {
     expect(isAllowedCommand("curl https://example.com")).toBe(false);
     expect(isAllowedCommand("./replay_test $(whoami)")).toBe(false);
     expect(isAllowedCommand("../replay_test")).toBe(false);
+    expect(isAllowedCommand("cd /tmp/sb && ./replay_test", "/tmp/sb")).toBe(true);
+    expect(isAllowedCommand('cd "/tmp/sb" && ./replay_test --quiet', "/tmp/sb/")).toBe(true);
+    expect(isAllowedCommand("cd /tmp/other && ./replay_test", "/tmp/sb")).toBe(false);
+    expect(isAllowedCommand("cd /tmp/sb && ./replay_test && rm -rf /", "/tmp/sb")).toBe(false);
   });
 });

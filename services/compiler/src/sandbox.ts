@@ -73,6 +73,8 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
     const base = job.baseSport ?? "table_tennis";
     const refSrc = job.moduleDir ?? join(root, "sports", base);
     cpSync(refSrc, join(dir, "reference", base), { recursive: true });
+    // Seed the new module with the reference so the Droid edits (a 90 s job) instead of retyping events.py.
+    for (const f of MODULE_FILES) cpSync(join(refSrc, f), join(moduleDir, f));
   } else {
     const src = job.moduleDir ?? join(root, "sports", job.sport);
     for (const f of MODULE_FILES) {
@@ -93,6 +95,7 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
   writeFileSync(join(dir, ".gitignore"), ".trophy/\n__pycache__/\n");
   const allowlist = editableFiles(job.kind, job.sport);
   writeFileSync(join(dir, "TASK.md"), renderTask(job, allowlist, samples));
+  installGuard(dir, allowlist);
   git(dir, "init", "-q", "-b", "main");
   git(dir, "-c", "user.name=trophy-droid", "-c", "user.email=droid@trophy.local", "add", "-A");
   git(
@@ -112,6 +115,33 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
 }
 
 const PROMPTS = join(REPO_ROOT, "services/compiler/prompts");
+export const GUARD = join(REPO_ROOT, "services/compiler/hooks/guard.py");
+
+/**
+ * The enforcement point. The Droid CLI runs project hooks from <cwd>/.factory/hooks.json before every tool call;
+ * autonomy "low" auto-approves edits without asking the SDK permission handler (measured 2026-10-24), so the
+ * PreToolUse hook is what keeps the agent inside the allowlist. The allowlist and the hooks file are read-only.
+ */
+export function installGuard(dir: string, allowlist: string[]): void {
+  mkdirSync(join(dir, ".trophy"), { recursive: true });
+  mkdirSync(join(dir, ".factory"), { recursive: true });
+  const allowPath = join(dir, ".trophy", "allowlist.json");
+  writeFileSync(allowPath, JSON.stringify({ files: allowlist, commands: ["./replay_test"] }, null, 1));
+  chmodSync(allowPath, 0o444);
+  const cmd = `python3 "${GUARD}" "${dir}"`;
+  const hooks = {
+    hooksDisabled: false,
+    PreToolUse: [
+      {
+        matcher: "Edit|Create|ApplyPatch|MultiEdit|Write|Execute",
+        hooks: [{ type: "command", command: cmd, timeout: 10 }],
+      },
+    ],
+  };
+  const hooksPath = join(dir, ".factory", "hooks.json");
+  writeFileSync(hooksPath, JSON.stringify(hooks, null, 1));
+  chmodSync(hooksPath, 0o444); // the guard also refuses writes to it; the git audit catches any change
+}
 
 export function renderTask(job: Job, allowlist: string[], samples: string[]): string {
   const tpl = readFileSync(join(PROMPTS, `${job.kind}.md`), "utf8");

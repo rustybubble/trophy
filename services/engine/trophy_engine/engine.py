@@ -179,7 +179,7 @@ class Engine:
                 continue
             rule = cr.rule
             call = self._make_call(g, ev, cr, activation, calib_untrusted)
-            if rule.get("kind") in SCORING_KINDS and (call.get("points") or call.get("outcome") == "let"):
+            if call.get("outcome") == "let" or (rule.get("kind") in SCORING_KINDS and call.get("points")):
                 if scoring_call is None:
                     scoring_call = call
                 continue

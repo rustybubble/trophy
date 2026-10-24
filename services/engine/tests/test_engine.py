@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -409,3 +410,60 @@ def test_serve_toss_rules_from_d22() -> None:
     assert angled[-1]["outcome"] == "illegal_toss_angle" and angled[-1]["speech"] == "Fault. Toss not vertical."
     legal = eng.feed(toss(13.0, 0.25, 0.1))
     assert legal == []
+
+
+def test_droid_net_let_house_rule_replays_the_point(tmp_path: Path) -> None:
+    """The rule the live Droid wrote on 2026-10-24 (run 01M5QYE04446M2RC8A2K1JFJ1V): a net-clipping serve is a let."""
+    import yaml
+
+    pack = yaml.safe_load((TT / "rules.yaml").read_text())
+    rule = {
+        "id": "serve_net_let",
+        "name": "Serve clips the net and lands in",
+        "tier": "AUTO",
+        "kind": "edge_call",
+        "when": "params.net_let_on_serve && ev.type == 'net' && ev.payload.kind == 'touch' && rally.phase == 'serve'",
+        "check": "code",
+        "outcome": "let",
+        "text": "Let: serve clipped the net",
+        "speech": "Let. Replay the point.",
+        "requires": ["net"],
+        "house_rule": True,
+    }
+    idx = next(i for i, r in enumerate(pack["rules"]) if r["id"] == "net_into_own_side")
+    pack["rules"].insert(idx, rule)
+    mod = tmp_path / "table_tennis"
+    shutil.copytree(TT, mod)
+    (mod / "rules.yaml").write_text(yaml.safe_dump(pack))
+    st = MemoryState()
+    eng = Engine(st, now_ms=lambda: 1.0)
+    eng.create_game(GAME, "table_tennis", t0_ms=0, module_dir=mod)
+    eng.start_game(GAME, "A")
+    eng.feed(point_call(1.0, "A"))  # serve bounces on the server's side
+    touch = {
+        "schema": "trophy.event.v1",
+        "id": "nt",
+        "game_id": GAME,
+        "t_game_s": 1.2,
+        "sport": "table_tennis",
+        "type": "net",
+        "source": "synthetic",
+        "cams": ["c_syn001"],
+        "conf": 0.8,
+        "side": "A",
+        "payload": {"kind": "touch", "from_side": "A"},
+    }
+    calls = eng.feed(touch)
+    assert (
+        calls
+        and calls[-1]["outcome"] == "let"
+        and calls[-1]["speech"] == "Let. Replay the point."
+        and "points" not in calls[-1]
+    )
+    assert eng.games[GAME].rally is None  # the rally ended; the point is replayed
+    assert {r["team_id"]: r["points"] for r in st.rows("score")} == {"A": 0, "B": 0}
+    assert st.rows("rally")[-1]["summary"]["let"] is True
+    # the same touch in a rally (not a serve) is not a let under this rule
+    eng.feed(point_call(5.0, "A"))
+    eng.feed(point_call(5.4, "B"))
+    assert eng.feed({**touch, "id": "nt2", "t_game_s": 5.6}) == []

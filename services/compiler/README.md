@@ -26,13 +26,25 @@ only: the module to edit, the golden reference (compile jobs, read-only), the JS
 sample layer-1 logs with labels, `TASK.md` (the brief from `prompts/`) and `replay_test`, a fixed script that runs
 the engine's gate. No repo, no `.env`, no secrets.
 
-The session runs with autonomy **off**, so every edit, file creation and shell command comes back to our permission
-handler ([`src/droidAgent.ts`](src/droidAgent.ts)), which proceeds only for edits inside the job's allowlist and for
-`./replay_test`; everything else is cancelled and recorded as a `blocked` step. Web fetch, web search, sub-agents,
-skills and automation tools are disabled. The runner does not take the agent's word for anything: after each turn it
-diffs the sandbox with git, **fails the run if any path outside the allowlist changed**, runs `replay_test` itself,
-and enforces a 90 s wall clock (`DROID_TIMEOUT_S`). Inside `events.py` the engine's loader refuses imports outside a
-small stdlib allowlist and the usual escape hatches (`exec`, `eval`, `open`, `__import__`, dunder access).
+Enforcement is layered, because the SDK's own permission handler turned out not to be enough (measured 2026-10-24:
+autonomy *off* offers no Edit tool, autonomy *low* auto-approves edits without asking; D-30):
+1. **A PreToolUse hook in every sandbox** (`.factory/hooks.json` → [`hooks/guard.py`](hooks/guard.py), read-only):
+   the Droid CLI runs it before each `Edit|Create|ApplyPatch|MultiEdit|Write|Execute`; it allows only the job's
+   allowlisted files and `./replay_test` (optionally prefixed with `cd <sandbox> &&`) and blocks everything else with
+   exit 2, with the reason sent back to the model and recorded as a `blocked` step.
+2. **The git audit:** after each turn the runner diffs the sandbox and **fails the run if any path outside the
+   allowlist changed, or if nothing changed** (a gate that passes on an unchanged module proves nothing).
+3. **The runner runs `replay_test` itself** and enforces a 90 s wall clock (`DROID_TIMEOUT_S`).
+4. The SDK permission handler ([`src/droidAgent.ts`](src/droidAgent.ts)) still answers any confirmation that does
+   arrive with the same allowlist, and refuses script-mode confirmations outright.
+Web fetch, web search, sub-agents, skills and automation tools are disabled. Inside `events.py` the engine's loader
+refuses imports outside a small stdlib allowlist and the usual escape hatches (`exec`, `eval`, `open`,
+`__import__`, dunder access).
+
+**Model.** `DROID_MODEL` defaults to `claude-sonnet-5`. In SDK sessions some models (`claude-opus-5-5`,
+`claude-fable-5.1`, `gpt-6-sol`; measured 2026-10-24) run in *script* tool-execution mode, where edits happen inside a
+script the permission handler can only partly inspect; the runner refuses script confirmations, so pick a model that
+runs in direct mode (`claude-sonnet-5`, `claude-opus-4-8`).
 
 ## The loop and the test gate
 
@@ -48,6 +60,13 @@ deterministic, the surface-bounce count matches the labels, bounces alternate si
 Every change to the run row (`DroidRun`, `droidrun.schema.json`: plan, steps, diff, test table, blocked calls, timings,
 token usage) is pushed to the sinks as it happens: stderr, `data/local/droid_runs/<run_id>/run.jsonl`, and for
 house rules the Spacetime `house_rule` row via `update_house_rule_progress`, which Agent 1's dashboard panel renders.
+
+## Measured (2026-10-24, this Mac, `claude-sonnet-5`, effort low, single runs)
+
+| Job | Wall time | Attempts | Gate |
+|---|---|---|---|
+| House rule "a serve that clips the net and lands in is a let" | 30.6 s | 1 | 19/19 in 0.5 s |
+| Derive `sports/pickleball/` from table tennis + the synthetic scene | 69.2 s | 1 | 19/19 in 0.5 s |
 
 ## Approval
 

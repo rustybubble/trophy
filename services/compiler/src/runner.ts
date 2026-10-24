@@ -6,7 +6,7 @@
  * run row goes to the sink immediately so a dashboard can render it live.
  */
 import { randomBytes } from "node:crypto";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { DroidRun, DroidRunStep } from "@trophy/contracts";
@@ -125,8 +125,14 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
   );
   let agent: Agent | undefined;
   try {
-    agent = await deps.agentFactory({ sandboxDir: sb.dir, allowlist: sb.allowlist, model: deps.config.model });
-    let prompt = "Read TASK.md and carry it out. Start with your plan.";
+    agent = await deps.agentFactory({
+      sandboxDir: sb.dir,
+      allowlist: sb.allowlist,
+      model: deps.config.model,
+      reasoningEffort: deps.config.reasoningEffort,
+    });
+    // The brief goes in the first prompt (it is also TASK.md in the sandbox) so the agent needs no exploratory turn.
+    let prompt = `${readFileSync(join(sb.dir, "TASK.md"), "utf8")}\n\nBegin now: plan in 3-5 lines, then edit, then run ./replay_test.`;
     let lastTable = "";
     for (let attempt = 1; attempt <= deps.config.maxAttempts; attempt++) {
       run.attempt = attempt;
@@ -166,6 +172,14 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
       if (outside.length) {
         clearTimeout(timer);
         return finish("failed", `allowlist violation: the agent changed ${outside.join(", ")}`);
+      }
+      if (!touched.length) {
+        // A gate that passes on an unchanged module proves nothing: the job asked for a change.
+        step({ kind: "error", text: `attempt ${attempt}: the agent changed nothing in ${sb.allowlist.join(", ")}` });
+        lastTable = `You did not change any file. The job requires editing ${sb.allowlist.join(", ")}; use the Edit or Create tool directly.`;
+        await emit();
+        if (!result.success) break;
+        continue;
       }
       step({ kind: "test", text: `runner: ./replay_test (attempt ${attempt})` });
       await emit();

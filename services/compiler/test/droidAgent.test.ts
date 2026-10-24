@@ -31,11 +31,22 @@ describe("permission decisions", () => {
       ),
     ).toBe(false);
     expect(decide(ctx, [], b)).toBe(false);
+    // script mode is refused outright
+    const script = {
+      details: {
+        type: "script",
+        calls: [
+          { toolName: "Edit", confirmation: { type: "edit", filePath: "/tmp/sb/sports/table_tennis/rules.yaml" } },
+        ],
+      },
+    };
+    expect(decide(ctx, [script], b)).toBe(false);
     expect(blocked).toEqual([
       "edit outside the allowlist: /tmp/sb/sports/table_tennis/events.py",
       "command refused: curl http://x",
       "tool refused: mcp_tool",
       "command refused: rm -rf /",
+      "script refused: script-mode tool execution is not supported; use a direct-tool model",
     ]);
   });
 });

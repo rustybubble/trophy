@@ -26,7 +26,22 @@ describe("sandbox", () => {
       "/usr/bin/false",
     );
     const top = readdirSync(sb.dir).sort();
-    expect(top).toEqual([".git", ".gitignore", "TASK.md", "replay_test", "samples", "schema", "sports"]);
+    expect(top).toEqual([
+      ".factory",
+      ".git",
+      ".gitignore",
+      ".trophy",
+      "TASK.md",
+      "replay_test",
+      "samples",
+      "schema",
+      "sports",
+    ]);
+    const hooks = JSON.parse(readFileSync(join(sb.dir, ".factory/hooks.json"), "utf8"));
+    expect(hooks.PreToolUse[0].matcher).toContain("Edit");
+    expect(hooks.PreToolUse[0].hooks[0].command).toContain("guard.py");
+    expect(() => writeFileSync(join(sb.dir, ".factory/hooks.json"), "{}")).toThrow();
+    expect(JSON.parse(readFileSync(join(sb.dir, ".trophy/allowlist.json"), "utf8")).files).toEqual(sb.allowlist);
     expect(readdirSync(join(sb.dir, "sports/table_tennis")).sort()).toEqual(["config.yaml", "events.py", "rules.yaml"]);
     expect(readdirSync(join(sb.dir, "samples")).filter((f) => f.endsWith(".l1.jsonl")).length).toBeGreaterThan(0);
     expect(sb.allowlist).toEqual(["sports/table_tennis/rules.yaml"]);
@@ -38,7 +53,7 @@ describe("sandbox", () => {
     expect(changedFiles(sb)).toEqual([]);
   });
 
-  it("gives a compile job the reference module read-only and an empty target", () => {
+  it("gives a compile job the reference module read-only and a seeded target", () => {
     const sb = createSandbox(
       {
         kind: "compile",
@@ -55,7 +70,7 @@ describe("sandbox", () => {
       "events.py",
       "rules.yaml",
     ]);
-    expect(readdirSync(join(sb.dir, "sports/pickleball"))).toEqual([]);
+    expect(readdirSync(join(sb.dir, "sports/pickleball")).sort()).toEqual(["config.yaml", "events.py", "rules.yaml"]); // seeded copy
     expect(existsSync(join(sb.dir, "scene/scene.json"))).toBe(true);
     expect(sb.allowlist).toContain("sports/pickleball/events.py");
   });

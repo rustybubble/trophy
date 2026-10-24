@@ -29,6 +29,7 @@ function config(over: Partial<CompilerConfig> = {}): CompilerConfig {
     factoryApiKey: "test-only-not-a-key",
     droidExecPath: undefined,
     model: "fake",
+    reasoningEffort: "low",
     timeoutMs: 60_000,
     maxAttempts: 3,
     enginePython: ENGINE_PY,
