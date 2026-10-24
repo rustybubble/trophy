@@ -109,6 +109,14 @@ You write the README sections for **Factory Droid, Anthropic/Claude (including "
 **P3: freeze**
 10. Write your README sections. The **Anthropic** one must name the community, state the problem, describe how Claude is used, and say **where it can go wrong**: blurry crops, wrong votes, a misread rule, a compiler mistake. Then say how we contain each one: geometry in the blend, judge confirmation, citations, replay tests + human approval. Also write the Factory, Bitdeer, Moss, Apify and Gemini sections. Hand everything to Agent 1.
 
+**P2b: post-game data for Trophy Watch (right after C3; see `docs/plan/trophy-watch-postgame.md` and interfaces §19)**
+- **Write `moment` rows live from the engine:** point, serve fault, edge call, challenge, basket, bookmark, house rule, plus `clip_that` tagging via the trigger-to-play rule.
+- **`highlight_score` + `reasons`** from event features only (rally length, game/match point, closeness, overturned challenge, near-limit serve, three-pointer, game winner). There's no crowd audio, so say so.
+- `set_best_play` at `end_game`.
+- **The `rules` service:** a per-game **Moss moment index** + `POST /search_moments` (Moss track); `POST /coach` (grounded Claude tips through the adapted Replay `narrate/grounding.py` validator, with a template fallback); `commentary` lines per moment (play-by-play + colour, validated) for Agent 1's Cartesia broadcast mode.
+- `review_call` handling, which appends labels to `evals/labels/`.
+- For basketball, publish player tracks so Agent 1 can build follow-a-player.
+
 **SHOULD (only after your MUSTs pass C3)**
 11. Basketball 2s/3s on the CC BY [half-court clip](https://www.youtube.com/watch?v=2NxcgKW7xFM) (after the user OKs the download):
     - RF-DETR (CoreML) people + ByteTrack + rtmlib feet;
@@ -129,6 +137,7 @@ You write the README sections for **Factory Droid, Anthropic/Claude (including "
 - [ ] The **Droid applies a new rule end to end in < 90 s**, with the plan, diff and tests visible, and the next point follows it.
 - [ ] `/ask` answers 5 prepared ping-pong questions with correct ITTF citations (checked by hand); Moss latency is reported.
 - [ ] The Apify actor runs on Apify and produces the rule dataset.
+- [ ] Moments are written live; ★ Play of the game is chosen with reasons; `/search_moments` returns correct moments for 5 prepared queries per game; coach tips and commentary pass the grounding validator, or fall back to templates.
 - [ ] No API key is in the repo or the logs. Probabilities from voters are labelled uncalibrated.
 
 ## 6. Coordination

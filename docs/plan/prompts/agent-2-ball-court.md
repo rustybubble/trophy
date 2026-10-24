@@ -86,6 +86,7 @@ The other agents: **Agent 1 (platform, capture, voice and replay; integration ow
 
 **STRETCH (only after C3, stopping at feature freeze)**
 8. Pickleball outs on the CC BY clip, and the Vultr GPU path if it's in use.
+9. **Post-game support** (small): make sure every `bounce` observation has `pos_m` on the table (for the Watch bounce heatmap) and `trk:ball` is complete (for replay trails, the reconstructed top-down view and ball cam). See `docs/plan/trophy-watch-postgame.md`.
 
 ## 4. Consumes and produces
 - **Consume:** `frames:{cam}` (Agent 1's gateway or your clip player), `ev:audio`, `calib:{cam}`, py-trophy (Agent 1, C0).

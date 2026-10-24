@@ -19,7 +19,7 @@ Read this file for project context, then the plan docs listed below. Explicit us
 
 **The weekend cut** (`docs/plan/three-agent-plan.md`):
 - **MUST:** live ping pong (scoring, the edge rule, illegal serves), spoken calls, challenge → replay → AI votes, Droid house rules, voice ask-the-ref.
-- **SHOULD:** recorded basketball 2s/3s on a CC BY clip.
+- **SHOULD:** recorded basketball 2s/3s on a CC BY clip; **Trophy Watch** post-game analysis for every game (highlights + ★ Play of the game, condensed, moments, stats, replay, voice search; then broadcast mode, watch party, clips), translated from Replay's Fire TV app (`docs/plan/trophy-watch-postgame.md`).
 - Everything else is "coming next", and is labelled as not built.
 
 **Prize tracks targeted:** Factory Droid SDK, Cartesia, Spacetime, Anthropic, Meta, Moss, Bitdeer AI Model Studio, Apify, and MLH (Gemini, Vultr, the GoDaddy/.Tech domain, Commit Fellowship), plus Cal Hacks overall. SubQ, Firecrawl, Deepgram and Convex are **not used**.
@@ -77,7 +77,7 @@ Spacetime ─subscriptions─▶ phones (Cartesia voice, banner, replay), dashbo
 | players / possession (SHOULD: basketball) | `services/players`, `services/possession` | — | py3.11, rfdetr 1.11.2 (CoreML), trackers 2.6.1, supervision 0.30.9, rtmlib 0.0.16 |
 | spacetimedb | `spacetime/` (TS module) | 3000 | SpacetimeDB 2.13 (`spacetime start`) |
 | redis | — | 6379 | redis 7 |
-| PWA, dashboard | `apps/pwa`, `apps/dashboard` | `/cam`, `/` | Vite 7 + React 19 + strict TS |
+| PWA, dashboard, Trophy Watch | `apps/pwa`, `apps/dashboard`, `apps/watch` | `/cam`, `/`, `/watch` | Vite 7 + React 19 + strict TS; Watch vendors Replay `tv-core` |
 
 Everything runs **natively on the M5 Pro** (D-12) under a `Procfile` (`make dev`). Docker on a Mac can't reach the GPU, so `docker-compose.yml` is only the later Linux path.
 

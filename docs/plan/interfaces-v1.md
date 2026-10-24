@@ -193,6 +193,9 @@ Each entry has one field, `json`: `{schema, req_id, cmd, game_id, t_srv_ms, by_c
 | `approve_house_rule` | `{rule_version}` | ✓ judge | The engine validates and hot-loads `rulepacks/house/{game_id}/{sport}.v{n}.yaml` from the next rally; an `info` call is spoken: "House rule added: …" |
 | `reject_house_rule` | `{rule_version}` | ✓ judge | Status `rejected` |
 | `ask_logged` | `{question, answer, citations, latency_ms}` | gateway only | The engine writes an `ask` row (dashboard transcript) |
+| `bookmark` | `{t_game_s, label?}` | ✓ any role | A `moment` of kind `bookmark` |
+| `clip_that` | `{t_game_s}` | ✓ any role | The trigger-to-play rule (the moment ending in [t − 8 s, t + 0.5 s]) → that moment gets the `clipped` tag |
+| `review_call` | `{call_id, result: "confirm"\|"correct", replacement?}` | ✓ judge | A post-game review: updates the call and appends a label to `evals/labels/<sport>/<game>.jsonl` (`source: review`) |
 
 ## 10. Calls: `trophy.call.v1` (engine → SpacetimeDB `call` table)
 | Field | Req | Notes |
@@ -241,12 +244,18 @@ Each entry has one field, `json`: `{schema, req_id, cmd, game_id, t_srv_ms, by_c
 | `observation` | `event_id` | `game_id, cam_id(s), t_game_s, sport, type, source, track_id?, team_id?, side?, pos_json?, sigma_m?, conf, payload_json, supersedes?` (one row per Event, §7.1) |
 | `track_sample` | `(cam_id, t_game_s)` | `game_id, object (ball\|player:<id>), pos_json?, px_json?, conf` (10 Hz, rolling 120 s) |
 | `ask` | `ask_id` | `game_id, sport, question, answer, citations_json ([{rule_id, title, url, quote}]), latency_ms, created_at_ms` |
+| `moment` | `moment_id` | `game_id, kind (point\|serve_fault\|edge\|challenge\|basket\|bookmark\|house_rule\|rally), t_game_s, t_start_s, t_end_s, label, team_id?, track_id?, call_id?, rally_no?, score_after, tags_json, highlight_score, reasons_json, is_best_play, thumb_t_s` (the engine writes these live as calls happen, so post-game works the moment the game ends; §19) |
+| `commentary` | `moment_id` | `game_id, voice (pbp\|colour), text, facts_json, validated, created_at_ms` (A3 writes; grounded lines for broadcast mode) |
+| `player_label` | `(game_id, track_id)` | `label, set_by, updated_at_ms` (a viewer-given name; never automatic; no face recognition) |
+| `watch_session` | `session_id` | `game_id, host, playing, t_game_s, rate, updated_at_ms` (watch party) |
+| `watch_reaction` | `reaction_id` | `session_id, emoji, t_game_s, by, created_at_ms` |
 | `player` (later) | `player_id` | `game_id, name, team_id, consent_name, consent_face` |
 
 **Reducers.**
 - *Engine identity:* `upsert_game`, `upsert_camera`, `open_rally`, `close_rally`, `post_call`, `update_call_status`, `set_score`, `open_challenge`, `resolve_challenge`, `post_ai_vote`, `insert_house_rule`, `set_house_rule_status`, `post_ask`.
 - *Compiler identity:* `update_house_rule_progress` (plan, steps, diff, results, status ∈ compiling/ready/failed only).
-- *Vision identity:* `post_observations`, `post_track_samples`. *Engine:* `prune_track_samples`.
+- *Vision identity:* `post_observations`, `post_track_samples`. *Engine:* `prune_track_samples`, `upsert_moment`, `set_best_play`. *Rules service:* `post_commentary`.
+- *Client-callable (the one exception to "clients don't write", scoped and non-game state):* `watch_create`, `watch_join`, `watch_set_state` (host only), `watch_react`, `set_player_label`. Rate-limit them in the module.
 
 **Client interface** (`@trophy/state-client`; the apps code only against this):
 ```ts
@@ -270,7 +279,11 @@ export function createState(impl: "mock" | "spacetime" | "ws", opts?: {uri?: str
 **[OPEN-1] (Agent 1, by C2):** SpacetimeDB is the default. The `"ws"` implementation (an engine-side WebSocket fan-out of the same rows) is the fallback, with the interface unchanged.
 
 ## 12. Replay (Agent 1: recorder, API, viewer)
-- **Recorder:** reads `frames:{cam}` and writes 2 s H.264 segments (ffmpeg `h264_videotoolbox` on the Mac, `libx264` elsewhere) to `data/local/recordings/{game_id}/{cam_id}/seg_{n}.mp4`. It also writes a JSONL index `{seq, t_game_s, seg, pts}` per frame, and copies `trk:*` to `tracks_{ball|players}.jsonl`. Recorded games (clips) are recorded the same way.
+- **Recorder:** reads `frames:{cam}` and writes **HLS** (ffmpeg `h264_videotoolbox` on the Mac, `libx264` elsewhere; 2 s fMP4 segments + `index.m3u8`, which is a live playlist during the game and finalised at `end_game`) to `data/local/recordings/{game_id}/{cam_id}/`.
+  - It also writes a JSONL index `{seq, t_game_s, seg, pts}` per frame, with `t_game_s` at media time 0 stored in `meta.json`.
+  - A **storyboard sprite** (`sprite_{n}.jpg`: a 10×10 grid of 160×90 thumbnails, one every 2 s) and `sprite.json`.
+  - Copies of `trk:*` in `tracks_{ball|players}.jsonl`.
+  - Recorded games (clips) are recorded the same way. Post-game playback (§19) uses this HLS stream.
 - **API (gateway, `cam_token` required):**
   - `GET /api/replay/{game_id}/clip?cam=&t0=&t1=` → `video/mp4` (cut on frame boundaries from segments; the default window is evidence ±1.5 s).
   - `GET /api/replay/{game_id}/overlay?cam=&t0=&t1=&call_id=` → `{frames: [{t_game_s, ball_px?, players?}], marks: [{t_game_s, px, ellipse_px: {cx, cy, rx, ry, angle_rad}}], lines_px: [...]}`. Field-frame marks are projected into image px with the camera's calibration (ellipses from `sigma_m` or `cov_m2`).
@@ -355,3 +368,23 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 - **Fallback:** a Claude-only compiler (`claude-opus-5-5`, structured output, same tests). The row records `backend`.
 - **The README must explain where and how Droid is used** (a Factory requirement).
 - **Logs** are JSON lines with `svc`, `game_id`, `cam_id`, `t_srv_ms` and `msg`. No frames, tokens or personal data.
+
+---
+
+## 19. Post-game: Trophy Watch (Agents 1 and 3; full feature map in [trophy-watch-postgame.md](trophy-watch-postgame.md))
+- **App:** `apps/watch` (Vite 7 + React 19 + strict TS, served at `/watch/`). It vendors Replay `packages/tv-core` (`types`, `follow`, `clock`, `retry`, `display`, `replays`) into `apps/watch/src/vendor/tv-core/` with the MIT notice. It reads Spacetime (`game`, `score`, `rally`, `call`, `moment`, `observation`, `ai_vote`, `commentary`, `player_label`, `watch_session`) through `@trophy/state-client` and video through the gateway watch API.
+- **Gateway watch API** (watch token = a `cam_token` with role `viewer`, or a share token):
+  - `GET /api/watch/{game_id}/manifest` → `{game, teams, final_score, duration_s, cams: [{cam_id, hls_url, sprite: {url_template, cols, rows, every_s, w, h}, t0_game_s}], has_tracks: {ball, players}}`;
+  - `GET /api/watch/{game_id}/hls/{cam_id}/index.m3u8` (+ segments);
+  - `GET /api/watch/{game_id}/tracks?cam=&kind=ball|players&t0=&t1=` → **Replay `replay.tracks.v1` shape** (`{t0, rate_hz, frames: [{t, p: [{id, bb: [x,y,w,h] normalised, ct?: [x_m,y_m], c?}]}]}`), so the vendored `follow.ts` works unchanged; `t` is `t_game_s`;
+  - `POST /api/watch/{game_id}/clip {cam_id, t0, t1, aspect: "16:9"|"9:16"}` → `{share_url, expires_at_ms}` (ffmpeg cut from HLS; 9:16 crops along the ball or player track; **the UI asks for consent before sharing**);
+  - `POST /api/watch/{game_id}/share-token` → an expiring viewer link for "open on another screen".
+- **Moments are written live by the engine** (A3) as calls happen, one per point, serve fault, edge call, challenge, basket, bookmark and approved house rule. `highlight_score` and `reasons` come from event features only (rally length, game or match point, closeness `|p − 0.5|`, overturned challenge, serve near the limit, three-pointer, game-winning basket). There's no crowd audio, so say so. `set_best_play` runs at `end_game` (and provisionally during play).
+- **Rules service** (A3):
+  - `POST /search_moments {game_id, q}` → Moss query over the game's moment index (built incrementally from `moment` rows) → `{hits: [{moment_id, score}], mode: "semantic"|"keyword"}`;
+  - `POST /coach {game_id, side|track_id}` → `{tips: [{text, facts}], validated: bool}` (Claude, grounded, run through the adapted Replay `narrate/grounding.py` validator, with a template fallback).
+  - Commentary lines are written to `commentary` per moment (voices `pbp` and `colour`) and validated the same way. The Watch app speaks them with Cartesia in broadcast mode.
+- **Stats** are computed in the client from `moment`, `call` and `observation` (tv-core `statLine` rule: show "not detected" rather than a guessed 0), labelled **auto-detected**:
+  - **ping pong:** points by side, serve vs. receive points, serve faults (low or angled), edge balls, longest rally, challenges, a bounce heatmap;
+  - **basketball:** points by team and player track, 2PT/3PT makes, a shot chart.
+- **Reconstructed views** (PG-SHOULD) are drawn from `observation` + `tracks` only and always carry the badge "Reconstructed from tracking — not video".

@@ -95,6 +95,24 @@ The other agents: **Agent 2 (ball and court perception)** and **Agent 3 (rules, 
    - camera health and a **live world-state view** (the observation feed + the ball trail from `track_sample`, drawn on a court diagram without video, which shows the Spacetime design to judges);
    - an honest sport wall: **"built this weekend"** vs. **"coming next"**.
 
+**P2b: Trophy Watch, post-game, for every game (start right after your live MUSTs pass C3)**
+
+Read `docs/plan/trophy-watch-postgame.md`, which translates Replay's Fire TV features to our stack, and interfaces §19.
+- **Recorder** → HLS + storyboard sprite.
+- **Gateway watch API:** manifest, HLS, tracks in the `replay.tracks.v1` shape, clip, share token.
+- **`apps/watch`:** vendor Replay `packages/tv-core` (`types`, `follow`, `clock`, `retry`, `display`, `replays`) with the MIT notice; adapt `apps/web`'s `PlayerSurface.tsx` + `SeekBarEvents`.
+- **PG-MUST, for both the ping-pong game and the basketball clip:**
+  - recap page;
+  - seek bar with moment notches + sprite preview + J/L jumps;
+  - moments list with per-sport filters;
+  - highlights reel ending on ★ Play of the game (show the reasons);
+  - condensed game (a client-side playlist of ranges);
+  - replay any moment with the in-game overlays + votes;
+  - stats (labelled auto-detected; ping-pong bounce heatmap on the table, basketball shot chart);
+  - search moments by text or voice (Agent 3's `/search_moments`).
+- **PG-SHOULD:** broadcast mode (score bug, captions, Cartesia play-by-play from `commentary`), watch party (Spacetime `watch_*` reducers), clip + share (**ask for consent**), open on another screen, follow a player (basketball, vendored `follow.ts`), reconstructed top-down views, review queue UI, player card + naming (no face recognition).
+- **PG-STRETCH:** multi-angle, 9:16, ball cam.
+
 **P3: freeze and submission (you assemble; everyone contributes)**
 10. Run **C3** (live) and **C4** (§5 of the plan), and write the measured numbers to `docs/progress.md`.
 11. Assemble the **root README**:
@@ -118,6 +136,7 @@ The other agents: **Agent 2 (ball and court perception)** and **Agent 3 (rules, 
 - [ ] The votes panel, Droid panel and ask transcript update live from Spacetime.
 - [ ] Voice ask → the spoken answer starts ≤ 3 s after the question ends.
 - [ ] No secret in the repo or on the client (tested); recordings stay in `data/local/`.
+- [ ] Trophy Watch PG-MUST works on the live ping-pong game and the basketball clip (if shipped): highlights end on ★ Play of the game, and condensed, stats and search all work.
 - [ ] The README sections, video and writeup are done before DEADLINE − 1 h.
 
 ## 6. Coordination

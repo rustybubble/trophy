@@ -26,6 +26,8 @@ Start now, in this order:
 (3) In parallel, run the P0 spikes: Spacetime reducer-to-subscription latency, plus one Cartesia TTS line and one Ink STT transcript on an iPhone.
 (4) Ask me to register the domain (GoDaddy Registry or .Tech) so you can set up Caddy on the Mac.
 
+After your live MUSTs pass C3, build Trophy Watch (post-game) for every game, translating Replay's Fire TV features per docs/plan/trophy-watch-postgame.md.
+
 Keep secrets in .env only. Ask me before any spend, account action or publishing, and before filming anyone.
 
 Report progress in docs/status/a1.md at every PR, and tell me when C0 is merged.
@@ -67,6 +69,8 @@ Start now, in this order:
 (4) Start the Apify rulebook actor (ITTF first), then the Moss index and /ask. They don't depend on perception, so they can be finished early.
 
 AI votes must never delay a live call. Run them in the background, in parallel, with a 4 s timeout.
+
+After C3, build the post-game data for Trophy Watch (moments, highlight scoring, Moss moment search, coach tips, commentary), per docs/plan/trophy-watch-postgame.md.
 
 Ask me before publishing the Apify actor, any paid tier, any download, or filming anyone.
 
