@@ -1,16 +1,16 @@
 # Trophy: open-source tracking / calibration / event stack research
 
-Researched 2026-10-22 for Cal Hacks 13.0 (Oct 23-25, 36 h, team of 4).
+Researched 2026-10-22 for Trophy.
 Setup assumed: 2-4 phones running a PWA stream video (WebRTC) to a local GPU laptop (RTX-class laptop GPU, 8-16 GB), plus AWS for post-game batch work.
 Demo: live table tennis at the judging table, a recorded half-court basketball game, optional third sport from public footage.
 
 Stars, licenses and last-push dates were pulled from the GitHub API on 2026-10-22 (all links below were verified to exist). Speeds marked "est." are my engineering estimates, not published numbers; measure on your laptop on Friday night.
 
 License flags used below:
-- **[NC]** non-commercial / research-only. Fine for a hackathon, must be swapped before any product.
-- **[AGPL]** Ultralytics family (YOLOv8/11/26, YOLOE, BoxMOT). Fine for a hackathon; commercial use needs an Ultralytics license or open-sourcing the whole service.
-- **[GPL]** copyleft (GPL-2/3). Fine for a hackathon and an open-source repo.
-- **[NoLic]** no license file, legally "all rights reserved". Fine to learn from or demo with at a hackathon, but do not ship.
+- **[NC]** non-commercial / research-only. Check whether the specific terms permit the intended use.
+- **[AGPL]** Ultralytics family (YOLOv8/11/26, YOLOE, BoxMOT). Evaluate the applicable license obligations for the chosen code, weights and deployment.
+- **[GPL]** copyleft (GPL-2/3). Use where the applicable copyleft obligations can be met.
+- **[NoLic]** no license file found. Do not infer reuse permission from public availability; obtain permission for code reuse or implement the documented ideas independently.
 
 ---
 
@@ -200,13 +200,13 @@ Note: for the **ball**, do not use a generic MOT tracker. Use a single-target Ka
 - **P3 Basketball + third sport:** avishah3 `best.pt` ball/hoop + make/miss; RF-DETR/YOLO person + roboflow/trackers + team KMeans; homography shot chart. Third sport: TennisProject (in/out calls) or roboflow/sports RADAR on public footage.
 - **P4 Universal layer + post-game (AWS):** LLM sport ontology, SAM 3 / YOLOE setup-frame detection, SAM 2/SAMURAI replays, TT3D-style physics arcs, report/highlights UI.
 
-**Pre-hackathon tonight (allowed? check Cal Hacks rules on pre-written code; downloading public weights is normally fine):** request SAM 3 HF access; download BlurBall, WASB (basketball/tennis), TennisProject, avishah3 `best.pt`, YOLOE text encoder, RF-DETR checkpoints; test CUDA/PyTorch versions (SAM 3 needs Py3.12 + Torch 2.7+, which may conflict with older repos, so use separate venvs or run SAM 3 only on AWS).
+**Suggested setup:** request SAM 3 HF access; download BlurBall, WASB (basketball/tennis), TennisProject, avishah3 `best.pt`, YOLOE text encoder, RF-DETR checkpoints; test CUDA/PyTorch versions (SAM 3 needs Py3.12 + Torch 2.7+, which may conflict with older repos, so use separate venvs or run SAM 3 on a separate suitable host).
 
 ## 7. Key risks
 
 1. **Frame rate and blur:** at 30 fps a TT ball is a streak. Ask phones for 60 fps (`frameRate: {ideal: 60}`). iOS Safari WebRTC often caps at 30. BlurBall's blur estimate partly compensates, and audio onsets supply the bounce timing.
 2. **WebRTC re-encoding** can drop or duplicate frames, and BlurBall/WASB multi-frame inputs are sensitive to duplicates. Dedupe by `rtpTimestamp`.
-3. **Licenses:** TTNet/OpenTTGames [NC], EasyMocap [NC], CoTracker [NC], chonyy/OpenPose [NC]; Ultralytics/YOLOE/BoxMOT [AGPL]; YOLO-World, PnLCalib, NBJW, sn-gamestate [GPL]; SAM 3 custom license + gated; many tennis/basketball repos have no license [NoLic]. All fine for a hackathon. A product path is RF-DETR + WASB/BlurBall/TrackNetV3 (MIT) + roboflow/trackers + OpenCV/aniposelib.
+3. **Licenses:** TTNet/OpenTTGames [NC], EasyMocap [NC], CoTracker [NC], chonyy/OpenPose [NC]; Ultralytics/YOLOE/BoxMOT [AGPL]; YOLO-World, PnLCalib, NBJW, sn-gamestate [GPL]; SAM 3 custom license + gated; many tennis/basketball repos have no license [NoLic]. Check code, weight and dataset permissions separately for the intended use. A product path is RF-DETR + WASB/BlurBall/TrackNetV3 (MIT) + roboflow/trackers + OpenCV/aniposelib.
 4. **Zero-shot models are too slow for live play and weak on tiny balls.** Keep them on the setup frame and in AWS post-game.
 5. **TrackNetV5 SDK is proprietary with no weights, and TTNet has no weights.** Do not plan around either.
 

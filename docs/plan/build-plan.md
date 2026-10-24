@@ -1,47 +1,47 @@
 # Trophy: build plan (feature by feature, on proven models)
 
-*Updated 2026-10-23: **cloud only** (AWS + hosted services; see §0). If a sport can't be filmed, use the [clip library](clip-library.md). First written 2026-10-22, for Cal Hacks 13.0 (hacking Fri Oct 23 → submit Sun Oct 25, 9:00 AM PT). It builds on [Trophy v3](concept-v3.md) and the priority-call ranking.*
+*Updated 2026-10-23. This is a working plan with a cloud deployment baseline; local work and other suitable infrastructure are welcome. If a sport cannot be filmed, use the [clip library](clip-library.md). It builds on [Trophy v3](concept-v3.md). Scope, sequencing and implementation choices can evolve with the task.*
 
-**Rule we follow:** every feature sits on an **existing model or a published method with reported numbers**. We write only the glue, the rule logic and the UX. No code is written before hacking starts.
+**Working approach:** prefer proven models and methods when they help, and build or experiment where needed. Agents may reuse compatible licensed code, including Replay, or write new implementations at any time. Validate the resulting behavior; [CLAUDE.md](../../CLAUDE.md) describes autonomy and safeguards.
 
 Exact install pins, weight files, input/output shapes and known bugs are in three integration-card files (checked against source and docs today). This plan cites them as **[F]**, **[P]** and **[X]**:
-- **[F]** [flight family](../research/Trophy%20build%20cards%20-%20flight%20family.md)
-- **[P]** [possession and resting](../research/Trophy%20build%20cards%20-%20possession%20and%20resting.md)
-- **[X]** [platform and post-game](../research/Trophy%20build%20cards%20-%20platform%20and%20post-game.md)
+- **[F]** [flight family](../research/build-cards-flight-family.md)
+- **[P]** [possession and resting](../research/build-cards-possession-and-resting.md)
+- **[X]** [platform and post-game](../research/build-cards-platform-and-post-game.md)
 
 ---
 
-## 0. System shape: cloud only (updated 2026-10-23)
+## 0. System shape: deployment baseline (updated 2026-10-23)
 
-**Nothing runs on the laptops.** They are only editors and browsers. Phones run the PWA in the browser; its client-side JavaScript, like the on-phone audio onset detector, is fine.
+**Use suitable available hardware.** Local development, tests, inference, training and rendering are allowed. Cloud GPUs are useful when local hardware is insufficient. Phones run the PWA in the browser. The topology below is a starting point; validate changes against latency, capacity and the authorized budget.
 
-**Budget (updated Oct 23 afternoon):** AWS has **only $100 of credits for now**, so the GPUs move to **Google Cloud** (the $2k Gemini + GCP credits) and **Vultr** (which also earns the MLH "Best Use of Vultr" prize). AWS keeps only the cheap pieces.
+**Budget snapshot (Oct 23):** the plan assumed $100 in AWS credits, $2k in Google credits and possible Vultr credits. Verify current balances and pricing before provisioning. Providers and workloads may change within authorized resources and spending.
 
-**Backends chosen to match prizes:**
-- **SpacetimeDB** is the real-time game backend (SpacetimeDB prize). It replaces Supabase.
-- **Factory Droid** runs the house-rule compiler (Droid SDK prize).
-- **Moss** does rulebook lookup (Moss prize).
+**Current backend choices:**
+- **SpacetimeDB** for shared real-time game state.
+- **Factory Droid** for the house-rule compiler.
+- **Moss** for rulebook lookup.
 
-See the [prize map in v3 §9](concept-v3.md#9-prize-map-live-hive-list-updated-oct-23-1247-am). Earlier research with sources: [cloud architecture notes](../research/Trophy%20-%20cloud%20architecture.md).
+These can change when alternatives better serve the product. See [integration priorities in v3 §9](concept-v3.md#9-integration-priorities) and [cloud architecture research](../research/cloud-architecture.md).
 
 ### Where everything runs
 | Piece | Runs on | Why |
 |---|---|---|
 | Live perception + ingest + engine + gateway + SpacetimeDB | **GCP Compute Engine `g2-standard-8`** (1× NVIDIA L4 24 GB, 8 vCPU), **on-demand** in **us-west1 (Oregon)**. Google's pricing page lists about **$0.85/h**, so 40 h ≈ $34 of credits. Use `g2-standard-16` if software decoding of 3–4 phone streams saturates 8 vCPU | Our live models are small (BlurBall is 6 MB; RF-DETR-S, rtmlib, WASB), so an L4 is plenty. A full VM keeps **UDP for WebRTC**, which Cloud Run can't do. Ada-generation GPUs keep the pinned torch/CUDA 12 stacks working |
-| Post-game: RIFE, GVHMR, ReCamMaster | **Vultr Cloud GPU L40S 48 GB** (about $1.67/GPU-hour from third-party trackers), started only for render jobs | 48 GB of VRAM for ReCamMaster; it keeps heavy jobs off the live box. Used meaningfully, it also earns **MLH Best Use of Vultr**. Vultr's new-account credit (reported as $250–300) is **unverified**, so check at signup or with MLH |
-| Dev | **One shared dev VM** (`g2-standard-4` **spot**, about $0.34/h, 1× L4), plus the live VM outside demo windows, using **VS Code or Cursor Remote-SSH** | Laptops only edit. Stop the VMs when idle |
+| Post-game: RIFE, GVHMR, ReCamMaster | **Vultr Cloud GPU L40S 48 GB** (about $1.67/GPU-hour from third-party trackers), started only for render jobs | 48 GB of VRAM for ReCamMaster; it keeps heavy jobs off the live box. Vultr's new-account credit (reported as $250–300) is **unverified**, so check current account terms |
+| Dev | **One shared dev VM** (`g2-standard-4` **spot**, about $0.34/h, 1× L4), plus the live VM outside demo windows, using **VS Code or Cursor Remote-SSH** | Local development is also welcome. Stop the VMs when idle |
 | Containers | GCP **Deep Learning VM image** (CUDA 12, NVIDIA driver and container toolkit) + **docker compose, one image per service** | Solves the version clashes. The shared-memory frame rings need `ipc: host`; ingest needs `network_mode: host` |
-| HTTPS | **Caddy** on the VM's static external IP with the domain (GoDaddy Registry, also the MLH domain prize) | Automatic Let's Encrypt; no LAN certificate problems |
+| HTTPS | **Caddy** on the VM's static external IP with the domain (any suitable registrar) | Automatic Let's Encrypt; no LAN certificate problems |
 | Phone video in | **aiortc** on the static IP. A **VPC firewall rule opens UDP 32768–60999** (aiortc picks random ports). Google's STUN server gives the right public address | Phones on 5G don't need TURN when the server has a public IP |
 | TURN (only for networks that block UDP) | **coturn** in a container on the live VM, TURN over TLS on 443 | aiortc can't fall back to TCP itself. The JPEG-over-WebSocket path on 443 is the other fallback |
-| Recordings | **Google Cloud Storage** with resumable/signed uploads from the phones. Upload challenge and closing-rally chunks right away, the full game afterwards | Same cloud as the GPU, so no egress fees. About 216 GB across the weekend is about $5 of storage |
-| **Live game state** | **SpacetimeDB**, self-hosted (`spacetime start`) in a container **on the live VM**, with Maincloud as the fallback. The free tier pauses idle databases, but they resume in under a second | **The core real-time backend** (the SpacetimeDB prize asks for exactly this). Tables: `game`, `player`, `camera`, `rally`, `event_summary`, `call`, `challenge`, `score`, `house_rule`, `highlight`. Phones and the dashboard subscribe with the **TypeScript SDK**; the Python engine calls **reducers over HTTP**. **Calls and beeps flow through SpacetimeDB subscriptions** (same VM, so one short hop). Redis stays internal for the high-rate perception → engine events. Supabase is dropped |
+| Recordings | **Google Cloud Storage** with resumable/signed uploads from the phones. Upload challenge and closing-rally chunks right away, the full game afterwards | Same cloud as the GPU, so no egress fees. About 216 GB in the example recording workload is about $5 of storage |
+| **Live game state** | **SpacetimeDB**, self-hosted (`spacetime start`) in a container **on the live VM**, with Maincloud as the fallback. The free tier pauses idle databases, but they resume in under a second | **The current real-time backend**. Tables: `game`, `player`, `camera`, `rally`, `event_summary`, `call`, `challenge`, `score`, `house_rule`, `highlight`. Phones and the dashboard subscribe with the **TypeScript SDK**; the Python engine calls **reducers over HTTP**. **Calls and beeps flow through SpacetimeDB subscriptions** (same VM, so one short hop). Redis stays internal for the high-rate perception → engine events. Supabase is dropped |
 | Detector training | **Roboflow cloud**: fork the Universe datasets and train RF-DETR (1 credit = 30 min, so set an epoch cap). Then run it in **Roboflow's inference container on our VM** | Running a model on your own hardware uses no Roboflow credits |
 | Trophy-clip rendering | **Remotion Lambda** on **AWS** (one of the few AWS uses left; pennies per render) | Check `npx remotion lambda quotas`, because new accounts may get about 10 concurrent Lambdas. Fallback: render with the Remotion CLI on the Vultr box |
 | Decisions | **SubQ Snap → Gemini (Flash, Google credits) → Claude votes → geometry only** | All hosted |
-| Voice | **Cartesia** (Pro, because the free tier allows only 2 concurrent requests). **Trophy is a voice referee**: calls, commentary, verdicts and "ask the ref" answers are all spoken. **Deepgram Nova-3** streaming STT for voice commands ("Trophy, challenge!", "Trophy, what's the rule on…?", with keyterm "Trophy"). **Deepgram Aura-2** as the backup voice | Cartesia prize: voice is the core interface |
-| House-rule compiler | **Factory Droid SDK** (`@factory/droid-sdk`, TypeScript; it runs the `droid` CLI as a subprocess) in a **sandboxed container on the live VM**, triggered by new `house_rule` rows in SpacetimeDB | Droid prize: real work, on a trigger we designed, with limited access and visible plan, diff and test results (F10) |
-| Rulebooks | **Firecrawl** scrapes the official rules (USA Pickleball, BWF, ITTF, USA Football flag, …) and chunks them by rule into **Moss** indexes, one per sport (`moss-minilm`; sub-10 ms semantic + keyword search) | Feeds "ask the ref", challenge verdicts that cite rule text, and the Droid compiler (F19). Moss prize. Check the SDK package names at docs.moss.dev, because sources disagree |
+| Voice | **Cartesia** (Pro, because the free tier allows only 2 concurrent requests). **Trophy is a voice referee**: calls, commentary, verdicts and "ask the ref" answers are all spoken. **Deepgram Nova-3** streaming STT for voice commands ("Trophy, challenge!", "Trophy, what's the rule on…?", with keyterm "Trophy"). **Deepgram Aura-2** as the backup voice | Voice is the core interface |
+| House-rule compiler | **Factory Droid SDK** (`@factory/droid-sdk`, TypeScript; it runs the `droid` CLI as a subprocess) in a **sandboxed container on the live VM**, triggered by new `house_rule` rows in SpacetimeDB | Triggered rule compilation with scoped access and visible plan, diff and test results (F10) |
+| Rulebooks | **Firecrawl** scrapes the official rules (USA Pickleball, BWF, ITTF, USA Football flag, …) and chunks them by rule into **Moss** indexes, one per sport (`moss-minilm`; sub-10 ms semantic + keyword search) | Feeds "ask the ref", challenge verdicts that cite rule text, and the Droid compiler (F19). Check the SDK package names at docs.moss.dev, because sources disagree |
 | LLM tracing and evals | **Langfuse**: trace every Snap, Gemini, Claude and Droid decision; keep the labelled-call eval sets; manage prompts | Free cloud tier allows 2 users; self-hosting is free |
 | Recap email | **AgentMail**: each game gets an inbox that emails players their recap, highlights and coach cards | Cheap, visible extra |
 | Code review | **Greptile** on PRs | |
@@ -62,7 +62,7 @@ Snap has a 2.0 s timeout; on timeout the call falls back to a challengeable geom
 
 **Phone uplink:** each phone streams on **its own 5G** (median upload about 13 Mbps, and 720p30 needs about 2–3 Mbps), so venue Wi-Fi is only a backup. Clock sync is noisier over the internet (my estimate is ±5–15 ms), so **lean on the optical QR-timecode calibration** (F2).
 
-### Cost for the 40-hour weekend
+### Example cost for 40 hours (historical estimates)
 | Where | Spend | Budget |
 |---|---|---|
 | **GCP** | Live L4 VM about $34 + dev spot VM about $15 + storage about $5 | **~$55 of the $2k** Google credits |
@@ -78,16 +78,16 @@ Snap has a 2.0 s timeout; on timeout the call falls back to a challengeable geom
 | Snap is down | Gemini, then Claude, then geometry |
 | SpacetimeDB container dies | Restart it from the compose file. Then fail over to **Maincloud** (same module published there) |
 | Droid is slow or fails | Fall back to the **Claude-only compiler** (same schema and replay tests, no agent loop) |
-| The live box dies | Recreate it from a **machine image baked Saturday morning** |
+| The live box dies | Recreate it from a **recent validated machine image** |
 
-### Do today (Friday, before hacking starts)
+### Initial setup (adapt to available resources)
 1. **GPU quota on GCP:** in the console, under IAM & Admin → Quotas, raise **`GPUS_ALL_REGIONS` to 2** and **NVIDIA L4 GPUs in us-west1 to 2** (also us-central1 as a backup). Confirm the $2k credits are on that billing account. In parallel, **create a Vultr account** and check that a GPU instance can launch (and what MLH credits apply).
 2. Domain (GoDaddy Registry) and DNS records pointing at the VM's static IP.
-3. Fork the Roboflow Universe datasets (Cornhole Referee, minigolf, roundnet, flag football) and start **capped** RF-DETR training. Training is setup, not project code; if in doubt, start it right after hacking opens.
+3. Fork the Roboflow Universe datasets (Cornhole Referee, minigolf, roundnet, flag football) and start **capped** RF-DETR training. Training and implementation can start whenever useful; cap resource use to the authorized budget.
 4. Install the `spacetime` CLI on the dev VM, and create a Maincloud account for the fallback.
 5. Get keys: SubQ, Cartesia Pro, Deepgram, Gemini, Anthropic, **Factory** (`FACTORY_API_KEY`), **Moss** (project ID + key from portal.usemoss.dev), Langfuse, Firecrawl, AgentMail.
 6. Deploy Remotion Lambda on AWS and run `npx remotion lambda quotas`.
-7. **Download all model weights onto the GCP VM's disk, never over venue Wi-Fi.**
+7. **Cache model weights on the compute host over a reliable connection before a demo.**
 8. At the venue, test phone round-trip time and UDP reachability on both 5G and Wi-Fi.
 
 ### Processes (each in its own container, connected through Redis)
@@ -163,7 +163,7 @@ Full browser recipes are in **[X] §2**.
 - **Camera-latency calibration:** the laptop shows a **60 Hz QR timecode** and each phone films it once. That gives each camera a per-track mapping from pts to game time, and display latency cancels out between cameras **[X] §1, §3**.
 
 **Steps:**
-- **F2B first, Friday night (about 2–3 h):** JPEG over WebSocket. Send a 16-byte header (camera id, sequence number, phone capture time) at 640×360 and 10–15 fps, keeping only the latest frame.
+- **F2B first (about 2–3 h):** JPEG over WebSocket. Send a 16-byte header (camera id, sequence number, phone capture time) at 640×360 and 10–15 fps, keeping only the latest frame.
 - **Then F2A:** aiortc at 720p.
   - Only H.264 Constrained Baseline or VP8 are offered, and decode is in software.
   - **Drain the receive queues into a latest-frame slot**, because aiortc's queues are unbounded.
@@ -219,7 +219,7 @@ Full browser recipes are in **[X] §2**.
 **Built on:** **PANNs** CNN14 embeddings plus logistic regression, a standard transfer-learning recipe. The bounce paper's mel-spectrogram CNN reached F1 0.97 at telling surfaces apart **[F]**.
 
 **Steps:**
-- Record about 50 snippets per class with the PWA itself during the event: table, racket, floor, net, **rim**, bag-on-board, bag-in-hole, chains.
+- Record about 50 snippets per class with the PWA itself during development: table, racket, floor, net, **rim**, bag-on-board, bag-in-hole, chains.
 - Embed them and fit one classifier per family.
 - PANNs downloads its weights with `wget`, which Windows lacks, so **pre-place the weight files**.
 
@@ -327,7 +327,7 @@ Each call is a rule in a pack, made from family events. Tiers follow the confide
    4. Geometry only.
    - Optional, only if the GPU has headroom: Qwen3-VL-8B-FP8 on vLLM in a container on the live box, using per-option logprobs.
    - Trace every decision in **Langfuse** and keep the labelled calls there as eval datasets.
-3. **Calibration:** label about 60 calls per Snap-judged rule type during the event, fit `T` with `softmax(log p / T)`, and plot a **reliability diagram**. That plot goes on the slides.
+3. **Calibration:** label about 60 calls per Snap-judged rule type during development, fit `T` with `softmax(log p / T)`, and plot a **reliability diagram**. That plot goes on the slides.
 
 **Done when:** p50 latency is ≤ 1.5 s for referee calls, the fallback switches over automatically (test by pulling the network), and the calibration plot exists.
 
@@ -336,9 +336,9 @@ Each call is a rule in a pack, made from family events. Tiers follow the confide
 - The **Code World Models** method (DeepMind, arXiv 2510.04542): the rule is written as code, **tested against recorded traces**, failing traces are fed back, and the loop repeats until every test passes.
 - That loop runs inside a **Factory Droid**: the Droid TypeScript SDK `@factory/droid-sdk` (`createSession()` for multi-turn, Node 18+, `FACTORY_API_KEY`), which drives the `droid` CLI as a subprocess. The Python SDK is the alternative.
 
-**Why a Droid:** Factory's prize scores four things, and each maps to one part of this design:
+**Why a Droid:** the compiler benefits from an iterative agent loop with these capabilities:
 
-| Factory's criterion | How the compiler meets it |
+| Capability | How the compiler provides it |
 |---|---|
 | Droid does real work in the running product | It writes the rule the engine enforces on the next rally |
 | A trigger we designed | A new `house_rule` row in SpacetimeDB |
@@ -353,7 +353,7 @@ Each call is a rule in a pack, made from family events. Tiers follow the confide
    - a `replay_test` harness, which replays the last 10 recorded rallies' event logs through the engine;
    - the relevant official rule clauses retrieved from **Moss** (F19).
 
-   **Allowed:** edit `rules/<sport>.yaml` only, and run `replay_test` only. No network, a 90 s timeout, and the lowest autonomy level that allows those edits (Droid Exec's autonomy levels).
+   **Runtime scope:** edit `rules/<sport>.yaml` and run `replay_test` in an isolated workspace, with no network and a 90 s timeout by default. Configure autonomy for that task. This boundary isolates user-supplied rules; repository agents may revise the compiler design and scope when needed.
 3. **Work.** Droid drafts the rule (CEL condition + tier + outcome), runs `replay_test`, reads the failures ("rally 7 would now score 2 for a bag touching the ground"), repairs the rule, and repeats until every test passes or it has made 3 attempts.
 4. **Make it visible.** Stream Droid's **plan, each step, the YAML diff and the test table** into `house_rule.plan/diff/results`. The dashboard shows them live, along with "Calls that would change: rally 3 (1 → 2 points)."
 5. **Human approval.** The judge taps **Approve**. A reducer hot-loads the new pack version, and Cartesia says "House rule added: hangers count two."
@@ -393,7 +393,7 @@ Each call is a rule in a pack, made from family events. Tiers follow the confide
 
 **Done when:** a call is spoken in under 1.5 s from the event, and lines cut off cleanly when the next point starts.
 
-**Cartesia prize framing:** Trophy is a **voice referee**. Players mid-rally can't look at a phone, so **every call, verdict and answer is spoken**, which makes voice core rather than a demo feature.
+**Voice interface:** Trophy is a **voice referee**. Players mid-rally can't look at a phone, so **every call, verdict and answer is spoken**, which makes voice core rather than a demo feature.
 - **Two distinct voices:** play-by-play and colour.
 - **Voice in:** challenges and questions (Deepgram), with spoken answers.
 - **Audio-description mode:** for blind and low-vision players and spectators.
@@ -469,19 +469,14 @@ Each call is a rule in a pack, made from family events. Tiers follow the confide
 
 ---
 
-## 5B. Replay's features, rebuilt as Trophy's post-game web app
+## 5B. Build on Replay for Trophy's post-game web app
 
-Source: [subatomic-hamster/replay](https://github.com/subatomic-hamster/replay) (MIT). It films a pickup game with one phone and plays it back on Fire TV like a broadcast. Its computer-vision core is **[courtcam](https://github.com/subatomic-hamster/courtcam)** (MIT, published as its own repo). Full inventory (49-row mapping, measured numbers): [Trophy - Replay repo inventory](../research/Trophy%20-%20Replay%20repo%20inventory.md).
+Source: [subatomic-hamster/replay](https://github.com/subatomic-hamster/replay) (MIT). It films a pickup game with one phone and plays it back on Fire TV like a broadcast. Its computer-vision core is **[courtcam](https://github.com/subatomic-hamster/courtcam)** (MIT, published as its own repo). Full inventory (49-row mapping, measured numbers): [Replay repository inventory](../research/replay-repo-inventory.md).
 
-> ⚠️ **Rules check first.** Cal Hacks says *"projects started before the hackathon aren't allowed… all implementation must happen during the event."* Replay was built from Sep 22 to Oct 23 and **was submitted to the Amazon Developer Hackathon**. So:
-> 1. **Depend on `courtcam` as a pinned, disclosed open-source library** (MIT, a published repo), like any other dependency. Ask the organizers in **#ask-directors** on Friday night to confirm a teammate's own published library is fine.
-> 2. **Rebuild everything else during the event:** the watch app, render, API and infra. Use Replay's design docs and decision log as a guide, but **don't copy `apps/`, `render/`, `services/` or `infra/`**.
-> 3. **Say on Devpost** exactly what existed before (courtcam) and what was built at Cal Hacks.
-> 4. **Don't reuse Replay's demo footage that shows the owner's games or minors.** Use only its **CC BY** clips, with attribution: Nottingham vs. Barking Abbey (basketball), 3x3 Ústí, two 2v2 games, pickleball4you, Roy Huang badminton.
-> 5. Nothing runs on Replay's private hfbox (AMD ROCm). courtcam needs **Python 3.12**, so it gets its own container.
+> **Reuse is encouraged.** Build on Replay and courtcam ideas and compatible licensed code, including `apps/`, `render/`, `services/` and `infra/`. Adapt, copy, vendor or reimplement as appropriate; preserve required notices and record incorporated sources/revisions in `docs/licenses.md`. No event window or organizer approval is required. Code licensing does not grant access to private footage or infrastructure; use media with permission and authorized compute. Check Python and GPU compatibility when integrating courtcam.
 
 ### Format change: a web app that works after the game, not a TV app
-Replay's **Fire TV app, D-pad navigation and Alexa skill are dropped.** Their features become the **Trophy Watch** web app:
+The current **Trophy Watch** target is a web app. Replay's interfaces and code can be adapted to it; Fire TV or Alexa support can be revisited if useful:
 - Responsive React (Vite).
 - Works in **any browser**: phone, laptop, or a TV's browser via cast or HDMI.
 - Opened from the **recap link** (AgentMail email or QR) as soon as post-processing finishes.
@@ -504,7 +499,7 @@ Replay's **Fire TV app, D-pad navigation and Alexa skill are dropped.** Their fe
 | MOT metrics, event evaluation against hand play logs, `eval_moments`, `eval_scene`, **`courtcam synth`** (labelled synthetic games for 4 sports) | — | **§6 accuracy** and **rule-engine test fixtures** (always labelled synthetic) |
 | 2.5D scene package: **SAM 2.1 cutouts** (Apache) → Player's view, Orbit, Broadcast high | About 1 GPU-minute per 8 s play | **F16**: a licence-clean alternative to GVHMR/SMPL, run on the **Vultr** box. With **2+ phones**, Trophy can do the true multi-view 3D that Replay's own "Tier D" notes wanted |
 
-### New Trophy Watch features (rebuilt as web, from Replay's design)
+### Trophy Watch features (adapted from Replay ideas and code)
 | Feature | What it does | Built on | Priority |
 |---|---|---|---|
 | **Follow a player** | Pick a player; the video crops and pans to follow them ("Following Anshul") | courtcam tracks + a smoothed crop path; with several phones, the auto-director (F14) picks the best camera for that player | P1 |
@@ -512,19 +507,19 @@ Replay's **Fire TV app, D-pad navigation and Alexa skill are dropped.** Their fe
 | **Condensed game + rally browser** | Every rally or possession back to back, dead time removed | Rally segmentation (courtcam) + ffmpeg concat | P1 |
 | **Broadcast mode** | Score bug, captions, spoken play-by-play, **Trophy's calls overlaid** | F12 commentary + Remotion/WebGL overlays | P0 (it's the trophy clip's look) |
 | **Replay angles** | Real cameras + **virtual angles** (Player's view, Orbit, Broadcast high, top-down), 0.5× slow-mo | F14 RIFE, F16 3D / 2.5D | P2 |
-| **Plain-English play search** | "Show every kitchen fault by Sam", "Joseph's threes" | **Moss** index over moments (sub-10 ms) + Claude query parsing → filters. This also strengthens the Moss prize | P1 |
+| **Plain-English play search** | "Show every kitchen fault by Sam", "Joseph's threes" | **Moss** index over moments (sub-10 ms) + Claude query parsing → filters. This supports search over recorded game events | P1 |
 | **Stats panel + player card** | Per-player stats, shot chart and heatmap, calls against, challenge record, coach cards (F11) | Trophy events + courtcam heatmap | P1 |
 | **"Can't tell" review queue** | Every BETA or low-confidence call and every unlabelled moment, for a human to confirm. **This builds the labelled set for calibration** | §6 accuracy + F9 calibration | P1 |
 | **Clips: trim, share, 9:16 reels** | Clip any moment, trim it, share a link; vertical highlight reel | F14 Remotion; signed GCS links | P1 |
 | **Voice + gesture commands** | "Trophy, clip that", "Trophy, challenge", X-gesture | Deepgram STT (Replay used Whisper) + courtcam X-gesture + the trigger-to-play rule | P1 |
 | **Profiles with consented naming** | Players enrol a face or jersey at join; **everyone else stays anonymous** (and blurred in shares) | F17 blur + enrolment (Replay's privacy rule) | P2 |
 | **Pickup scoring modes** | Make-it-take-it, by 1s/2s, win by 2, game to 11/15/21 | Rule-pack scoring templates (F8) | P1 |
-| **Watch party** (new, not in Replay) | Friends open the same game link; **playback, cursor and reactions stay in sync** through SpacetimeDB | **SpacetimeDB** shared state: strengthens the SpacetimeDB and Meta prizes | P2 |
+| **Watch party** (new, not in Replay) | Friends open the same game link; **playback, cursor and reactions stay in sync** through SpacetimeDB | **SpacetimeDB** shared state for synchronized viewing | P2 |
 | QR / phone handoff | Open any moment on another device with a scoped, expiring token | Gateway signed tokens | P2 |
 
 **Dropped:** the Fire TV app (react-native-tvos, D-pad focus), the Alexa skill, Replay's AWS CDK stack (Lambda/CloudFront; Trophy uses GCP + Caddy), and Kokoro TTS (Cartesia replaces it).
 
-**Owner:** A (web app, clips) + D (search, stats, review queue). In the §7 schedule, **Trophy Watch takes Saturday evening** next to the trophy clip, and its P1 features slot in before the 3 AM freeze.
+**Suggested owners:** A (web app, clips) + D (search, stats, review queue). Schedule Trophy Watch alongside the trophy clip after the core capture and event pipelines work; adjust P1 scope to the current milestone.
 
 ## 6. Sport wall and accuracy (owner D, P1, about 3 h)
 **Built on:** our own labelled calls (a keyboard-shortcut labeler over the rally clips) and Wilson confidence intervals.
@@ -536,19 +531,21 @@ Replay's **Fire TV app, D-pad navigation and Alexa skill are dropped.** Their fe
 
 ---
 
-## 7. Schedule (36 h, 4 people)
+## 7. Suggested milestones
+
+Sequence and owners are flexible; there is no fixed implementation window or submission deadline.
 
 | Block | A: PWA + resting + replays | B: Flight + audio + calibration | C: Possession | D: Engine + AI |
 |---|---|---|---|---|
-| **Fri start → 1 AM** | Device-test page; Caddy HTTPS; join by QR; JPEG-over-WebSocket stream; NTP sync | Envs + weights smoke tests (BlurBall/WASB) on recorded clips; solvePnP tap-corner tool | Envs; RF-DETR TensorRT, ByteTrack, rtmlib feet on a sample clip; print COCO ids | Contracts, **SpacetimeDB module (tables + reducers)**, Redis, rule-pack schema + CEL, `decide()` with Snap + Claude fallback; table-tennis pack; start the Firecrawl → Moss rule indexes |
-| **1 AM → 9 AM** (sleep in shifts) | MediaRecorder → OPFS, chunk upload; QR timecode calibration | Live table-tennis bounce → 2D call; audio-onset fusion | Basketball ball+hoop fine-tune (record 300 frames on site, label, train); make/miss | Engine replaying event logs; commentary → Cartesia |
-| **Sat 9 AM → noon** | aiortc 720p path; challenge UI | 2-camera triangulation + P(in) ellipse; edge-ball logic | Possession/contact, "off you", step counter | Cornhole + basketball packs; calibration harness |
-| **🚦 Sat noon gate** | **Each P0 family makes ≥ 1 correct live call, or switch to "calls within 2 s after the point"** | | | |
-| **Sat noon → 6 PM** | Cornhole fine-tune + zone scoring; **park trip with C** (basketball, pickleball, two-hand touch, soccer, ultimate) | Pickleball in/out + **kitchen fault with C**; badminton (WASB); roundnet rim audio | **Snap detector + rush count, two-hand touch**; kitchen feet | **House-rule Droid** (sandbox, trigger, plan/diff/test stream); "ask the ref" (Moss + Deepgram + Cartesia); coach (flight + possession candidates); sport wall |
-| **Sat 6 PM → 3 AM** | Auto-director, RIFE, Remotion trophy clip; highlights | 3D replay of ball + presets (P2); roundnet live | P2 sports: dodgeball, soccer cone goal, wiffle zone | Label ~60 calls per type → fit `T`; accuracy tiles; 25 drafted packs reviewed |
-| **🧊 3 AM** | **Feature freeze** | | | |
-| **Sun 3 → 8:30 AM** | Devpost video (sponsors judge from it) | Demo-table rehearsal | Recorded-segment edit | Slides: architecture, calibration, sport wall |
-| **Sun 9 AM** | **Submit** (on site by 8) | | | |
+| **Foundation** | Device-test page; Caddy HTTPS; join by QR; JPEG-over-WebSocket stream; NTP sync | Envs + weights smoke tests (BlurBall/WASB) on recorded clips; solvePnP tap-corner tool | Envs; RF-DETR TensorRT, ByteTrack, rtmlib feet on a sample clip; print COCO ids | Contracts, **SpacetimeDB module (tables + reducers)**, Redis, rule-pack schema + CEL, `decide()` with Snap + Claude fallback; table-tennis pack; start the Firecrawl → Moss rule indexes |
+| **First vertical slice** | MediaRecorder → OPFS, chunk upload; QR timecode calibration | Live table-tennis bounce → 2D call; audio-onset fusion | Basketball ball+hoop fine-tune (record 300 frames on site, label, train); make/miss | Engine replaying event logs; commentary → Cartesia |
+| **Live integration** | aiortc 720p path; challenge UI | 2-camera triangulation + P(in) ellipse; edge-ball logic | Possession/contact, "off you", step counter | Cornhole + basketball packs; calibration harness |
+| **P0 checkpoint** | **Each P0 family makes ≥ 1 correct live call, or switch to "calls within 2 s after the point"** | | | |
+| **Expand coverage** | Cornhole fine-tune + zone scoring; **park trip with C** (basketball, pickleball, two-hand touch, soccer, ultimate) | Pickleball in/out + **kitchen fault with C**; badminton (WASB); roundnet rim audio | **Snap detector + rush count, two-hand touch**; kitchen feet | **House-rule Droid** (sandbox, trigger, plan/diff/test stream); "ask the ref" (Moss + Deepgram + Cartesia); coach (flight + possession candidates); sport wall |
+| **Replays and evaluation** | Auto-director, RIFE, Remotion trophy clip; highlights | 3D replay of ball + presets (P2); roundnet live | P2 sports: dodgeball, soccer cone goal, wiffle zone | Label ~60 calls per type → fit `T`; accuracy tiles; 25 drafted packs reviewed |
+| **Stabilization** | **Stabilize the chosen release scope** | | | |
+| **Demo preparation** | Demo video | Demo-table rehearsal | Recorded-segment edit | Slides: architecture, calibration, sport wall |
+| **Release** | **Share the validated demo or release when ready** | | | |
 
 ---
 
@@ -570,9 +567,9 @@ Replay's **Fire TV app, D-pad navigation and Alexa skill are dropped.** Their fe
   - RTX 50-series laptops need torch ≥ 2.7 built for CUDA 12.8; set `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` or patch the `torch.load` calls.
   - Keep supervision at 0.30.9 (0.31 removed `sv.ByteTrack`).
   - Keep Roboflow's `inference` package **out** of the live environment (dependency conflicts) **[P]**.
-- **Download onto the GCP VM's disk** with `gdown` (Google Drive throttles large files). Never over venue Wi-Fi:
+- **Download onto the chosen compute host** with `gdown` (Google Drive throttles large files), using a reliable connection:
   - BlurBall (`blurball_best`, Nextcloud), WASB `wasb_<sport>_best.pth.tar`, RIFE 4.25, PANNs CNN14.
   - TT3D's ImageNet encoder.
   - Roboflow exports: Cornhole Referee, minigolf, roundnet, flag football.
   - Qwen3-VL-8B-FP8 (about 10 GB).
-- **Licenses:** BlurBall and WASB weights have unstated licenses; the basketball repos have none, so reimplement their logic; YOLO-based weights are AGPL. All fine for the hackathon; list them in the README.
+- **Licenses:** BlurBall and WASB weights have unstated licenses; the basketball repos have none, so reimplement their logic; YOLO-based weights are AGPL. Check permissions for each selected code, weight and dataset revision and record adopted components in `docs/licenses.md`.

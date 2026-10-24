@@ -9,29 +9,31 @@
 - *a "Play of the Game" moment,*
 - *and a license that allows reuse.*
 
-*Full candidate lists (2–4 per sport, with weaknesses and alternatives) are in [Cal Hacks 13 research notes/](../research/), in the three `Trophy clips -` files.*
+*Full candidate lists (2–4 per sport, with weaknesses and alternatives) are in [research notes](../research/), in the three `clips-*-family-full-list.md` files.*
 
 **How it was checked:**
 - Licenses were read from each YouTube watch page or the Commons file page.
 - Camera angles were checked from YouTube's auto-generated preview frames. No videos were downloaded.
 - **Not checked:** whether ball sounds are actually audible. Listen before relying on a clip for the bounce, rim or chain classifiers.
 - ✓ = CC BY confirmed on the page.
-- † = it came up in YouTube's Creative Commons search filter, but the page check was rate-limited. Open the page and confirm the "Creative Commons Attribution" line before using it in the Devpost video.
+- † = it came up in YouTube's Creative Commons search filter, but the page check was rate-limited. Open the page and confirm the "Creative Commons Attribution" line before using it in the demo video.
 
 ---
 
 ## 1. License rules
 
-| License | Live judged demo | Devpost video | Notes |
-|---|---|---|---|
-| **CC BY / CC0** | ✅ | ✅ | Credit the creator on an end slide (keep `credits.json` from §5) |
-| **CC BY-SA** | ✅ | ⚠️ | A video that includes it may have to be released as CC BY-SA too. Prefer CC BY |
-| **Pexels / Mixkit / Pixabay** | ✅ | ✅ | Free, but clips are 8–30 s and usually silent. B-roll only |
-| **Research / non-commercial datasets** (OpenTTGames, CalTennis, PadelVic, SportsMOT, DeepSport) | ✅ | ❌ | Fine to show judges live; keep them out of the public video |
-| **Standard YouTube license** | ✅ (only four square) | ❌ | Credit it on screen |
-| **Re-uploaded pro broadcasts tagged CC** (TK Tennis ATP, VolleyHub VNL, Handball World, Jomboy, PBA/FOX, PDC darts) | ❌ | ❌ | The uploader doesn't own the rights. **Excluded** |
+Use any footage whose permissions cover the intended use; CC BY / CC0 are convenient defaults. Check the actual source and applicable terms before relying on this dated inventory. See [media guidance](../rules-compliance.md).
 
-**Etiquette:** one uploader (Rob Alexander, soccer) asks to be told if anyone filmed doesn't want to be public. **Blur faces of non-team people in the Devpost video**, which is also a chance to show off Trophy's privacy blur.
+| License or source | Use guidance |
+|---|---|
+| **CC BY / CC0** | Reuse within the terms; preserve required credits and any change notices in `credits.json` and exports |
+| **CC BY-SA** | Reuse when applicable attribution and share-alike obligations can be met |
+| **Pexels / Mixkit / Pixabay** | Check the asset's current license and intended use; often useful for B-roll |
+| **Research / non-commercial datasets** | Verify each dataset's evaluation, demo, redistribution and commercial-use permissions separately |
+| **Standard YouTube license** | Do not infer reuse permission from availability or attribution; obtain permission where needed |
+| **Re-uploaded broadcasts tagged CC** | Verify the uploader can grant the rights before reuse |
+
+**Etiquette:** one uploader (Rob Alexander, soccer) asks to be told if anyone filmed doesn't want to be public. **Anonymize or blur non-consenting people in shared clips**, which is also a chance to show off Trophy's privacy blur.
 
 ---
 
@@ -80,7 +82,7 @@ The score (out of 10) is how many Trophy features the clip exercises. The last c
 - **[TeamTrack](https://www.kaggle.com/datasets/atomscott/teamtrack)** (MIT, 17.7 GB): basketball from **two side views plus a drone top view**. It also has a static handball view. **Best for showing the 3D replay and auto-director on a team sport.**
 - **[SoccerTrack](https://www.kaggle.com/datasets/atomscott/soccertrack)** (LGPL-3.0, 6.8 GB): wide fisheye plus drone, time-synced.
 
-**Safest licenses for the Devpost video:** Wikimedia Commons clips under CC BY 4.0 (HCTV high-school baseball and basketball), CC BY-SA 4.0 (University of Alberta dodgeball, Old Markonians club cricket) and CC0 (roller hockey).
+**Candidate licenses for shared videos (verify terms and participant permissions):** Wikimedia Commons clips under CC BY 4.0 (HCTV high-school baseball and basketball), CC BY-SA 4.0 (University of Alberta dodgeball, Old Markonians club cricket) and CC0 (roller hockey).
 
 **Avoid as a dependency:** the BaseballCV amateur set (206 files, 387 GB, no license on its Hugging Face card). SportsMOT (CC BY-NC) and DeepSport (CC BY-NC-ND) are research only.
 
@@ -131,15 +133,15 @@ Public footage is weak or missing for:
 - **Horseshoes, Kan Jam, ladder toss, disc golf putting.**
 - **A staged LBW** if you want that call.
 
-Film them with the Trophy PWA itself during the event, which also proves the app works.
+Film them with the Trophy PWA whenever useful, with participant permission; this also validates capture.
 
 ---
 
-## 5. Getting the clips into the pipeline (cloud only)
+## 5. Getting the clips into the pipeline
 
-1. **Download on the AWS box, not the laptops.** Run `yt-dlp -f "bv*[height<=1080]+ba/b" --download-sections "*START-END"` for just the segments you need (for example `*8:20-8:50` for the edge ball). This avoids a single residential IP getting rate-limited, which happened during the research. Download Commons files directly, and datasets from Hugging Face or Kaggle.
-2. Store them in **S3** as `clips/<sport>/<id>_<start>-<end>.mp4`, plus a sidecar JSON with the source URL, license, creator, segment, the calls you expect at each timestamp (ground truth), and camera notes.
+1. **Download on suitable local or cloud compute.** Run `yt-dlp -f "bv*[height<=1080]+ba/b" --download-sections "*START-END"` for just the segments you need (for example `*8:20-8:50` for the edge ball). This avoids a single residential IP getting rate-limited, which happened during the research. Download Commons files directly, and datasets from Hugging Face or Kaggle.
+2. Store large/private media in **ignored local storage or access-controlled object storage** as `clips/<sport>/<id>_<start>-<end>.mp4`, plus a sidecar JSON with the source URL, license, creator, segment, the calls you expect at each timestamp (ground truth), and camera notes.
 3. **Calibrate once per clip**: tap the court corners on the first frame, and store the homography or PnP pose in the sidecar.
 4. Play each clip through the same ingest path as a phone, so the pipeline treats it like a live camera stream. That gives the sport wall's "VERIFIED on public footage" badge and an accuracy score from the sidecar's ground truth.
 5. Generate `credits.json`, and from it an end-slide credit for every CC BY clip used in the video.
-6. **Before using any † clip in the Devpost video**, confirm its license line on the watch page.
+6. **Before using any † clip in the demo video**, confirm its license line on the watch page.

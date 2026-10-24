@@ -1,12 +1,12 @@
 # Trophy: a universal referee and post-game analyzer for casual sports (v3)
 
-*2026-10-22, the day before Cal Hacks 13.0. Supersedes [v2](Cal%20Hacks%2013%20-%20Trophy%20(universal%20ref%20+%20post-game%20analyzer)%20v2.md). Changes:*
+*2026-10-22. Product concept v3. Plans and priorities are adaptable; see [agent guidance](../../CLAUDE.md). Changes:*
 - *Chess is removed.*
 - *Added pickleball, badminton, two-hand touch football and every popular casual sport we could find, now **28 sports**, organized into **three engine families**.*
 
 *Everything else from v2 stays: PWA capture, the SubQ Snap decision layer and coach, honest call tiers, the house-rule compiler.*
 
-*Research notes (licenses and links checked through the GitHub, HF and Roboflow APIs today) are in [Cal Hacks 13 research notes/](../research/). The two new ones are `Trophy - racket and net sports.md` and `Trophy - field, team and target sports.md`.*
+*Research notes (licenses and links checked through the GitHub, HF and Roboflow APIs today) are in [research notes](../research/). The two new ones are `Trophy - racket and net sports.md` and `Trophy - field, team and target sports.md`.*
 
 > **One-liner:** *"Open a link on any phone, point it at any pickup game, and Trophy referees it. Live calls with honest confidence, challenges, replays, a commentator, and a coach that shows you the better move. 28 sports, one engine."*
 
@@ -39,7 +39,7 @@ A judge taps any tile and watches its calls play over footage. The **house-rule 
 
 ## 2. The sport catalog (calls by tier)
 
-How it shows: **AUTO ≥ 90%** auto-call · **BETA** stands but challengeable, shows uncertainty · **PLAYERS DECIDE** never called. Demo plan: **L** = live at the venue, **R** = recorded at the event, **P** = pack + short clip.
+How it shows: **AUTO ≥ 90%** auto-call · **BETA** stands but challengeable, shows uncertainty · **PLAYERS DECIDE** never called. Demo plan: **L** = live demo, **R** = recorded example, **P** = pack + short clip.
 
 ### A. Flight family
 | Sport | AUTO | BETA | PLAYERS DECIDE | Best existing code / weights | Demo |
@@ -95,7 +95,7 @@ Before judges arrive, set up the judging table with the **table-tennis clamp net
 | 1:00–1:20 | **Switch sports in one tap.** The judge throws 3 bags at the tabletop cornhole board: "Bag in hole, 3. Cancels 1. Blue leads 4–1." The same phones, a different rule pack |
 | 1:20–1:35 | **House rule.** The judge types "bags that hang over the hole count 2." Trophy shows the compiled rule and the next throw is scored with it |
 | 1:35–1:55 | **Coach.** "On that rally you went cross-court; down-the-line was the better option (0.58 vs. 0.09)." The ghost trajectory plays and the commentator voices it |
-| 1:55–2:30 | **Recorded at Cal Hacks:**<br>• Pickleball **kitchen foot fault**<br>• Badminton landing call<br>• Two-hand touch: **"5-Mississippi rush, early: penalty"** and a **two-hand touch at 82%**<br>• Basketball double dribble (beta) and a foul tagged "players decide" |
+| 1:55–2:30 | **Recorded examples:**<br>• Pickleball **kitchen foot fault**<br>• Badminton landing call<br>• Two-hand touch: **"5-Mississippi rush, early: penalty"** and a **two-hand touch at 82%**<br>• Basketball double dribble (beta) and a foul tagged "players decide" |
 | 2:30–2:50 | **The sport wall:** 28 tiles with LIVE / VERIFIED / PACK badges and a measured accuracy number on each verified one. The **Play of the Game** trophy clip lands on the judge's phone |
 | 2:50–3:00 | "Three engines, 28 rule packs, honest confidence. Any game, any phone." |
 
@@ -105,7 +105,7 @@ Before judges arrive, set up the judging table with the **table-tennis clamp net
 
 ## 4. Architecture
 
-Same as v2: PWA phones, then the edge GPU laptop, then AWS after the game. The one change is that perception is split into the three families. The full repo map for capture, decisions, replay and broadcast is in [v2 §3](Cal%20Hacks%2013%20-%20Trophy%20(universal%20ref%20+%20post-game%20analyzer)%20v2.md#3-feature--existing-model-or-repo-what-to-download-not-build), minus chesscog and Stockfish.
+Phones run the PWA, perception is split into three families, and post-game processing produces Trophy Watch replays. See [build plan §0](build-plan.md#0-system-shape-deployment-baseline-updated-2026-10-23) for the current deployment baseline. Local and cloud compute are both options.
 
 - **Capture (PWA):**
   - Video: aiortc or FastRTC WebRTC at 720p, plus a 1080p MediaRecorder copy in OPFS.
@@ -156,25 +156,25 @@ Same as v2: PWA phones, then the edge GPU laptop, then AWS after the game. The o
   - Privacy blur.
 
 **Gates:**
-- **Saturday noon:** each P0 family must produce at least one correct call, or fall back to "calls within 2 s after the point."
-- **3 AM Sunday:** feature freeze.
+- **P0 checkpoint:** each P0 family should produce at least one correct call, or fall back to "calls within 2 s after the point."
+- **Release preparation:** stabilize the chosen scope and record measured results.
 
-**Recording trip (Saturday afternoon, about 2 h):** take 3 phones running the Trophy PWA itself to a park with courts and grass. In one trip, record basketball, pickleball, two-hand touch (3v3), soccer and ultimate, plus a few dodgeball and wiffle reps. Badminton goes indoors if the hall ceiling allows. Recording *during* the event with your own app also proves the PWA works. Don't pre-record footage before Friday; Cal Hacks requires all work to happen during the event.
+**Recording trip (about 2 h):** take 3 phones running the Trophy PWA to a park with courts and grass. Record basketball, pickleball, two-hand touch (3v3), soccer and ultimate, plus dodgeball and wiffle reps. Badminton goes indoors if the ceiling allows. Record whenever useful with participant permission; using the PWA also validates capture.
 
 ---
 
-## 6. Team split (4)
+## 6. Suggested team split (adapt as needed)
 
 | Who | Owns |
 |---|---|
 | **A: PWA + resting family** | Device-test page (hour 1), camera/lens selection, recording to OPFS, WebRTC stream, clock sync, join by QR, beep/flash/challenge UI, router + HTTPS. Then **cornhole / mini golf / cup pong** (fixed phone, homography, detect objects once they stop moving) |
 | **B: Flight family** | BlurBall + TT3D + triangulation + audio onsets (table tennis), then WASB/TrackNetV3 for **pickleball, badminton**, roundnet rim audio, volleyball |
 | **C: Possession family** | RF-DETR + trackers + rtmlib + team colors, field homography; **basketball**, then **two-hand touch** (snap detector, rush count, touch from both wrists), soccer, ultimate, dodgeball |
-| **D: Rules, decisions, story** | Rule-pack schema + 28 packs (Claude drafts, humans check the P0/P1 ones), house-rule compiler, Snap `decide()` + calibration, coach, Claude → Cartesia commentary, sport wall UI, trophy clip, **Devpost video** |
+| **D: Rules, decisions, story** | Rule-pack schema + 28 packs (Claude drafts, humans check the P0/P1 ones), house-rule compiler, Snap `decide()` + calibration, coach, Claude → Cartesia commentary, sport wall UI, trophy clip, **demo video** |
 
 ---
 
-## 7. Do today (Thursday): accounts, downloads, gear, no code
+## 7. Setup options: accounts, downloads and gear
 
 - **Accounts:**
   - [ ] **SubQ console**: 1–2 people sign up now (100M free tokens, possible waitlist). Check that `subq-snap-1.1` is listed.
@@ -182,7 +182,7 @@ Same as v2: PWA phones, then the edge GPU laptop, then AWS after the game. The o
   - [ ] **AWS GPU quota** request.
   - [ ] SMPL registration (only if you'll do 3D players).
   - [ ] Roboflow account (needed to export the Universe datasets and models).
-- **HTTPS:** [ ] a domain (also enters MLH's GoDaddy prize) + a Let's Encrypt wildcard via DNS challenge, pointed at the laptop's fixed LAN IP. iOS rejects self-signed certificates for `wss://`.
+- **HTTPS:** [ ] a domain from a suitable registrar + a Let's Encrypt wildcard via DNS challenge, pointed at the laptop's fixed LAN IP. iOS rejects self-signed certificates for `wss://`.
 - **Download:**
   - Flight: BlurBall, TT3D, WASB (all sports), TrackNetV3 badminton, fast-volleyball-tracking.
   - Possession: RF-DETR, rtmlib models, basketball `best.pt`, roboflow/sports, BaseballCV weights.
@@ -207,8 +207,8 @@ Same as v2: PWA phones, then the edge GPU laptop, then AWS after the game. The o
 4. **SubQ Snap:**
    - The model is new (1.1 launched today).
    - Its benchmarks are vendor-reported, and its capacity is limited.
-   - The fallback chain must be wired by Saturday morning.
-5. **Licenses:** many sport-specific weights are AGPL (Ultralytics, BaseballCV weights, pocket-drs), GPL (Padex), non-commercial, or unlicensed. That's fine for a hackathon. Keep the core on RF-DETR / rtmlib / WASB / BlurBall / roboflow (MIT/Apache) for a future startup.
+   - Validate the fallback chain before relying on live decisions.
+5. **Licenses:** many sport-specific weights are AGPL (Ultralytics, BaseballCV weights, pocket-drs), GPL (Padex), non-commercial, or unlicensed. Check the terms for the intended use, including weights and data. Prefer permissive components where useful, but other licenses are allowed when their obligations can be met.
 6. **Venue Wi-Fi:** use your own router; nothing in the live loop touches the cloud.
 
 **Competition for Q&A:**
@@ -219,62 +219,21 @@ Same as v2: PWA phones, then the edge GPU laptop, then AWS after the game. The o
 
 ---
 
-## 9. Prize map (live Hive list, updated Oct 23 12:47 AM)
+## 9. Integration priorities
 
-Source: [hive.hackberkeley.org/prizes](https://hive.hackberkeley.org/prizes), plus the MLH prizes listed only on Devpost. **Best Robotics has been removed** from both.
+Choose integrations for product value, measured behavior, maintenance cost and the authorized budget. Providers are replaceable; there are no prize-driven requirements.
 
-### Go for these (Trophy fits the judging criteria)
-| Prize | What the judges ask for | How Trophy answers it | Built in |
-|---|---|---|---|
-| **1st / 2nd / 3rd Overall** | Application, Intentionality, Functionality, Creativity, Technical Complexity | Live input, judges play, honest confidence, 28 sports | Everything |
-| **Most Technically Complex** | Technical depth | Several phones synced into 3D, calibrated decision probabilities, a rulebook compiled into a referee | Build plan F2–F11 |
-| **Most Creative / Hacker's Choice** | Fresh idea; the crowd's favorite | People line up to play a point and get refereed; the sport wall | Demo |
-| **Cartesia** (Meta glasses, TBD) | Voice must be **core, not a demo feature**. Scored 25% each on problem and originality, use of Cartesia, execution, and impact and responsibility (accessibility, privacy). They want a **2-minute demo-first video**, a README listing the Cartesia features used, and no keys in the repo | **Trophy is a voice referee.** Players mid-rally can't look at a phone, so **every call is spoken**. There are two commentator voices (play-by-play and colour), voice challenges ("Trophy, challenge!") and "ask the ref". **Audio-description mode** serves blind and low-vision players and spectators | F12, F19 |
-| **Meta: Bringing People Closer Together with AI** (Round 2 trip to Menlo Park) | How meaningfully it strengthens human connection, how essential AI is, originality, the working demo | Pickup games with friends: it ends arguments fairly, makes casual games feel like a broadcast, and shares the Play of the Game and recap emails | Whole product |
-| **SpacetimeDB** (prize "coming soon") | SpacetimeDB as the **core real-time backend**: live shared state, multiplayer, live dashboards, agents coordinating in one persistent world state. "Meaningfully used, not just added on the side" | **The game session lives in SpacetimeDB**: players, phones, rallies, score, calls, challenges, house rules. Phones, the dashboard, the engine and the Droid compiler all read and write the same live state through subscriptions and reducers | Build plan §0, F8 |
-| **Anthropic** (prize "coming soon") | 1) **A named community** ("students" is too broad), 2) a real problem you've lived, 3) it works, and one thing done well beats a broad demo, 4) thoughtful use of Claude: you know where it could go wrong | **For this judge, frame Trophy around one community**, e.g. *"Berkeley rec pickleball regulars who call their own lines"*, and **lead with the pickleball line call plus the kitchen fault**. Claude: commentary grounded on the event log, coach explanations, rule answers. **Where it could go wrong:** wrong calls, which is why there are confidence tiers, "players decide", evidence mode, and Claude never making visual calls | F10–F12, F19 |
-| **Factory: Best Use of the Droid SDK** ($2,000) | Droid does **real work in the running product** on **a trigger you designed**, with **controlled access and safety**, and its work **visible**: plans, steps, diffs, results. Scores poorly as a chatbot wrapper or a slides-only demo | **The house-rule compiler is a Droid.** A judge types a rule, a SpacetimeDB row triggers Droid, and Droid edits *only* the rule-pack file, replays the last 10 rallies as tests, repairs the rule until the tests pass, and streams its plan, diff and test results onto the dashboard. A human taps Approve to hot-load it | F10 |
+| Capability | Current approach | Why it helps |
+|---|---|---|
+| Spoken calls and accessible commentary | Cartesia, with Deepgram voice commands | Players can hear decisions without looking at a phone; audio description supports spectators |
+| Shared live state and watch parties | SpacetimeDB | Phones, the engine, dashboard and viewers share game state and playback |
+| Grounded explanations and coaching | Claude and the decision pipeline | Explanations cite event facts and rules while showing uncertainty |
+| House-rule compilation | Factory Droid with scoped access and replay tests | Players can customize a game and inspect changes before applying them |
+| Rulebook lookup and play search | Firecrawl and Moss | Answers and search results stay tied to rules and recorded events |
+| Post-game analysis and rendering | Suitable local hardware or cloud GPUs, Remotion | Heavy jobs can run separately from live calls |
 
-### Cheap add-ons (only claim them if they're really used)
-| Prize | Use |
-|---|---|
-| **Moss** (AirPods Max/Pro) | Example #1 is "voice agents that listen, respond, and act in real time." **Rulebook lookup:** official rules (scraped with Firecrawl), indexed in Moss for sub-10 ms search, answer "Trophy, what's the rule on…?", and cite the rule text in challenge verdicts (F19) |
-| **MLH Best Use of Vultr** (M5Stack Tab5) | **Post-game GPU jobs on Vultr** (RIFE, GVHMR, ReCamMaster on an L40S). This also eases the $100 AWS limit |
-| **MLH Best Use of Gemini API** | Gemini is the fallback decider and the highlight captioner |
-| **MLH GoDaddy Registry domain** | The domain you need for HTTPS anyway |
-| **Notability** | Keep ideation and architecture notes in it (they judge on process, detail, feature use and relevance) |
-| **Figma** (brief TBD) | Only if the PWA is designed in Figma |
+### Build on Replay
 
-### Watch (recheck Saturday morning)
-- **Annapurna Labs**, **Elastic**, **Convex**, **AfterQuery**, **Armadin**: all "coming soon". Convex is an alternative to SpacetimeDB, so pick one.
-- **Microsoft "Built for the Real World"** is a long shot: it asks for high-impact domains (finance, productivity, healthcare), scored on customer understanding, measurable usefulness, path to production, responsible design and end-to-end function. You'd pitch rec-league referee shortages plus measured accuracy.
-- **Best People-First Hack**, through the accessibility mode.
+Trophy Watch may reuse and extend [subatomic-hamster/replay](https://github.com/subatomic-hamster/replay) ideas and compatible licensed code: follow a player, moments, condensed games, replay angles, grounded commentary, play search, stats and review queues. The web experience is the current priority; Fire TV, Alexa and other interfaces remain optional directions.
 
-### Skip
-Hyphenate, Visa, CRS, Capital One Nessie, Coinbase x402, Creao (you'd have to build in their platform), Fetch.ai, Apify, Bright Data, SpaceXAI (space data + Grok), Atlassian, Mana, Bitdeer, Planet-First, Hardware, Beginner, Solo.
-
-**Opt-in list:**
-- **Core:** Overall · Most Technically Complex · Most Creative · Hacker's Choice · Cartesia · Meta · SpacetimeDB · Anthropic · Factory Droid.
-- **Extras:** Moss · MLH Vultr · MLH Gemini · MLH GoDaddy · Notability.
-
-Don't add sponsors you only touch lightly; judges notice.
-
-### Does adding Replay's features change the map? (Oct 23)
-Replay's watch experience is rebuilt as the **Trophy Watch** post-game web app (build plan §5B). The opt-in list mostly holds; three prizes get stronger, and one new risk applies to all of them.
-
-| Prize | Change |
-|---|---|
-| **Overall / Most Creative / Hacker's Choice** | ⬆ Trophy now covers **during** the game (the ref) *and* **after** it (a broadcast-style replay: follow a player, moments, condensed game, replay angles). That's a fuller story, as long as the demo stays tight |
-| **Meta** | ⬆ Sharing reels, follow-a-friend, and a **watch party** where friends watch the replay together, synced through SpacetimeDB, are all "bringing people closer" |
-| **SpacetimeDB** | ⬆ A second real-time use: **synced playback, cursors and reactions** across friends' browsers, on top of the live game state |
-| **Moss** | ⬆ A second real use: **plain-English play search** over moments ("every kitchen fault by Sam"), on top of rulebook lookup |
-| **Cartesia** | = Commentary was already core. Broadcast mode adds narrated highlight reels |
-| **Anthropic** | = Still frame it around one named community. Claude parses search queries and paraphrases commentary, now behind Replay's **fact validator**, which is a good answer to "where could it go wrong" |
-| **Factory Droid, Gemini, Vultr, GoDaddy, Notability** | No change |
-| **Fire TV / Alexa** | Dropped: no Cal Hacks prize for them, and they carry device risk |
-| **Elastic** (still "coming soon") | Watch: if its brief rewards search or agents over event data, play search could run on Elastic Agent Builder instead of Moss. Pick one |
-
-> ⚠️ **New risk across every prize: eligibility.** Replay predates Cal Hacks and was submitted to the Amazon Developer Hackathon. Cal Hacks requires all implementation during the event. **Copying Replay's app code risks disqualification from every prize.** Safe path:
-> 1. Use only the published MIT **courtcam** library as a disclosed dependency (confirm with organizers in #ask-directors).
-> 2. Rebuild the watch app during the event.
-> 3. Say on Devpost what existed before.
+Use courtcam as a dependency or adapt it when that is useful. Preserve required notices, record incorporated sources/revisions, and validate changes on Trophy data. See [build plan §5B](build-plan.md#5b-build-on-replay-for-trophys-post-game-web-app) and [reuse guidance](../rules-compliance.md).

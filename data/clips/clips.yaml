@@ -1,4 +1,4 @@
-# Hero clips per sport (from docs/plan/clip-library.md). No media in git: fetch on the VM, store in GCS.
+# Hero clips per sport (from docs/plan/clip-library.md). Keep large/private media in ignored local storage or access-controlled object storage.
 # Fill `segments` (start-end) and `expected_calls` (ground truth) as you prepare each clip.
 clips:
   - {"sport": "Table tennis", "family": "flight", "title": "BenSucksAtPingPong club match", "url": "https://www.youtube.com/watch?v=7maQFqJ3XQ0", "license": "✓ CC BY", "specs": "4K60, 9:35", "showcases": "**A disputed edge ball at 8:36** (the challenge-replay moment), games chaptered, long rallies", "segments": [], "expected_calls": []}

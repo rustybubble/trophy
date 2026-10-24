@@ -1,4 +1,4 @@
-# Trophy: racket and net sports research (Cal Hacks 13.0)
+# Trophy: racket and net sports research
 
 Compiled 2026-10-22. Repo metadata comes from the GitHub API (authenticated `gh api repos/...`) on this date; "pushed" is the last push date. I checked Hugging Face entries through the HF API, Roboflow Universe entries through their page meta descriptions (the pages return 403 to fetchers, but the meta tags come through), PadelTracker100 through the Zenodo API, and footage counts through the Wikimedia Commons API. I did not download or run any weights. Speed figures are the authors' own numbers.
 

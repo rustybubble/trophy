@@ -1,6 +1,6 @@
 # Trophy: field, team and target sports research
 
-Prepared 2026-10-22 for Cal Hacks 13.0 (Oct 23-25, 36 h, team of 4).
+Prepared 2026-10-22 for Trophy.
 
 **Scope.** This covers field, team and target sports. Basketball, table tennis and spikeball are covered in other documents.
 
@@ -42,7 +42,7 @@ Rule packs map events to calls in three tiers: AUTO, BETA and PLAYERS DECIDE.
 | MCG-NJU/SportsMOT | https://github.com/MCG-NJU/SportsMOT | none listed | 233 | 2023-07-24 | Data | Soccer, basketball and volleyball MOT. |
 | mikel-brostrom/boxmot | https://github.com/mikel-brostrom/boxmot | AGPL-3.0 | 8,319 | 2026-10-20 | ReID weights | Avoid unless you accept AGPL. roboflow/trackers is enough. |
 
-**Licensing note.** Ultralytics YOLO (62.7k stars) is AGPL-3.0. Weights trained with it, including roboflow/sports `.pt` files, BaseballCV and most Roboflow Universe YOLO exports, carry AGPL implications if Trophy ever ships commercially. That is fine at a hackathon. Prefer RF-DETR (Apache-2.0) for anything you fine-tune yourself.
+**Licensing note.** Ultralytics YOLO (62.7k stars) is AGPL-3.0. Weights trained with it, including roboflow/sports `.pt` files, BaseballCV and most Roboflow Universe YOLO exports, carry AGPL implications if Trophy ever ships commercially. Check applicable obligations for the intended deployment. Prefer RF-DETR (Apache-2.0) for anything you fine-tune yourself.
 
 ### The 30 fps budget
 33 ms per frame decides the tiers more than model quality does:
@@ -551,6 +551,6 @@ Academic work (Ivašić-Kos, Univ. Rijeka) covers YOLO ball/player detection and
    - Cricket: bowled and boundary 4 as AUTO; PocketDRS ideas for LBW. Skip LBW unless you have 60 fps.
 3. **PACK-ONLY:** kickball, touch rugby, team handball, street hockey, disc golf, plus four square, horseshoes, foosball and air hockey.
 4. **Licensing traps:**
-   - Ultralytics/YOLO weights (AGPL), PocketDRS (AGPL), BaseballCV MLB models (AGPL dual) and SoccerNet sn-gamestate (GPL) are fine for the hackathon but not for a product.
+   - Ultralytics/YOLO weights (AGPL), PocketDRS (AGPL), BaseballCV MLB models (AGPL dual) and SoccerNet sn-gamestate (GPL) need review against the intended deployment; neither demos nor commercial products have a blanket exemption or ban.
    - Kaggle NFL/DFL data is competition-use only.
    - Prefer RF-DETR + roboflow/trackers + supervision (Apache/MIT) for the core.

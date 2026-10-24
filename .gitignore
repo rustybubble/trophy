@@ -17,7 +17,7 @@ dist/
 .vite/
 out/
 
-# models, footage, data (keep on the VM disk or in GCS)
+# models, footage, data (keep in ignored local storage or object storage)
 *.pt
 *.pth
 *.pth.tar

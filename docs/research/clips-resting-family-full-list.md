@@ -1,9 +1,9 @@
 # Trophy demo clips: resting-object family (+ table goal/pocket games)
 
-Researched 2026-10-23 for Cal Hacks 13 "Trophy". **No video files were downloaded.** I pulled only metadata, YouTube storyboard sprites (160x90 tiles) and stock/Commons poster thumbnails, saved in `ch13/thumbs/` (contact sheets: `sheet_*.jpg`), to check camera angles.
+Researched 2026-10-23 for Trophy. **No video files were downloaded.** Only metadata, YouTube storyboard sprites (160x90 tiles) and stock/Commons poster thumbnails were used to check camera angles; the original scratch assets are not included in this repo.
 
 ## License verification method
-- **YouTube:** candidates came from YouTube's own Creative Commons filter (`sp=EgIwAQ==`). For each one I ran `yt-dlp --dump-json` and read the `license` field. "CC BY (verified)" means the field returned `Creative Commons Attribution license (reuse allowed)`. YouTube CC BY is CC BY 3.0, so the clip can go in the Devpost video, but **credit the channel and link the video**. In the first 260 hits from the CC filter, every one carried the flag.
+- **YouTube:** candidates came from YouTube's own Creative Commons filter (`sp=EgIwAQ==`). For each one I ran `yt-dlp --dump-json` and read the `license` field. "CC BY (verified)" means the field returned `Creative Commons Attribution license (reuse allowed)`. YouTube CC BY is CC BY 3.0, so the clip can go in the demo video, but **credit the channel and link the video**. In the first 260 hits from the CC filter, every one carried the flag.
   - Partway through, YouTube rate-limited this IP (HTTP 429 or a Google "sorry" bot page). I checked a handful of clips through an Invidious mirror instead: it gave resolution, duration and storyboards but no license field. Those clips are marked **"CC (filter hit, flag not re-read)"**. Before using one, open the watch page and confirm the "Creative Commons Attribution license (reuse allowed)" line under the description.
   - Excluded: CC-flagged channels that re-post broadcast footage they probably don't own (Jomboy Media breakdowns, "Top 5 PBA Moments" from FOX Sports, Oche180 / Xander PDC clips).
 - **Wikimedia Commons:** license read from the API's `extmetadata.LicenseShortName`. CC BY-SA means you credit the author and any derivative must carry the same license, which is fine for a demo.
@@ -260,7 +260,7 @@ Alts:
 Alt: Pexels "Friends Playing Air Hockey" https://www.pexels.com/video/friends-playing-air-hockey-7233523/ (2560x1080, 15 s).
 
 **Foosball, HERO: "Table football.ogv"**: https://commons.wikimedia.org/wiki/File:Table_football.ogv
-- Wikimedia Commons, by אבנר. **CC BY-SA 4.0**. 11 s, 1080p. It was filmed **at a hackathon** (2017), which is a fun fit for the Devpost story.
+- Wikimedia Commons, by אבנר. **CC BY-SA 4.0**. 11 s, 1080p. It was filmed **at a hackathon** (2017).
 - Weaknesses: an angled view with people in frame, and short.
 - **Score 4**
 
@@ -282,4 +282,4 @@ Alts:
 ## Bottom line
 - **Strong public footage** exists for cornhole (UKCL), bowling (pin-deck cam, 259 game), darts (board cam with 501 overlay), pool (overhead break) and mini golf (MGA ace).
 - **Weak public footage**: horseshoes, Kan Jam, ladder toss and disc-golf putting (no clean static single-target CC clip). **Film these four at the venue** with phone tripods: one camera locked on the target, one on the thrower.
-- Before the Devpost video, re-open each "filter hit, flag not re-read" watch page and confirm the CC BY line. Put credits for every CC BY / CC BY-SA clip in the video description.
+- Before the demo video, re-open each "filter hit, flag not re-read" watch page and confirm the CC BY line. Put credits for every CC BY / CC BY-SA clip in the video description.

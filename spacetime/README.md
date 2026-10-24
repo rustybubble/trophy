@@ -8,4 +8,4 @@ Self-hosted with `spacetime start` in a container on the live VM; the same modul
 ## Reducers
 `join_game` · `register_camera` · `post_call` · `challenge` · `resolve_challenge` · `submit_house_rule` · `update_house_rule` · `approve_house_rule` · `post_highlight` · `watch_sync` · `react`
 
-Why SpacetimeDB is core: it's the single live shared state for phones, dashboard, engine, Droid and watch parties. That's also what the SpacetimeDB prize asks for (concept-v3 §9).
+Why SpacetimeDB is core: it's the single live shared state for phones, dashboard, engine, Droid and watch parties. This is the current architecture choice; alternatives can be evaluated against those needs.

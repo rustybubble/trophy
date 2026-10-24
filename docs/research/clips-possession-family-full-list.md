@@ -1,19 +1,19 @@
 # Trophy - public demo clips, possession-family sports
 
-Researched 2026-10-23 for Cal Hacks 13. No video files were downloaded; only YouTube auto-frame thumbnails (hq1/hq2/hq3 = frames at ~25/50/75% of the video) and Commons poster frames were pulled to check camera angle. Contact sheets: `C:\Users\Joseph\AppData\Local\Temp\claude\C--Users-Joseph-Code-TreeHacks-IDeas\c155ce4e-327e-4c15-95c5-3a10044b5441\scratchpad\ch13\thumbs\poss\sheet_<sport>.jpg` (+ `sheet_commons.jpg`).
+Researched 2026-10-23 for Trophy. No video files were downloaded; only YouTube auto-frame thumbnails (hq1/hq2/hq3 = frames at ~25/50/75% of the video) and Commons poster frames were used to check camera angles. Original contact sheets were scratch assets and are not included in this repo.
 
 ## How this was searched and verified
 
 - **YouTube**: ~60 queries run through YouTube search with the Creative Commons filter (`sp=EgIwAQ%3D%3D`) via yt-dlp flat search (about 1,300 unique results). The shortlisted videos were then fetched individually with `yt-dlp --dump-json --skip-download`. Clips marked **"CC BY (verified)"** returned `license == "Creative Commons Attribution license (reuse allowed)"` from that per-video fetch, along with max listed resolution and fps. YouTube rate-limited and bot-checked the IP mid-run (other agents were also scraping), so some clips are marked **"CC filter; re-check"**: they came back from the Creative-Commons-filtered search, but the per-video confirmation was blocked. Open the watch page and confirm the "License: Creative Commons Attribution" line under the description before using them. yt-dlp ran without a JS runtime, so a higher format could be missing; treat resolution as a floor.
 - **CC BY caveat**: a CC BY tag on YouTube is the uploader's claim. That is fine for amateur channels filming their own games (most picks below). Channels re-uploading pro broadcasts with a CC tag (e.g. "Handball World") were excluded as likely license-washing.
-- **Attribution**: CC BY requires a credit line ("Video: <channel>, YouTube, CC BY 3.0"). Several pickup-soccer uploads include "if you are in this video and don't want it public, tell me"; be respectful: crop or blur faces in the Devpost video if in doubt.
+- **Attribution**: CC BY requires a credit line ("Video: <channel>, YouTube, CC BY 3.0"). Several pickup-soccer uploads include "if you are in this video and don't want it public, tell me"; be respectful: crop or blur faces in the demo video if in doubt.
 - **Wikimedia Commons**: MediaWiki API, File namespace, `filetype:video`, licenses read from `extmetadata`.
 - **Pexels / Mixkit**: search pages (stock clips are 8-30 s, mostly drone/handheld; they serve as B-roll only).
 - **Datasets**: Kaggle/HF/GitHub license fields checked directly.
 
 Scoring (1-10) weighs: static/elevated camera with visible lines (homography) > visible Trophy calls > casual/pickup story > audio > resolution/fps > license cleanliness.
 
-**Legend**: Static = tripod / fixed mount, no pan. "Devpost-OK" = license allows use in the public Devpost video with attribution.
+**Legend**: Static = tripod / fixed mount, no pan. "Public-video candidate" = license allows use in the public demo video with attribution.
 
 ---
 ## Hero clip per sport (at a glance)
@@ -34,7 +34,7 @@ Scoring (1-10) weighs: static/elevated camera with visible lines (homography) > 
 
 **Multi-view (synchronized) footage**: none of the CC YouTube finds are true synchronized multi-angle recordings (Roses Live ultimate is a switched multi-camera broadcast). For the multi-view / auto-director / challenge-replay demo use datasets: **SoccerTrack** (fisheye + drone, time-synced, LGPL-3.0) or **TeamTrack basketball** (2 side views + drone top view, MIT). Otherwise film it yourselves with 2 phones.
 
-**Best "license-clean for the Devpost video" picks** (CC BY / CC BY-SA / CC0 / Pexels, no doubts about the uploader's rights): Rob Alexander pickup soccer (own footage, CC BY), Flag Football Coaching clips (own footage), Commons HCTV baseball/basketball (CC BY 4.0), Commons Alberta dodgeball (CC BY-SA 4.0), Commons Old Markonians cricket (CC BY-SA 4.0), Commons roller hockey (CC0), TeamTrack handball (MIT). A Devpost video that edits in a CC BY-SA clip is arguably an adaptation that must itself be released CC BY-SA, so prefer CC BY / CC0 clips where possible.
+**Best "license-clean for the demo video" picks** (CC BY / CC BY-SA / CC0 / Pexels, no doubts about the uploader's rights): Rob Alexander pickup soccer (own footage, CC BY), Flag Football Coaching clips (own footage), Commons HCTV baseball/basketball (CC BY 4.0), Commons Alberta dodgeball (CC BY-SA 4.0), Commons Old Markonians cricket (CC BY-SA 4.0), Commons roller hockey (CC0), TeamTrack handball (MIT). A demo video that edits in a CC BY-SA clip is arguably an adaptation that must itself be released CC BY-SA, so prefer CC BY / CC0 clips where possible.
 
 **Sports where you should film your own**: touch rugby (weak public footage) and two-hand touch football (no CC game footage). Kickball and wiffle are thin but usable.
 
@@ -44,7 +44,7 @@ Scoring (1-10) weighs: static/elevated camera with visible lines (homography) > 
 
 ### HERO: "Fun Moderate to Intense 10 games Saturday run" - JaiArtHub
 - URL: https://www.youtube.com/watch?v=2NxcgKW7xFM
-- Source / license: YouTube, **CC BY (verified)**. Devpost-OK with credit.
+- Source / license: YouTube, **CC BY (verified)**. Public-video candidate with credit.
 - Duration 32:10 (1930 s); **2160p, 60 fps**; uploaded 2026-03-24.
 - Camera: **static tripod at about head height facing one hoop**, single view, outdoor **half-court** run at Hogben Park; sideline, key paint and hoop visible; full bodies. Running score overlay ("Team A 4 - Team B 0", "Session 4") burned in.
 - Audio: raw recording (ball bounces, rim, calls) - not checked for added music.
@@ -116,7 +116,7 @@ Also: "12u 7v7 Unity Thunder vs Laurel Stallions Scrimmage" (https://www.youtube
   - "Soccer Highlights 2023-01-29 | 'Intentional hands!'" https://www.youtube.com/watch?v=_R3HcUCSKNI (18:41, 4K60, CC BY) - camera right behind a pop-up goal; the title names a handball call.
   - "Highlights - Chantilly Co-Ed Pickup Soccer 4/20/2023" https://www.youtube.com/watch?v=vY3udgpzmpk (12:20, 4K60, CC BY) - burned-in score + game clock ("WHITE 1 - DARK 5").
   - "Fairfax County Pickup Soccer Game Summary Feb 5, 2023" https://www.youtube.com/watch?v=s3IxEpyKi7A (20:50, 4K60, CC BY).
-- Uploader note: "If you are in this video and do not want it made public please let me know." Be considerate (crop/blur faces) in the Devpost video.
+- Uploader note: "If you are in this video and do not want it made public please let me know." Be considerate (crop/blur faces) in the demo video.
 - **Showcase score: 9/10**
 
 ### Alt (5v5 with goal timestamps): "sweat, sweat | 5 v 5 | sns football 4k" - sns interviews
@@ -220,7 +220,7 @@ Also: "Kick Ball Game Bell Elementary April, 2022" (d887FFj6RQw, CC BY, 43:38, V
 - https://www.youtube.com/watch?v=30DYzg21VSw (4:16) and https://www.youtube.com/watch?v=reDRND0234Y (1:18) - CC BY (verified), 1080p30, 2025-04.
 - Locked-off tripod behind the bowler on a driveway pitch, score overlay ("RONAN 3 - DB 13*"). Father-and-son backyard cricket. Small far-end target; stumps are improvised. **6/10**
 
-### License-clean (Devpost-OK, share-alike): Wikimedia Commons "Old Markonians CC v Bucks Cricket select XI at Bayford, Herts, England 199/356"
+### License-clean (Public-video candidate, share-alike): Wikimedia Commons "Old Markonians CC v Bucks Cricket select XI at Bayford, Herts, England 199/356"
 - https://commons.wikimedia.org/wiki/File:Old_Markonians_CC_v_Bucks_Cricket_select_XI_at_Bayford,_Herts,_England_199.webm (2:22) and ..._356.webm (1:57) - **CC BY-SA 4.0** (Acabashi), 1080p, filmed 7 May 2026, mid-week 40-over club match.
 - Close static side-on view of the striker's end: batter, keeper, stumps, slip and umpire all in frame. Good for bowled/LBW evidence and bat-on-ball audio. Not a pickup game, and the field of view is too narrow for boundaries. **6/10**
 
@@ -244,7 +244,7 @@ Also: "Exciting Cricket Match - Rushton Cricket Club" (https://www.youtube.com/w
 - Same channel: full matches with static end-court cams, e.g. "BGSU vs. Maryland | Dodgeball Full Match | 2025 Pink Out" (https://www.youtube.com/watch?v=kEDhakH7RUA, 1:11:25) and "HIGHLIGHTS: Dodgeball National Title: Miami vs. Cincinnati" (https://www.youtube.com/watch?v=JvUUoAwBELI, 13:48, elevated wide arena view).
 - Note: these College Dodgeball / WDF videos came from the CC-filtered search, but the per-video license re-check was bot-blocked. Confirm the "Creative Commons" line on the watch page before use.
 
-### License-clean (Devpost-OK): Wikimedia Commons "Dodgeball game at the University of Alberta"
+### License-clean (Public-video candidate): Wikimedia Commons "Dodgeball game at the University of Alberta"
 - https://commons.wikimedia.org/wiki/File:Dodgeball_game_at_the_University_of_Alberta.webm - **CC BY-SA 4.0** (Sdkb), 0:41, 1920x1080. Lister residence rec-league game; elevated corner view of a gym court with all lines; a real casual game. Short. **6/10**
 - Also on Commons: "8th Annual International Dodgeball Tournament of CHAMPIONS! Hamline 2014 8" (CC BY 3.0, 3:08, 1080p) and "2013 GitHub Dodgeball Tournament for Charity" (CC BY 3.0, 1:50, recap edit with music).
 - "World Dodgeball Federation - 2015 Women's Semi - Canada vs Australia" (https://www.youtube.com/watch?v=uxDs-Br61AQ, 44:52) - static wide-angle cam behind the side net (CC filter; re-check pending).
@@ -322,19 +322,17 @@ License-clean: **TeamTrack handball** (MIT, Kaggle) - static 6K fisheye side vie
 |---|---|---|---|---|---|
 | **TeamTrack** (Nagoya Univ., CVPRW 2024) - https://www.kaggle.com/datasets/atomscott/teamtrack | soccer, basketball, **handball** | Static side-view fisheye (Z CAM E2, 6K/8K) for all three sports; basketball also has drone side view + drone top view (multi-view); handball = single static side-view fisheye (full-pitch by design; 6 m line visibility not checked). MOT boxes for every player. | **MIT** (Kaggle dataset license field); project site CC BY-SA 4.0 | 17.7 GB on Kaggle (also Google Drive) | Best license-clean static-camera source for handball and basketball multi-view. Fisheye needs undistort before homography. No audio guaranteed. |
 | **SoccerTrack** (same group) - https://www.kaggle.com/datasets/atomscott/soccertrack | soccer | 8K wide-view fisheye (static) + DJI Mavic 3 top-view drone, time-synced, with GNSS player positions. University soccer. | **LGPL-3.0** (Kaggle license field) | 6.8 GB | Gold for multi-view / "auto-director" demo: two synchronized angles of the same play. Full-pitch 11v11, not small-sided. |
-| **BaseballCV `international_amateur_baseball_game_videos`** - https://huggingface.co/datasets/dyland222/international_amateur_baseball_game_videos | baseball | 206 mp4 files (README says 205) of amateur games from the Alfredo Harp Helu Baseball Academy (Mexico). | **No license declared** on the HF dataset card (card has no license field / no README). BaseballCV code is AGPL-3.0 (dual-licensed). Treat as research/demo-only; ask the maintainers before using in the Devpost video. | 387.5 GB total; files 125 MB - 3.4 GB each | Huge but unvetted; pick 1-2 files after previewing. Do not bulk-download. |
+| **BaseballCV `international_amateur_baseball_game_videos`** - https://huggingface.co/datasets/dyland222/international_amateur_baseball_game_videos | baseball | 206 mp4 files (README says 205) of amateur games from the Alfredo Harp Helu Baseball Academy (Mexico). | **No license declared** on the HF dataset card (card has no license field / no README). BaseballCV code is AGPL-3.0 (dual-licensed). Treat as research/demo-only; ask the maintainers before using in the demo video. | 387.5 GB total; files 125 MB - 3.4 GB each | Huge but unvetted; pick 1-2 files after previewing. Do not bulk-download. |
 | **SportsMOT** - https://github.com/MCG-NJU/SportsMOT | basketball, soccer, volleyball | Broadcast clips with MOT boxes | **CC BY-NC 4.0** | (size not checked) | Research-only (NC). Broadcast/panning cameras = poor fit for homography. Skip for demo. |
 | **DeepSportradar instance segmentation** - https://www.kaggle.com/datasets/gabrielvanzandycke/deepsport-dataset | basketball | Still frames from fixed, calibrated Keemotion arena cameras (calibration included) | **CC BY-NC-ND 4.0** | images, not video | Useful for testing court homography only; NC-ND. |
 | **roboflow/sports** - https://github.com/roboflow/sports | soccer, basketball | Code + Roboflow Universe datasets (player/ball/pitch keypoints, basketball court keypoints). Demo soccer videos come from the Kaggle DFL Bundesliga shootout (tactical broadcast cam). | Repo **MIT**; demo video license not stated; Universe datasets vary per project | small | Use the court/pitch keypoint models, not the videos. |
 | **SoccerNet (incl. MV-Fouls multi-view)** | soccer | Pro broadcast, multi-view foul clips | NDA | large | Not usable for the public demo. |
 | **APIDIS basketball** (UCLouvain, FP7) | basketball | 7 calibrated fixed IP cameras around an amateur basketball game (approx. synced, 22-25 fps) with action annotations (throw, violation, foul) | No public license found; research distribution | - | Historically the canonical multi-view amateur basketball set; access uncertain in 2026. Not pursued. |
-| **Pexels** - pexels.com/videos | basketball, soccer, cricket (many), ultimate | 4K stock, 8-30 s, mostly drone/handheld. e.g. "Ultimate frisbee game on a sunny field" (pexels.com/video/32514516, 8 s, 3840x2160, 59.94 fps, by Usman AbdulrasheedGambo); aerial basketball court with players (pexels.com/video/27456775); ~24+ cricket match clips (e.g. 30172302 casual park match, 33907672 aerial match). | **Pexels License** (free, commercial OK, no attribution required) | small | License-clean B-roll for the Devpost video intro; too short for referee calls. No dodgeball/kickball/handball game footage found. |
+| **Pexels** - pexels.com/videos | basketball, soccer, cricket (many), ultimate | 4K stock, 8-30 s, mostly drone/handheld. e.g. "Ultimate frisbee game on a sunny field" (pexels.com/video/32514516, 8 s, 3840x2160, 59.94 fps, by Usman AbdulrasheedGambo); aerial basketball court with players (pexels.com/video/27456775); ~24+ cricket match clips (e.g. 30172302 casual park match, 33907672 aerial match). | **Pexels License** (free, commercial OK, no attribution required) | small | License-clean B-roll for the demo video intro; too short for referee calls. No dodgeball/kickball/handball game footage found. |
 | **Mixkit** - mixkit.co/free-stock-video/basketball/ | basketball | 165 basketball clips incl. "Aerial view of a blue and purple basketball court" (#1216), 1v1 outdoor games | **Mixkit License** (free) | small | B-roll only. |
 
 ---
 
-## Files
+## Original research artifacts
 
-- Search scripts: `ch13/poss/poss_flat.py` (CC-filtered search), `ch13/poss/poss_slow.py` (per-video metadata), `ch13/poss/poss_commons.py` (Commons API).
-- Raw data: `ch13/poss/yt_flat.json` (all ~1,300 CC search hits by sport), `ch13/poss/full.json` (verified per-video metadata), `ch13/poss/commons.json` (Commons hits with license/size).
-- Contact sheets: `ch13/thumbs/poss/sheet_*.jpg`.
+The original scratch workspace held CC-filtered search scripts, per-video metadata, Commons API results and contact sheets. Those temporary files are not included in this repo; source URLs and license notes above are the available research record.

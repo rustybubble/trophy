@@ -1,6 +1,6 @@
-# Trophy (Cal Hacks 13.0): open-source stack for replay and post-game features
+# Trophy: open-source stack for replay and post-game features
 
-Researched 2026-10-22. Every GitHub repo below was checked live through the GitHub API (license, stars, last push date). Hugging Face model IDs were checked through the HF API (200 = exists). "NOASSERTION" means a custom license, usually non-commercial research use, which is fine for a hackathon demo but not for a company. All SMPL/SMPL-X based tools also need the body model files, which require free registration at https://smpl.is.tue.mpg.de / https://smpl-x.is.tue.mpg.de (non-commercial). **Register on Day 0.**
+Researched 2026-10-22. Every GitHub repo below was checked live through the GitHub API (license, stars, last push date). Hugging Face model IDs were checked through the HF API (200 = exists). "NOASSERTION" means this inventory does not establish the license; inspect the actual terms for the intended use. All SMPL/SMPL-X based tools also need the body model files, which require free registration at https://smpl.is.tue.mpg.de / https://smpl-x.is.tue.mpg.de (non-commercial). **Register on Day 0.**
 
 Assumed hardware: one local laptop with an RTX 4080/4090-class GPU (12-24 GB VRAM), plus AWS (g5/g6e with 24-48 GB, or p4/p5 with 80 GB if credits allow). Phones: 2-4, not hardware-synced.
 
@@ -139,7 +139,7 @@ No well-maintained "SMPL to glTF" library exists (GitHub search finds only toy r
 - **Roll your own (recommended, ~2 h):** You already have player tracks and the ball. Crop center x = EMA of the weighted centroid of (ball, ball-handler, active players), clamped and smoothed with a critically damped spring. 1080x1920 from 4K landscape (or 608x1080 from 1080p, then upscale). This beats saliency on sports.
 
 ### Programmatic editing / score bug
-- **Remotion** https://github.com/remotion-dev/remotion (custom "Remotion License": **free for individuals and companies with 3 or fewer employees**, so a hackathon team qualifies; 66k stars). React compositions: `<OffthreadVideo>` + `<Sequence>` + an animated score-bug component + `<Audio>` for the Cartesia commentary. `@remotion/renderer` / `npx remotion render` locally, or Remotion Lambda on AWS. Speed-ramp with `playbackRate`. The TikTok caption template https://github.com/remotion-dev/template-tiktok gives word-timed captions (feed it Cartesia word timestamps). **A** if anyone knows React. This is the best trophy-clip renderer.
+- **Remotion** https://github.com/remotion-dev/remotion (custom "Remotion License": **free for individuals and companies with 3 or fewer employees**, verify eligibility for the actual user or organization; 66k stars). React compositions: `<OffthreadVideo>` + `<Sequence>` + an animated score-bug component + `<Audio>` for the Cartesia commentary. `@remotion/renderer` / `npx remotion render` locally, or Remotion Lambda on AWS. Speed-ramp with `playbackRate`. The TikTok caption template https://github.com/remotion-dev/template-tiktok gives word-timed captions (feed it Cartesia word timestamps). **A** if anyone knows React. This is the best trophy-clip renderer.
 - **ffmpeg** (via ffmpeg-python https://github.com/kkroening/ffmpeg-python, Apache-2.0): crop, `setpts` slow-mo, `overlay` PNG score bug, `drawtext`, `amix` commentary over a ducked game audio (`sidechaincompress`). **A**. Fast fallback.
 - **MoviePy** https://github.com/Zulko/moviepy (MIT), **editly** https://github.com/mifi/editly (MIT, declarative JSON edits): alternatives.
 - Prior-art "Opus Clip" open clones: https://github.com/Anil-matcha/AI-Youtube-Shorts-Generator (MIT, 5.5k stars), https://github.com/fralapo/clippyme (MIT).
@@ -191,7 +191,7 @@ No well-maintained "SMPL to glTF" library exists (GitHub search finds only toy r
 - **Timestamps:** word and phoneme timestamps are available (docs show them with SSE; WebSocket supports `add_timestamps`). Use them for burned-in captions.
 - **Suggested voices** (docs): Daniel (en-US male) `47c38ca4-5f35-497b-b1a3-415245fb35e1`, Archie (en-GB male) `ef191366-f52f-447a-a398-ed8c0f2943a1`. Browse the library for a "sports announcer" style, or clone one.
 - SDKs: Python https://github.com/cartesia-ai/cartesia-python (Apache-2.0), JS https://github.com/cartesia-ai/cartesia-js (Apache-2.0). Both updated 2026-10-16.
-- **Cartesia Line** (https://github.com/cartesia-ai/line, Apache-2.0; docs https://docs.cartesia.ai/line): a Python voice-agent framework (STT "Ink" + Sonic + any LLM, turn-taking, interruptions). **Heads-up: Cartesia now says it stops *hosting* Line SDK agents on Dec 1, 2026, migrating to "Managed Agents" (`/v1/agents` REST API, config-only, no deploy)**; self-hosted Line code keeps working. Line/Managed Agents fit a **"talk to the ref / ask the commentator" voice feature** (e.g. "Hey Trophy, was that a foul?", answered from the event log and the clip). For one-way commentary, use the raw TTS WebSocket; Line is overkill. If you want the Cartesia prize, a small Line or Managed-Agents "ask the ref" interaction plus Sonic commentary covers both products.
+- **Cartesia Line** (https://github.com/cartesia-ai/line, Apache-2.0; docs https://docs.cartesia.ai/line): a Python voice-agent framework (STT "Ink" + Sonic + any LLM, turn-taking, interruptions). **Heads-up: Cartesia now says it stops *hosting* Line SDK agents on Dec 1, 2026, migrating to "Managed Agents" (`/v1/agents` REST API, config-only, no deploy)**; self-hosted Line code keeps working. Line/Managed Agents fit a **"talk to the ref / ask the commentator" voice feature** (e.g. "Hey Trophy, was that a foul?", answered from the event log and the clip). For one-way commentary, use the raw TTS WebSocket; Line is overkill. A small Line or Managed-Agents "ask the ref" interaction can complement Sonic commentary if it serves the product.
 - Offline fallback TTS: Piper https://github.com/rhasspy/piper (MIT).
 
 ---
@@ -205,7 +205,7 @@ No well-maintained "SMPL to glTF" library exists (GitHub search finds only toy r
 | **trackers** (Roboflow) | https://github.com/roboflow/trackers | Apache-2.0 | Clean SORT/ByteTrack/OC-SORT implementations | A |
 | **ByteTrack** | https://github.com/FoundationVision/ByteTrack | MIT | Reference tracker | A |
 | **BoxMOT** | https://github.com/mikel-brostrom/boxmot | AGPL-3.0 | BoT-SORT/StrongSORT/DeepOCSORT **with ReID** built in (OSNet weights auto-download) | A- |
-| **Ultralytics YOLO11/26** | https://github.com/ultralytics/ultralytics | AGPL-3.0 | person/ball detection, pose, seg, `model.track()` | A (AGPL is OK for an open hackathon repo) |
+| **Ultralytics YOLO11/26** | https://github.com/ultralytics/ultralytics | AGPL-3.0 | person/ball detection, pose, seg, `model.track()` | A (evaluate applicable AGPL obligations) |
 | **InsightFace** (SCRFD detector + ArcFace) | https://github.com/deepinsight/insightface | code MIT-ish; **models non-commercial** | Face detection + 512-d embeddings for enrollment matching | A- |
 | **Torchreid / OSNet** | https://github.com/KaiyangZhou/deep-person-reid | MIT | Body ReID embeddings (clothing) | B+ |
 | **FastReID** | https://github.com/JDAI-CV/fast-reid | Apache-2.0 | Alternative ReID | B |
@@ -235,7 +235,7 @@ No well-maintained "SMPL to glTF" library exists (GitHub search finds only toy r
 | 3D replay (courtside / top / broadcast / POV) | GVHMR (`-s` static cam) per player-track → root anchored by ground-plane foot projection → rigged SMPL glb (Meshcapade Blender add-on, once) driven by bone quaternions in **Three.js** → pre-captured court splat via **Spark** → 4 camera presets + POV from the head joint (smoothed). PromptHMR GLB output as a parallel try | AWS/laptop for HMR; browser for viewing | Med |
 | Generative "re-shoot" (stretch) | ReCamMaster (Wan2.1-1.3B) arc-around on the single trophy clip, pre-rendered on AWS A100/H100 (~3-12 min); TrajectoryCrafter if >= 28 GB VRAM. Skip GEN3C, EgoX, 4DGS | AWS | High |
 | AI commentary | Event-log-grounded LLM → Cartesia `sonic-3.6` WebSocket streaming (contexts, emotion=excited, `[laughter]`, 2 voices, cloned announcer), word timestamps → captions; LiveCC-7B as an "AI watches the raw video" experiment; Line / Managed Agents for "ask the ref" voice Q&A | API + laptop | Low |
-| Privacy blur | Enrollment (ArcFace face + OSNet body) → per-track player vote → deface/SCRFD face blur or SAM2 body blur for non-players, via supervision BlurAnnotator | Laptop only | Low-Med |
+| Privacy blur | Enrollment (ArcFace face + OSNet body) → per-track player vote → deface/SCRFD face blur or SAM2 body blur for non-players, via supervision BlurAnnotator | Authorized compute with private media access | Low-Med |
 
 ### Suggested team split (4 people, 36 h)
 1. **Capture + sync + calibration + tracking + privacy blur** (Python, laptop).

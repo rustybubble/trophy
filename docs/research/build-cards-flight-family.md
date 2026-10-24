@@ -1,6 +1,6 @@
 # Trophy build flight: integration cards
 
-Cal Hacks 13.0 (Oct 23-25 2026). Compiled 2026-10-22.
+Trophy integration research. Compiled 2026-10-22.
 
 **How this was checked.** I shallow-cloned every repo (commits listed per card) and read the actual inference, postprocess and dataloader code, not only the READMEs. Paper numbers come from the arXiv HTML. Hugging Face file lists come from the HF API. The BlurBall weight and dataset listings come from the public Nextcloud WebDAV. Issue threads come from `gh api`. **Nothing was installed or run on a GPU**, so every speed marked "est." is a guess: measure on the laptop Friday night.
 
@@ -65,7 +65,7 @@ Why these pins:
 
 ## 1. BlurBall (table tennis ball + motion blur)
 
-**Repo:** https://github.com/cogsys-tuebingen/blurball (commit `2f0f549`, 2026-05-14), MIT (`LICENSE.md` is NTT's WASB MIT). Paper: arXiv 2509.18387, CVPRW 2026 (CVSports). Project page: https://cogsys-tuebingen.github.io/blurball/. **Weights license is unstated**; open issue #2 asks whether `blurball_best` may be redistributed. That is fine for a hackathon demo, but do not redistribute the weights.
+**Repo:** https://github.com/cogsys-tuebingen/blurball (commit `2f0f549`, 2026-05-14), MIT (`LICENSE.md` is NTT's WASB MIT). Paper: arXiv 2509.18387, CVPRW 2026 (CVSports). Project page: https://cogsys-tuebingen.github.io/blurball/. **Weights license is unstated**; open issue #2 asks whether `blurball_best` may be redistributed. Verify permission before using or redistributing those weights.
 
 **Install**
 ```
@@ -378,7 +378,7 @@ Training: 30 epochs from scratch, Adam, batch 8, quality focal loss, binary GT (
 6. **Court detectors are broadcast-trained** (TennisCourtDetector #10, CourtKeyNet). Good-Pickleball's is classical and needs bright lines and a baseline view. Keep human-confirmed 4-tap corners as the primary path.
 7. **Roundnet Roboflow model:** about 5 years old, version and mAP unverified (Cloudflare blocks fetchers), needs an API key, and may not be locally exportable. Plan to fine-tune on its CC BY 4.0 dataset instead.
 8. **Audio over WebRTC:** browser AEC, NS and AGC plus Opus can erase the 10-14 kHz transient the TT detector relies on. Send raw PCM through an AudioWorklet and verify the band on Friday.
-9. **Licenses:** the BlurBall and WASB weights have unstated licenses (open issues #2 and #12), TennisCourtDetector has no license, tt_sounds data is CC BY-NC, and Good-* YOLO weights are AGPL. All are fine for a hackathon, but not for a product.
+9. **Licenses:** the BlurBall and WASB weights have unstated licenses (open issues #2 and #12), TennisCourtDetector has no license, tt_sounds data is CC BY-NC, and Good-* YOLO weights are AGPL. Verify each component's permissions for the intended use; a demo setting does not waive its terms.
 10. **CourtKeyNet ships obfuscated `exec` code.** It decoded as benign at `2dd886a`, but bypass it anyway.
 
 ## Sources (all fetched or verified 2026-10-22)

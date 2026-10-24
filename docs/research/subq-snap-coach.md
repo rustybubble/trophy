@@ -1,9 +1,9 @@
 # Trophy: SubQ Snap as referee + coach (research, 2026-10-22)
 
-Scope: SubQ Snap API facts, access status, Jev, a concrete Snap-coach design for Trophy (Cal Hacks 13.0, Oct 23-25 2026), evaluation plan, risks and fallbacks.
+Scope: SubQ Snap API facts, access status, Jev, a concrete Snap-coach design for Trophy, evaluation plan, risks and fallbacks.
 
 Bottom line:
-- **The API is real and documented, and it's self-serve.** Sign up at console.subq.ai and get 100M free tokens. Two caveats: the launch post says new users "may be waitlisted when capacity is reached", and Product Hunt says the 100M free tokens are for "the first 10,000 users". **Sign up today (Oct 22), create the key and run the smoke test below before the event starts.**
+- **The API is real and documented, and it's self-serve.** Sign up at console.subq.ai and get 100M free tokens. Two caveats: the launch post says new users "may be waitlisted when capacity is reached", and Product Hunt says the 100M free tokens are for "the first 10,000 users". **Check current access, create a key and run the smoke test below before relying on this integration.**
 - **Facts changed today.** Snap 1.1 launched on 2026-10-22. The documented model ID is now `subq-snap-1.1`, not `subq-snap-preview`, and the price is $0.04/M input tokens, not $0.05. Output is still free.
 - **SubQ Snap uses Jev's API design.** Jev is TypeSafe AI's "System One" decision model. Both use `POST /v1/systemone` with `state` + `questions`, and both have `noul`/`choice`/`score` question types, `probabilities` and `confidence`. Code written for one ports to the other with small changes. That makes Jev the cheapest fallback.
 - **Design rule taken from both vendors' docs: keep code in charge.** Geometry decides IN/OUT. Snap handles semantic, rule-interpretation and tactical judgments, and its probabilities feed the confidence gate after calibration.
@@ -315,7 +315,7 @@ calibration: {T: 1.4, fitted_on: 64 calls}
 | **Option-order bias, nondeterminism** | Medium | Shuffle + average 2 calls on borderline cases. |
 | **Confidently wrong** | Medium | Atomic-question consistency checks. Empirical-stats agreement for coach flags. Challenge button. |
 | **Venue Wi-Fi** | Medium | Phone hotspot backup. Small JPEG crops. Geometry-only mode. |
-| **Proprietary, closed license; data retained 60 days** | Low for a hackathon | Tell judges no player video is stored long-term. ZDR exists on request. |
+| **Proprietary, closed license; data retained 60 days** | Depends on consent and retention requirements | Verify and disclose actual provider retention before sending player video; request ZDR if needed and confirm it is enabled. |
 
 **Fallback stack (same `decide(state, questions, images) -> {probs}` interface, swappable by a config flag):**
 1. **Jev via Vercel AI Gateway** (`typesafe-ai/jev-1.14.0`). It's a text-only decision model on the same contract, so you get probabilities without Snap. Send the event summary + tendencies (fits in 32K) and drop the images. Requires a Vercel account and gateway key; get the key ahead of time. Direct TypeSafe signups were paused as of late September.

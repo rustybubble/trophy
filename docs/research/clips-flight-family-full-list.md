@@ -1,6 +1,6 @@
 # Trophy: public demo clips for the flight-family sports
 
-Compiled 2026-10-23 for Cal Hacks 13. Nothing was downloaded except small thumbnails and auto-frames, which are in `ch13/thumbs/` (contact sheets `s_*.jpg`).
+Compiled 2026-10-23 for Trophy. Only small thumbnails and auto-frames were downloaded for the original research; those scratch assets are not included in this repo.
 
 ## How this was checked
 
@@ -16,9 +16,9 @@ Compiled 2026-10-23 for Cal Hacks 13. Nothing was downloaded except small thumbn
 - **Hugging Face, Zenodo, GitHub:** their APIs.
 - **Audio caveat:** "audio = yes" means an audio stream exists. I could not listen without downloading. Where I say ball sounds are "likely audible", the reason is a courtside phone or GoPro and no music listed in the description. **Verify by ear before relying on the bounce/rim classifiers.**
 - **License labels:**
-  - **CC BY:** reuse allowed with attribution (credit the channel plus a link). OK for the Devpost video.
-  - **STD:** standard YouTube license. Demo-only: ask the uploader or attribute, and do NOT put it in the Devpost video.
-  - **NC / research-only datasets:** OK for a live judged demo with a credit, but avoid them in the public Devpost video.
+  - **CC BY:** reuse allowed with attribution (credit the channel plus a link). OK for the demo video.
+  - **STD:** standard YouTube license. Check permission before use; attribution alone does not grant reuse rights.
+  - **NC / research-only datasets:** Check the specific dataset terms for evaluation, demos and public sharing.
 
 Scoring rubric (1-10): static/tripod with corners visible (3), audio (1), full-body players (1), close calls or violations present (2), casual play (1), 1080p and at least 30 fps with long rallies (1), license cleanliness (1). Multi-view adds a bonus.
 
@@ -167,7 +167,7 @@ Scoring rubric (1-10): static/tripod with corners visible (3), audio (1), full-b
   - **2-6 synchronized cameras at 60 Hz** on tripods at the net posts and corners, which is essentially Trophy's phone rig.
   - Per-video `timestamps.npy` and **`camera_calibration/<session>/<video>/calib.json`** with intrinsics and extrinsics.
   - Faces are blurred. 288 files; each mp4 is about 1.1-1.5 GB (for example, session `01_23_2026_17_00_court2` has E and W views).
-- **Features:** this is the only found source that exercises **multi-view 3D, the auto-director, and challenge replay from several angles** with real calibration. It is also a UC Berkeley dataset, a nice Cal Hacks touch.
+- **Features:** this is the only found source that exercises **multi-view 3D, the auto-director, and challenge replay from several angles** with real calibration. It is a UC Berkeley dataset.
 - **Weaknesses:** NC license, huge files (stream or download a single session), and pose-focused (no ball labels). Audio is unknown.
 - **Score: 9** for the multi-view demo.
 
@@ -358,7 +358,7 @@ This sport has the weakest supply. No good CC footage exists, so the hero is sta
 
 ### HERO (STD license, demo-only): PRBC 4-Square Champions League
 - **URL:** https://www.youtube.com/watch?v=lzlcWsl4Voc
-- **Source and license:** YouTube, ColeParker12. **Standard license.** Ask or attribute; not for the Devpost video.
+- **Source and license:** YouTube, ColeParker12. **Standard license.** Obtain appropriate permission before reuse.
 - **Duration and format:** 22:27, 1080p30.
 - **Camera:** static, elevated corner over a **taped 4-square court on carpet**. All 4 squares and their corners are visible, and the players are full-body.
 - **Audio:** yes. Indoor, so ball bounces are likely audible.

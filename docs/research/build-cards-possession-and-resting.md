@@ -1,6 +1,6 @@
 # Trophy: build integration cards (perception + possession)
 
-Prepared 2026-10-22 for Cal Hacks 13.0 (Oct 23-25, 36 h). These are integration facts only, with no project code. They cover the following stack:
+Prepared 2026-10-22 for Trophy. These are integration research notes. They cover the following stack:
 
 ```
 phones (PWA, 720p WebRTC ~30 fps iOS / up to 60 Android; 1080p local recordings)
@@ -19,7 +19,7 @@ phones (PWA, 720p WebRTC ~30 fps iOS / up to 60 Android; 1080p local recordings)
 
 ### Current versions (PyPI, 2026-10-22)
 
-| Package | Latest | Released | Python | Pin for the hackathon |
+| Package | Latest | Released | Python | Research baseline pin |
 |---|---|---|---|---|
 | rfdetr | 1.11.2 | 2026-10-04 | >=3.10 | `rfdetr[train]==1.11.2` |
 | trackers | 2.6.1 | 2026-09-25 | >=3.10 | `trackers==2.6.1` |
@@ -592,7 +592,7 @@ Validation data for timing logic only: NFL Big Data Bowl tracking has `ball_snap
    - **Weights download once and are cached in `MODEL_CACHE_DIR`.** The default is `/tmp/cache`, which is cleared on reboot. **Set `MODEL_CACHE_DIR` to a persistent folder.** Source: https://docs.roboflow.com/reference/inference/inference-python/offline-weights
    - The docs examples pass `api_key` on every call. **The docs do not say whether a cached model loads with no network.** Test with Wi-Fi off before relying on it.
    - **Full air-gapped mode is an Enterprise feature:** Docker plus a 30-day weight lease (https://docs.roboflow.com/deploy/offline-mode).
-   - **License:** Inference core is Apache-2.0. Models "follow the model's own license" when self-hosted. A commercial self-host license is an Enterprise add-on, and AGPL models stay AGPL (README [V]). "Roboflow 3.0 Fast" Universe models are YOLO-family. That is fine for a hackathon.
+   - **License:** Inference core is Apache-2.0. Models "follow the model's own license" when self-hosted. A commercial self-host license is an Enterprise add-on, and AGPL models stay AGPL (README [V]). "Roboflow 3.0 Fast" Universe models are YOLO-family. Check the selected model terms for the intended use.
    - Keep it in a separate venv (section 0, conflict 1).
 
 ### "Motion stopped" (settle) detector [E]
@@ -649,7 +649,7 @@ aniposelib: https://github.com/lambdaloop/aniposelib. BSD-2, 92 stars, 0.8.0 [V]
   - or `triangulate_optim(...)` (smoothness).
 - **Reprojection error:** `cgroup.reprojection_error(p3d, points, mean=True)`.
 
-**Blockers for the hackathon:**
+**Integration risks:**
 - Needs intrinsics plus extrinsics. That means a printed ChArUco board waved in all views, or Pose2Sim's scene-point calibration.
 - Needs **frame-level sync**.
 - Needs **cross-view person association**: same `tracker_id` across phones. Do it by nearest field position via the homography feet points, then the Hungarian algorithm.
@@ -683,7 +683,7 @@ Over a 10 m indoor court, sound delay is about 30 ms, i.e. about 1 frame at 30 f
 - **API key:** a free Roboflow account and API key is needed to **download** Universe datasets or hosted weights. The README says inference on your own hardware uses no credits [V].
 - **Weights cache:** `MODEL_CACHE_DIR`; default `/tmp/cache`.
 - **Offline after caching:** not documented for the open-source pip package. **Verify with Wi-Fi off.**
-- **Best practice for Trophy:** pull the Universe **datasets** before the event and fine-tune **RF-DETR locally**.
+- **Best practice for Trophy:** pull the Universe **datasets** when preparing training and fine-tune **RF-DETR locally**.
   - The checkpoint is a local `.pth`; no key or network is needed at runtime.
   - It is Apache-2.0, apart from each dataset's CC BY 4.0 attribution requirement.
   - It runs in the same venv and process as the rest of the pipeline.

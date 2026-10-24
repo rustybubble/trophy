@@ -2,7 +2,7 @@
 
 *Compiled 2026-10-23 from the GitHub repo at commit `2db92c0` (main, pushed 2026-10-23 17:15 UTC): README, HANDOFF.md, `docs/*`, `courtcam/*`, `services/*`, `render/*`, `scripts/eval_*`, `infra/*`, `alexa/*`, and the GitHub API. I read the files but ran nothing. Every number below comes from Replay's own progress, decision and evidence docs. None of them was re-measured here.*
 
-Trophy references are to `Cal Hacks 13 - Trophy build plan.md`: F1–F18, §6 "Sport wall" (S6 below), and F19 (rulebooks with Moss).
+Trophy references are to [the build plan](../plan/build-plan.md): F1–F18, §6 "Sport wall" (S6 below), and F19 (rulebooks with Moss).
 
 ---
 
@@ -13,7 +13,7 @@ Trophy references are to `Cal Hacks 13 - Trophy build plan.md`: F1–F18, §6 "S
 | Repo | `github.com/subatomic-hamster/replay`, MIT (LICENSE added in the last commit, 2026-10-23 17:13 UTC), 0 stars, 0 forks |
 | Created / first commit | 2026-09-22 04:06 UTC ("Initial commit", Subham Dash) |
 | Commits | 146, all by `subatomic-hamster` (author name Subham Dash) |
-| Last push | 2026-10-23 17:15 UTC, the day Cal Hacks hacking opens. The last code commit was `d87fec7` at 09:23 UTC. After it came only README and LICENSE changes |
+| Last push | 2026-10-23 17:15 UTC. The last code commit was `d87fec7` at 09:23 UTC. After it came only README and LICENSE changes |
 | Purpose | Amazon Developer Hackathon entry (Fire TV track plus the AWS Builder and Open Source mini-challenges), submitted 2026-10-23 |
 | courtcam | Published separately at `github.com/subatomic-hamster/courtcam`: **exists**, MIT, 0 stars, created **2026-10-23 16:33 UTC**, pushed 17:01 UTC, 33 commits. It is a `git subtree split` of `replay/courtcam` (D-36), so its history goes back to 2026-09-22, plus a standalone commit `b2f5ff5` (synthetic samples at the root, its own CI). Python `>=3.12,<3.13`. Its core dependencies are permissive. YOLO is the AGPL `[yolo]` extra |
 | Compute | All measurements are from **hfbox**: a private, shared AMD RX 9070 XT 16 GB box (ROCm 7.2, torch 2.14, 16 GiB cgroup RAM), reached over the box owner's Tailscale Funnel. Its GPU lock defaults to `/workspace/airtools/.gpu.lock` (the same box as the AirTools work). The README says "EC2 GPU worker", but the CDK app has **no EC2 resource**. HANDOFF (Oct 22) says "EC2 GPU quota is 0. The GPU work stays on hfbox as a pull-based runner." |
@@ -361,19 +361,19 @@ Both are Tier B 2.5D camera paths over the play window (`render/replay_render/vi
   * Basketball 2v2: "Fun 2v2 Basketball – Best of 2 series – vol-1", JaiArtHub (7MloXoCl6LU), CC BY 3.0.
   * Pickleball: two tournament matches by **pickleball4you** (4M58YJoZ4O4, wY_KUvQ8w7I), CC BY 3.0, fixed tripod behind the baseline. The channel has dozens more under the same licence.
   * Badminton: "2012 US Badminton Adult National Championships Mixed Doubles QF", Roy Huang (654WkfWSYf0); "Badminton recorded with fisheye lens (Hans & René)", bvconquesto (B9XLUHQfh4A, net-post fisheye, test only).
-  * Volleyball: "West Washington" school livestream, CC BY, **local only because the players are minors** (D-76). Never use it.
+  * Volleyball: "West Washington" school livestream, CC BY, **local only because the players are minors** (D-76). Do not import or share it without appropriate permission.
   * `samples/real/*` are YouTube standard licence, local only, never public.
 
 ---
 
 ## 3. Mapping: Replay → Trophy
 
-Reuse modes:
+Suggested reuse modes (engineering estimates, not restrictions):
 * **As-is:** pip-install courtcam or call its function unchanged.
 * **Adapt:** port or modify the code or contract.
-* **Reference:** reimplement from the documented method; no code copied.
+* **Reference:** use the documented method as a starting point; reuse or adaptation is also allowed when useful and compatible with the license.
 
-Effort is hours for one Trophy engineer, including glue and a smoke test on Trophy's own data. Licences: courtcam and the rest of Replay are MIT. **The licence is not the constraint; the hackathon rule is (§6).**
+Effort is hours for one Trophy engineer, including glue and a smoke test on Trophy's own data. Licences: courtcam and the rest of Replay are MIT. **Ideas and compatible licensed code are available for reuse and adaptation; preserve notices and verify the selected revision and assets (§6.1).**
 
 | # | Replay feature / method | Trophy feature | Mode | Effort (h) | Licence notes |
 |---|---|---|---|---|---|
@@ -387,14 +387,14 @@ Effort is hours for one Trophy engineer, including glue and a smoke test on Trop
 | 8 | On-court filter + bystander removal (`court.py`) | **F6** people filtering at casual venues (benches, spectators, next court) | As-is | 1 | MIT |
 | 9 | Identity: jersey HSV 8×4×4 k-means, `net_side`, **`matchup_teams`** (2v2/3v3), K-person roster solve, appearance cuts, `fill_gaps`, officials cap | **F6** teams (instead of or before SigLIP+UMAP+KMeans) and stable ids for coach and stats | Adapt (per-camera; feed it RF-DETR+ByteTrack boxes through a custom `Detector`) | 4 | MIT; keep YOLO out (AGPL) |
 | 10 | `ball.py` ball-at-rim make/miss (classical CV, rim units, "can't tell" at the rim edge) | **F6 / rank 12** basketball make/miss (replaces reimplementing the no-licence shot-tracker repo) | As-is | 2 | MIT, no model; Q1 P/R .90/.90, make/miss 8/9 |
-| 11 | Pose on upscaled track crops (`pose.py`) | **F6** pose on far players (rtmlib BodyWithFeet on crops) | Reference (swap in rtmlib) | 1 | YOLO-pose AGPL: don't use; ViTPose Apache is OK |
+| 11 | Pose on upscaled track crops (`pose.py`) | **F6** pose on far players (rtmlib BodyWithFeet on crops) | Reference (swap in rtmlib) | 1 | YOLO-pose AGPL: evaluate deployment obligations; ViTPose Apache is a permissive alternative |
 | 12 | `audio.py` numpy spectral-flux onsets, RMS, hype and speech segments | **F5** server-side onsets on the full recording (post-game), crowd hype for **F15** | As-is | 1 | MIT |
 | 13 | Rally segmentation (median court speed + hysteresis), `one_touch` sides, serve side, side-out, `server_behind_line` winner | **F8** pickleball, badminton and volleyball scoring templates; **F13** rally boundaries for clip fetch | Adapt | 3 | MIT; real badminton P 1.00 / R .86 |
 | 14 | `detect_possessions` (team geometry vs the attacked rim) | **F6** possession / "Off you" (rank 6) prior | Reference | 1.5 | MIT |
 | 15 | `detect_lost_man` | **F11** coach card for basketball ("you lost your man here"); new Trophy moment type | Adapt | 2 | MIT; tuned on 1 example |
 | 16 | X-gesture trigger (`triggers.py`: crossed forearms, faces-camera gate, hold times) | **F13** hands-free **"challenge" gesture** (and "clip that") | Adapt | 2 | MIT; YOLO-pose 0/22 on far players, so use rtmlib or ViTPose |
 | 17 | Trigger → play resolution ([T−8 s, T+0.5 s], clip = play ± 1 s, ownership) | **F13** a challenge or voice command resolves to the right rally | As-is | 0.5 | MIT |
-| 18 | Whisper-small + difflib command parser | **F13** voice fallback if Deepgram is down; Trophy keeps Deepgram for the prize | Reference | 1 | Whisper MIT |
+| 18 | Whisper-small + difflib command parser | **F13** voice fallback if Deepgram is down; Deepgram is the current hosted default | Reference | 1 | Whisper MIT |
 | 19 | `metrics.py` CLEAR-MOT/IDF1, `eventeval.py`, `eval_moments.py`, `players_eval.py` | **S6** sport wall and accuracy; F6 "id-switch rate" test | As-is | 2 | MIT |
 | 20 | `courtcam synth` (5 sports, labelled ground truth, scripted plays, triggers, audio) | **F8** "recorded event logs replayed are the unit tests"; CI fixtures; **F10** house-rule replay traces | As-is (basketball, pickleball, badminton, volleyball only) | 2 | MIT |
 | 21 | Director rules (`cuts.json`) + `camera.smooth` operator spring | **F14** auto-director: Viterbi picks the phone; Replay's rules do the in-camera virtual framing and replay insertion | Adapt | 3 | MIT |
@@ -403,7 +403,7 @@ Effort is hours for one Trophy engineer, including glue and a smoke test on Trop
 | 24 | Highlight selection (`virtual/replays.select`: best → triggers → story events → fill) | **F15 / F14** "Play of the Game" pick | Reference | 1 | n/a |
 | 25 | Reel (`reel.py`) and vertical 9:16 (`vertical.py`) with event-only captions | **F14** trophy clip; recap email (AgentMail) attachment | Adapt | 2 | MIT |
 | 26 | Condensed game + rally browser | **New N2** | Adapt | 2 | MIT |
-| 27 | **Grounded commentary**: templates + `grounding.check` validator over an LLM paraphrase | **F12** (the "can't invent plays" guarantee for Claude streaming); also F11 coach text and F9 "why" strings | Adapt (extend the action classes to 28 sports) | 4 | MIT; swap Kokoro → Cartesia (prize), Qwen → Claude |
+| 27 | **Grounded commentary**: templates + `grounding.check` validator over an LLM paraphrase | **F12** (the "can't invent plays" guarantee for Claude streaming); also F11 coach text and F9 "why" strings | Adapt (extend the action classes to 28 sports) | 4 | MIT; current plan: Kokoro → Cartesia, Qwen → Claude |
 | 28 | Kokoro-82M TTS | **F12** offline or backup voice (if Cartesia is throttled) | Reference | 1 | Apache-2.0; espeak-ng GPL via `espeakng-loader` (subprocess) |
 | 29 | Query engine (rules → LLM json_schema filter + `validate_filter`) | **F19** "ask the ref" and **new N5** play search | Adapt | 2 | MIT |
 | 30 | SigLIP keyframe + text embeddings with RRF ranking | **New N5** "find the play where…" | Adapt | 2 | open_clip MIT, SigLIP weights Apache-2.0 |
@@ -441,7 +441,7 @@ Effort is hours for one Trophy engineer, including glue and a smoke test on Trop
 | N4 | **Player's view** (virtual POV from real pixels) and **Orbit / Broadcast high / Free view** | `imageview.py`, `tierb.py`, scene package | 6–12 h | Medium; overlaps F16, heavy |
 | N5 | **Search plays in plain English** ("Ana's steals in the second half") with grounded filters | `query.py`, `search.py` | 3–4 h | Medium-high; reuses Moss and Claude |
 | N6 | **Stats panel**: box score, shot chart, heatmap, distance covered; **Review queue** for "can't tell" items | `stats.py`, `review.py` | 3 h | High for the post-game analyzer |
-| N7 | **Alexa** "ask Trophy to clip that or challenge"; Fire TV **TV app** | `alexa/*`, `apps/tv` | 4 h Alexa / 8+ h TV | Low for Cal Hacks (no Amazon prize) |
+| N7 | **Alexa** "ask Trophy to clip that or challenge"; Fire TV **TV app** | `alexa/*`, `apps/tv` | 4 h Alexa / 8+ h TV | Optional extension beyond the current web focus |
 | N8 | **X-gesture** commands (challenge or clip without a phone in hand) | `triggers.py` | 2 h | High; complements Deepgram voice |
 | N9 | **"Lost his man"** defensive-lapse moments; possession causes (steal, rebound, inbound) | `events.py` | 2 h | Medium (basketball only) |
 | N10 | **Player profiles and collectible cards** with career stats, cross-game linking, consented face naming | `profiles/*`, `card.py` | 4 h | Medium |
@@ -468,13 +468,12 @@ Effort is hours for one Trophy engineer, including glue and a smoke test on Trop
 
 ## 6. Risks
 
-### 6.1 Pre-existing work and the "all work done during the event" rule
+### 6.1 Reuse, attribution and asset permissions
 
-* **Everything in Replay predates Cal Hacks 13.0.** The repo was created 2026-09-22. 146 commits, the last code commit 2026-10-23 09:23 UTC, before hacking opens Friday evening PT. It was **submitted to another hackathon** (Amazon Developer Hackathon: Fire TV track, AWS Builder and Open Source mini-challenges) on 2026-10-23. Re-presenting its features as Trophy's work would be (a) pre-existing code and (b) a double submission. MLH-style rules (check Cal Hacks 13's own page) usually allow open-source libraries and public code with disclosure, but not continuing a project or re-submitting one. Judges can see the commit dates.
-* **What is separately published open source:** `subatomic-hamster/courtcam`, MIT, a standalone repo (created 2026-10-23 16:33 UTC from a subtree split with 33 commits of history). This is the cleanest thing to depend on: `pip install git+https://github.com/subatomic-hamster/courtcam@<sha>` as a **third-party library**, credited in the README and on Devpost as pre-existing open source ("courtcam, MIT, by the Replay team"). Note the standalone repo is only hours old, and its history shows it was written for Replay.
-* **Everything else** (`render/`, `services/`, `apps/`, `packages/tv-core`, `infra/`, `alexa/`) became MIT only at 17:13 UTC on Oct 23 and is **not** a separate library. Copying it into the Trophy repo is copying another hackathon project. Safe options: treat it as **reference** (reimplement from the documented methods in `docs/decisions.md` / `scene-format.md`, which are public design notes), or vendor it as a clearly marked, unmodified third-party directory with disclosure. The "Adapt" rows in §3 should be **rewritten in the Trophy repo during the event**, not copied. Typing the method in fresh is about the same effort as porting.
-* **Team overlap:** the Replay demo footage names "Anshul" and "Joseph", and hfbox's GPU lock path is `/workspace/airtools/...` (the AirTools project). If Trophy's team overlaps with Replay's, say so on Devpost: "we built Replay/courtcam before the event; at Cal Hacks we built X on top." That is the honest framing, and a strong one.
-* **Media and data:** the owner's demo game, the `samples/real` YouTube clips and the volleyball footage (minors) must never appear in Trophy. Only the CC BY clips (with attribution) and synthetic data are usable.
+* **Replay is a foundation agents may build on.** Its ideas, design notes and compatible licensed code can be extended, adapted, copied or vendored into Trophy. This includes `render/`, `services/`, `apps/`, `packages/tv-core`, `infra/` and `alexa/`; no mandatory rewrite or event implementation window applies.
+* **courtcam is also available as a library.** The inventory records Replay and the separately published `subatomic-hamster/courtcam` as MIT. Verify the selected revision, preserve required copyright and license notices, and record incorporated sources/revisions in `docs/licenses.md`.
+* **Keep provenance and measurements clear.** Credit reused work and distinguish Replay's benchmarks from results reproduced in Trophy. The estimates and upstream numbers in this inventory are starting points for evaluation.
+* **Code, models and media have separate permissions.** Check bundled dependencies, weights and datasets. Private footage is usable only with permission; consent and anonymization apply to identifying data, including appropriate permission for media involving minors. See [reuse and media guidance](../rules-compliance.md).
 
 ### 6.2 The hfbox dependency
 
@@ -487,13 +486,13 @@ Effort is hours for one Trophy engineer, including glue and a smoke test on Trop
   * Default paths `/workspace/wt/replay-env/...`, `REPLAY_MODEL_VENVS`, and the GPU lock `/workspace/airtools/.gpu.lock` (it falls back to the cache dir elsewhere).
   * Models load through `providers/_runner.py` subprocess venvs.
   * Budget a few hours to make it run on CUDA, and re-measure speeds there.
-* The live Replay runner (tmux `replay-runner`) and its keys live on hfbox. If Trophy uses hfbox at all, it competes with Replay's demo for the GPU lock, and the box has no auto-restart after an OOM. **Recommendation: don't put Trophy on hfbox.** Trophy's plan is already cloud-only (GCP / Vultr).
+* The live Replay runner (tmux `replay-runner`) and its keys live on hfbox. If Trophy uses hfbox at all, it competes with Replay's demo for the GPU lock, and the box has no auto-restart after an OOM. **Recommendation: don't put Trophy on hfbox.** GCP / Vultr are current cloud options; suitable local hardware is also allowed.
 * The README says the worker runs on "EC2 GPU", but `infra/` has no EC2 resource, and HANDOFF says the EC2 GPU quota is 0 and the GPU runs on hfbox. Don't rely on an AWS GPU path from this repo.
 
 ### 6.3 Technical fit
 
 * **Python 3.12 only** (`requires-python >=3.12,<3.13`). Trophy's containers are 3.10–3.11 (BlurBall, WASB, RIFE). courtcam needs its **own py3.12 container** (OK under Trophy's one-venv-per-process design) or `--ignore-requires-python` (untested).
-* **AGPL:** the default detector and pose path is ultralytics YOLO11 (AGPL-3.0). Trophy should install courtcam **without** `[yolo]` and pass its RF-DETR + ByteTrack boxes through the `Detector` protocol (`FrameDets`), plus rtmlib pose. Effort ~2 h. Never ship the `[yolo]` extra.
+* **AGPL:** the default detector and pose path is ultralytics YOLO11 (AGPL-3.0). Trophy should install courtcam **without** `[yolo]` and pass its RF-DETR + ByteTrack boxes through the `Detector` protocol (`FrameDets`), plus rtmlib pose. Effort ~2 h. The `[yolo]` extra is an option if its applicable terms fit the deployment; document that choice.
 * **Single fixed camera, post-game batch.** Nothing in Replay is live: Kennesaw ran at 3.1× realtime cold; events take 43–47 s per 240 s on CPU. Trophy's 0.3–0.7 s live calls must not wait on courtcam stages. Use courtcam for calibration, teams and post-game analysis per phone. There is no cross-camera identity or triangulation.
 * **Only 4 sports** (basketball, pickleball, badminton, volleyball), all court sports. The other 24 Trophy sports need new templates and profiles, and the flight, resting and audio families have nothing here.
 * **Accuracy ceilings Replay itself reports:**
@@ -506,11 +505,11 @@ Effort is hours for one Trophy engineer, including glue and a smoke test on Trop
   * Virtual views show only some players on older runs and ghost at 45–55°.
   * Several thresholds (lost man, X sign) were tuned on one video.
 * **Heavy GPU stages:** SAM 2.1 is ~1 GPU-minute per 8 s play, and full replays ~12 min per game. Keep them on the Vultr box and outside the live demo path.
-* **Licence tails if adopted:** MotionBERT (Human3.6M-trained; keep the analytic fallback), SFace (training data undocumented), ECAPA (VoxCeleb research terms), espeak-ng (GPL, inside Kokoro), FFmpeg libx264 (GPL; subprocess only), openWakeWord and VGGT (non-commercial; don't use).
+* **Licence tails if adopted:** MotionBERT (Human3.6M-trained; keep the analytic fallback), SFace (training data undocumented), ECAPA (VoxCeleb research terms), espeak-ng (GPL, inside Kokoro), FFmpeg libx264 (GPL; subprocess only), openWakeWord and VGGT (check non-commercial terms against the intended use).
 
-### 6.4 Suggested stance for the weekend
+### 6.4 Suggested integration approach
 
-1. Depend on **courtcam** as a disclosed, pinned, MIT third-party library for F3 calibration (`calibrate`, `distortion`, `camera_calibration`, `templatefit` as suggestions), the F6 on-court filter and teams (`identity` with a custom Detector), F6 basketball make/miss (`ball.py`), F5 / F15 audio (`audio.py`), and the S6 metrics and `synth` fixtures.
-2. **Reimplement during the event**, from the public design notes, the ideas that are Replay-app code: grounded commentary validator (F12), hype + best-play + condensed + moments (F15, N2, N3), follow-cam (N1), the X-gesture challenge (N8), review queue and "can't tell" (F13), and query/search (N5).
-3. Skip the Fire TV app and Alexa for Cal Hacks (no matching prize, device and signing risk). Treat the scene package and Player's view as a P2 reference for F16 only if F16 is reached.
-4. Say on Devpost exactly what is pre-existing.
+1. Use **courtcam** for F3 calibration, F6 on-court filtering, teams and basketball make/miss, F5 / F15 audio, and evaluation/synthetic fixtures where it fits. Pin an adopted revision for reproducibility and validate compatibility.
+2. **Reuse, adapt or reimplement Replay app code as useful:** grounded commentary validation (F12), hype/best-play/condensed/moments (F15), follow-cam, X-gesture challenges (F13), the review queue and query/search. There is no restriction to reading design notes.
+3. Prioritize the Trophy Watch web experience. Fire TV, Alexa, scene packages and Player's view remain options when their value justifies the integration effort.
+4. Preserve required notices, record incorporated sources/revisions and measure behavior on Trophy data. Run locally or on authorized cloud resources as appropriate.

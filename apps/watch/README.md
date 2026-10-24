@@ -3,8 +3,8 @@
 **Stack:** Vite + React + strict TypeScript (+ Three.js/Spark where 3D is needed), SpacetimeDB TypeScript SDK. Built to `dist/` and served by Caddy.
 
 ## Responsibilities
-- Opens from the recap link (AgentMail/QR) once processing finishes. Works in any browser (phone, laptop, TV browser); touch, mouse and keyboard controls. **Not a Fire TV app.**
-- Features (rebuilt from Replay's design; build plan §5B):
+- Opens from the recap link (AgentMail/QR) once processing finishes. Works in any browser (phone, laptop, TV browser); touch, mouse and keyboard controls. The web is the current target; other interfaces can be added when useful.
+- Features (reuse and extend Replay ideas and compatible licensed code; build plan §5B):
   - follow a player;
   - moments browser + ★ best play;
   - condensed game + rally browser;

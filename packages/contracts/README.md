@@ -1,6 +1,6 @@
 # Contracts
 
-JSON Schemas shared by every service and app. **Change them only with a `docs/decisions.md` entry**, and tell the other owners.
+JSON Schemas shared by every service and app. Agents may evolve them as needed: update affected producers, consumers and checks together, and record breaking changes in `docs/decisions.md` so later work stays compatible.
 
 - `event.schema.json`: family → engine (Redis streams `ev:*`)
 - `call.schema.json`: engine → SpacetimeDB `call` table → phones/dashboard

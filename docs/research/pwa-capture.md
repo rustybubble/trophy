@@ -1,4 +1,4 @@
-# Trophy: PWA multi-phone capture research (Cal Hacks 13.0, Oct 23-25 2026)
+# Trophy: PWA multi-phone capture research
 
 Researched 2026-10-22. Current shipping browsers: **iOS Safari 27.0.x** (Safari 27 was announced at WWDC26 in June 2026; a WebKit bug comment on 2026-10-06 references "Safari 27.0.1"). Many players will still be on **iOS 26.x**, and a few on 18.x. The Android baseline is **Chrome 15x** (caniuse lists 156).
 
@@ -186,7 +186,7 @@ Capture and exposure take about 33 ms. Encode takes 10-20 ms. Wi-Fi takes 5-20 m
 
 | Approach | Verdict |
 |---|---|
-| **Own domain + Let's Encrypt wildcard (DNS-01) issued before the event**, public or router-local A record `trophy.example.com → 192.168.8.10` | **Best.** Zero per-phone setup, and it works offline if the router serves the record. Get the cert tonight (Caddy with a DNS plugin, or certbot-dns-cloudflare). |
+| **Own domain + Let's Encrypt wildcard (DNS-01) issued before device testing**, public or router-local A record `trophy.example.com → 192.168.8.10` | **Best.** Zero per-phone setup, and it works offline if the router serves the record. Get the cert tonight (Caddy with a DNS plugin, or certbot-dns-cloudflare). |
 | **local-ip.sh / traefik.me** (`192-168-8-10.local-ip.sh` with a public wildcard cert you download) [V] | Good backup and zero setup. However, it needs internet for DNS, and **local-ip.sh failed to resolve when I fetched it today**, so don't depend on it alone. |
 | mkcert + install the root CA on each iPhone (download profile → install → Settings → General → About → Certificate Trust Settings → full trust) | Works, but takes 2-3 min per phone and is unacceptable for "any player's phone". Fine for your own 4 test phones as a fallback. The cert needs the IP/hostname in **SAN** [C]. |
 | Self-signed + click through the warning | **Breaks on iOS:** Safari rejects `wss://` to that host even after the HTTPS warning is accepted (WebKit 41419, open since 2010) [C]. |

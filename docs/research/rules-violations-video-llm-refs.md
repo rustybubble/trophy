@@ -1,4 +1,4 @@
-# Trophy: prior art for a universal AI referee (Cal Hacks 13.0, Oct 23-25 2026)
+# Trophy: prior art for a universal AI referee
 
 Research date: 2026-10-22. I checked each link marked **[verified]** by fetching it on that date. Star counts and licenses come from the GitHub page at fetch time. "36h" means how easily a team of 4 could adopt the item in a 36-hour hackathon: A = drop-in, B = a few hours of glue or fine-tuning, C = a reference only.
 
@@ -10,7 +10,7 @@ Research date: 2026-10-22. I checked each link marked **[verified]** by fetching
 2. **Video-LLMs are not reliable referees.** RefereeBench (Apr 2026, 11 sports): Gemini-3-Pro and Doubao-Seed-1.8 score about 60%, and the best open model (Qwen3-VL) about 47%. They over-call fouls on clean clips and are weak at temporal grounding. Use them only to judge a clip whose event time the tracker already knows. SoccerNet 2025 MV-Foul supports this framing: a zero-shot video-LLM entry reached 49.3, close to the winning fine-tuned model's 52.2 and well above the 37.0 baseline.
 3. **The best finds for table tennis are BlurBall and an audio bounce paper.** BlurBall (cogsys-tuebingen, MIT, pretrained table tennis weights plus a 64k-frame dataset) is a table tennis ball detector built on WASB. Sound-based bounce detection (Gossard et al., arXiv 2409.11760) reports millisecond-level timing and classifies the bounce surface (racket, table or floor) from audio alone. Phones have microphones. **Audio gives the timing and vision gives the location.**
 4. **Correction to the design brief:** single-phone in/out, kitchen faults and table tennis edge balls are not "easy" near the line. They are easy only when the ball or foot is clearly away from the line. Make every geometric call return P(in) from a propagated error ellipse, and copy cricket DRS "umpire's call": when the call falls inside the uncertainty band, it goes to the players, a replay or the VLM. Hawk-Eye, with 10 or more synced high-speed cameras, claims a mean error of 2.2 to 3.6 mm. A 60 fps phone will be at centimetre scale.
-5. **Licensing:** Ultralytics YOLO11/YOLO26 is AGPL-3.0. That is fine for an open-source hackathon repo, but if Trophy becomes a company, use RTMPose via rtmlib (Apache-2.0) and RF-DETR (Apache) instead. SoccerNet code is GPL-3.0 and data is behind an NDA. OpenTTGames is CC BY-NC-SA.
+5. **Licensing:** Ultralytics YOLO11/YOLO26 is AGPL-3.0. Evaluate its obligations for the intended deployment. RTMPose via rtmlib (Apache-2.0) and RF-DETR (Apache) are alternatives when permissive licensing is preferable. SoccerNet code is GPL-3.0 and data is behind an NDA. OpenTTGames is CC BY-NC-SA.
 
 ---
 

@@ -1,10 +1,10 @@
-# Trophy: build-platform integration cards (Cal Hacks 13.0, Oct 23-25 2026)
+# Trophy: build-platform integration cards
 
 Compiled 2026-10-22. These cards are integration facts, not project code. Snippets are short reference shapes to copy.
 
 Tags:
 - **[V]**: verified today from the linked source (repo source, docs, PyPI/npm/HF API).
-- **[N]**: carried over from the research notes (`Cal Hacks 13 research notes/Trophy - *.md`), which were verified on 2026-10-22.
+- **[N]**: carried over from the research notes (`docs/research/*.md`), which were verified on 2026-10-22.
 - **[E]**: estimate or prior knowledge. Measure it in hour 1.
 
 Each card follows the same order: Install/pins, Entry points, I/O formats, Performance, Gotchas, Plug-in.
@@ -638,7 +638,7 @@ vllm serve Qwen/Qwen3-VL-8B-Instruct-FP8 --max-model-len 32768 --gpu-memory-util
   - Serve video and audio via `staticFile()` from `public/`, or an http URL on the laptop.
   - Word captions come from Cartesia timestamps. The TikTok template (`remotion-dev/template-tiktok`) shows the pattern [N].
 - **Render time:** no official number. A 20 s 1080×1920 composition with one `OffthreadVideo` takes about 30-90 s on an 8-16 thread laptop [E]. Remotion Lambda is optional.
-- **License** [V, LICENSE.md]: free for individuals, for-profits with **up to 3 employees**, non-profits, and evaluation. Otherwise a Company License is required. A hackathon team qualifies.
+- **License** [V, LICENSE.md]: free for individuals, for-profits with **up to 3 employees**, non-profits, and evaluation. Otherwise a Company License is required. Check the current license against the actual user or organization.
 
 ### 7C. Three.js + Spark (splat court + ball trail + skeletons) [V]
 - **Install:** `npm i three@0.180.0 @sparkjsdev/spark@2.4.0`. Spark 2.4.0 was published 2026-10-20 (two days ago); peer dependency `three >=0.180.0`.

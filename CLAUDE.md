@@ -1,9 +1,9 @@
 # CLAUDE.md: context for every agent working on Trophy
 
-Read this whole file before doing anything. Then read the build-plan section for the feature you own.
+Read this file for project context, then consult the plan and research relevant to the task. Explicit user instructions take precedence over repository guidance. The plans, ownership table, stack and priorities are starting points that agents may improve as they work.
 
 ## What we're building
-**Trophy** is a universal AI referee and post-game analyzer for casual pickup sports, built at **Cal Hacks 13.0** (hacking Fri Oct 23 → **submit Sun Oct 25, 9:00 AM PT**; on site by 8:00 AM).
+**Trophy** is a universal AI referee and post-game analyzer for casual pickup sports.
 
 **During the game:** 2–4 phones open a PWA link and become cameras.
 - Trophy tracks the ball, players and objects and makes calls with **honest confidence**:
@@ -24,45 +24,34 @@ Read this whole file before doing anything. Then read the build-plan section for
 Each sport is a **rule pack** (YAML) on top of one family pipeline.
 
 **Demo:**
-- **Live at the judging table:** table tennis, a tabletop cornhole set, and a typed house rule.
-- **Recorded at the event:** pickleball kitchen fault, badminton, two-hand touch rush count and touch, basketball.
+- **Live demo:** table tennis, a tabletop cornhole set, and a typed house rule.
+- **Recorded examples:** pickleball kitchen fault, badminton, two-hand touch rush count and touch, basketball.
 - **Sport wall:** 28 tiles marked LIVE / VERIFIED / PACK, each verified sport showing its measured accuracy.
 
 ## Source-of-truth docs (in this repo)
-- `docs/plan/build-plan.md` is **the** implementation plan: features F1–F19, §0 cloud architecture, §5B Trophy Watch, §7 schedule, §8 smoke tests.
-- `docs/plan/concept-v3.md`: the product, sport catalog, demo script, **§9 prize map** (which prizes we target and what each judge wants).
+- `docs/plan/build-plan.md`: the working implementation plan: features F1–F19, §0 deployment architecture, §5B Trophy Watch, §7 milestones, §8 smoke tests.
+- `docs/plan/concept-v3.md`: the product, sport catalog, demo script and §9 integration priorities.
 - `docs/plan/clip-library.md`: licensed public clips per sport, and the license rules.
 - `docs/research/`: integration cards with exact pins, weights, input/output shapes and known bugs for every model. **Check here before guessing an API.**
-- `docs/decisions.md`: why things are the way they are. Add an entry when you make an architecture choice.
+- `docs/decisions.md`: why things are the way they are. Record significant architecture changes so later agents have context.
 - `docs/progress.md`: the milestone checklist. Tick items and write measured numbers.
-- `docs/rules-compliance.md`: Cal Hacks rules, prior-work disclosure, licenses.
+- `docs/rules-compliance.md`: reuse, attribution and media permissions.
 
-## Hard rules (non-negotiable)
-1. **All implementation happens during Cal Hacks.**
-   - **Do not copy code from `subatomic-hamster/replay`** (a teammate's earlier Amazon-hackathon project).
-   - Only the published MIT library **`courtcam`** may be used, as a **pinned, disclosed dependency**. Reimplement Replay's features from its design docs.
-   - Record anything pre-existing in `docs/rules-compliance.md`.
-2. **Cloud only.** Nothing heavy runs on the laptops; they edit and browse.
-   - GPU work runs on the **GCP L4 VM** (live) or the **Vultr L40S** (post-game). Develop through Remote-SSH.
-   - **AWS has only $100**: use it for Remotion Lambda only.
-3. **No secrets in the repo.**
-   - Configuration comes from environment variables (see `.env.example`).
-   - Phones get short-lived tokens (Cartesia `/access-token`, signed GCS URLs); never API keys.
-4. **No faked outputs.**
-   - No hard-coded results or mock data shown as real.
-   - Synthetic fixtures are always labelled synthetic.
-   - Accuracy numbers come from labelled evaluations only.
-5. **Footage and licenses.**
-   - Only CC BY / CC0 clips go into the Devpost video; credit them from `data/clips/credits.json`.
-   - Research datasets (CalTennis, PadelVic, OpenTTGames) are for the live judged demo only.
-   - Never commit footage. Never use Replay's private footage or any clip with minors.
-6. **Privacy.**
-   - Names and faces only for players who enrolled at join.
-   - Everyone else stays anonymous and is blurred in shared clips.
-7. **Licenses in the core.**
-   - Prefer MIT/Apache: RF-DETR, roboflow/trackers, supervision, rtmlib, WASB, BlurBall, OpenCV, courtcam core.
-   - AGPL (Ultralytics/YOLO), GPL and non-commercial models are allowed only as documented optional pieces; list them in `docs/licenses.md`.
-8. **Honest calls.** Claude, Gemini or Snap never make raw visual line calls. Geometry makes measurable calls; decision models judge only ambiguous ones, with **calibrated** probabilities.
+## Agent autonomy
+- **Build on prior work.** Agents may learn from, extend, adapt, copy or vendor compatible licensed code from `subatomic-hamster/replay`, including its apps, renderers, services and infrastructure, as well as `courtcam`. There is no reference-only rule, mandatory rewrite or event-based implementation window. Preserve required notices and record the source/revision when incorporating code; see `docs/rules-compliance.md`.
+- **Choose the implementation.** Change architecture, dependencies, models, priorities and directory boundaries when that helps the task. Owners are coordination hints, not exclusive permissions. Explain substantial departures in `docs/decisions.md` and update affected consumers and docs.
+- **Choose where to run.** Local development, tests, inference, training and rendering are allowed when the hardware can handle them. GCP L4 and Vultr L40S remain useful defaults for GPU work; other providers are fine within the user's authorized resources and budget. Historical credit estimates are not spending authorization.
+- **Proceed with routine work.** Make reversible implementation choices and run relevant checks without asking for approval. Ask only for missing information that blocks progress or actions outside the user's authorization, such as destructive operations or new spending commitments.
+- **Treat research as dated evidence.** Verify APIs, compatibility and license terms when adopting them. Old recommendations, version pins and demo schedules are not permanent constraints.
+
+## Safeguards to retain
+1. **Protect credentials and access.** Keep secrets out of source control and logs; use environment variables or a secret store. Clients get scoped, short-lived tokens rather than server credentials. This prevents account and data exposure.
+2. **Represent results honestly.** Label mock data, synthetic fixtures and generated views. Report accuracy from labelled evaluations and distinguish measured results from estimates or upstream benchmarks. This keeps users and later agents from relying on invented evidence.
+3. **Respect licenses and permissions.** Preserve required notices and attribution. Check code, weights and media separately; record adopted components in `docs/licenses.md`. Copyleft and non-commercial components are allowed where their terms fit the intended use. A public repository or demo does not by itself grant reuse rights.
+4. **Protect participant privacy.** Use consented identity and face data, keep private footage private, and anonymize or blur non-consenting people in shared clips. Use media involving minors only with appropriate permission. These protections apply regardless of which pipeline or hosting provider is chosen.
+5. **Preserve user work and resource limits.** Keep unrelated changes and data intact, stay within authorized access and spending, and isolate experiments that could damage shared systems. Routine edits and checks need no extra approval.
+
+Geometry-first measurable calls, calibrated decision models and the AUTO / BETA / PLAYERS DECIDE tiers are current product defaults. Agents may experiment with alternatives, but should validate changes before presenting them as reliable calls and continue to show uncertainty.
 
 ## Architecture at a glance
 Full details are in build-plan §0.
@@ -94,11 +83,11 @@ Post-game: Vultr L40S (RIFE, SAM 2.1 2.5D angles, GVHMR) · Remotion Lambda (AWS
 | postgame | `services/postgame` | — | Vultr; py3.10/3.11 |
 | PWA, dashboard, watch | `apps/pwa`, `apps/dashboard`, `apps/watch` | served by Caddy at `/cam`, `/`, `/watch` | Vite + React + TS (+ Three.js, Spark) |
 
-**Contracts** live in `packages/contracts/` (JSON Schema): Event, Call, Decide, RulePack. Change them only with a note in `docs/decisions.md`, and tell the other owners.
+**Contracts** live in `packages/contracts/` (JSON Schema): Event, Call, Decide, RulePack. Agents may evolve them; update affected producers, consumers and checks together, and document breaking changes in `docs/decisions.md`.
 
 **Redis streams:** `ev:flight`, `ev:possession`, `ev:resting`, `ev:audio` (family → engine); `ctl:engine` (control).
 
-## Owners
+## Suggested owners
 | Owner | Area |
 |---|---|
 | **A** | PWA + ingest + clock sync + resting family + replays (challenge UI, auto-director, trophy clip) + Trophy Watch app |
@@ -117,14 +106,14 @@ Post-game: Vultr L40S (RIFE, SAM 2.1 2.5D angles, GVHMR) · Remotion Lambda (AWS
   - Sport wall; trophy clip; Trophy Watch core (moments, best play, condensed, follow, search, stats, review queue); calibration slide.
 - **P2:**
   - More verified sports; 3D / 2.5D angles; ReCamMaster; blur; watch party.
-- **Gates:**
-  - **Saturday noon:** each P0 family makes at least 1 correct call, or switch to "calls within 2 s after the point".
-  - **3 AM Sunday:** feature freeze.
-  - **8:30 AM Sunday:** Devpost submitted.
+- **Milestones:**
+  - Each P0 family makes at least 1 correct call; use "calls within 2 s after the point" as a fallback while improving latency.
+  - Stabilize the selected demo or release scope and record measured results before sharing it.
+  - Adjust scope and sequencing to the current task; there is no fixed submission deadline.
 
 ## Gotchas
-Each is a real problem someone hit; ignore them and you lose hours.
-- **Pin versions; never install latest.**
+These are compatibility notes from earlier research; check whether they still apply.
+- **Use reproducible versions; upgrades are welcome after compatibility checks.**
   - numpy 2.x, OpenCV 5, librosa 1.0 and torch 2.14 break BlurBall and WASB.
   - supervision 0.31 removed `sv.ByteTrack`.
   - Keep Roboflow's `inference` package out of the live environments.
@@ -149,12 +138,11 @@ Each is a real problem someone hit; ignore them and you lose hours.
 - **Remotion:** pin 4.0.538; `--props` must be a file path on Windows. Lambda concurrency on a new account may be 10.
 
 ## How to work in this repo
-- Start each task by reading the matching F-section of `docs/plan/build-plan.md` and the relevant `docs/research/` card.
-- Every feature has a **"Done when"** test in the plan. Meet it, then record the measured numbers in `docs/progress.md`.
-- Keep changes inside your owner's directories, and use branches named `a/…`, `b/…`, `c/…`, `d/…`.
-- Small PRs into `main`, which must never be broken.
-- Commit format: `<feat|fix|chore|docs>: message`.
-- Python: ruff + pytest, one `pyproject.toml` per service.
-- TypeScript: Vite + React + strict TS, prettier + eslint.
-- Each service has a `Dockerfile` and an entry in `docker-compose.yml`. GPU services use `deploy.resources.reservations.devices`, frame rings need `ipc: host`, and ingest uses `network_mode: host`.
-- Run heavy jobs (inference, training, renders) on the VMs, never locally. Put large files (weights, footage, recordings) on the VM disk or in GCS, never in git.
+- Consult the matching F-section and research card when useful; update the plan if the task needs a different approach.
+- Use the feature's **"Done when"** criteria as a starting point. Run checks proportional to the change and record relevant measured results in `docs/progress.md`; documentation-only changes do not need inference runs.
+- Work across directories as needed. Follow the active user's or environment's branch convention; owner-prefixed branches are optional.
+- Prefer focused changes and keep shared workflows usable. Preserve unrelated work and report any checks you could not run.
+- Suggested commit format: `<feat|fix|chore|docs>: message`.
+- Current tooling: Python uses ruff + pytest and per-service `pyproject.toml`; TypeScript uses Vite + React + strict TS, prettier + eslint. Adapt tooling when justified.
+- For services deployed through Compose, update the `Dockerfile` and `docker-compose.yml` together. The current GPU, frame-ring and ingest design needs GPU device reservations, `ipc: host` and `network_mode: host` respectively; revisit these when changing the design.
+- Store large weights, footage and recordings in ignored local paths or suitable object storage. Small licensed, non-sensitive test fixtures may be versioned when useful; avoid bloating git with generated media.

@@ -1,6 +1,6 @@
-# Trophy, cloud-only architecture (Cal Hacks 13, researched 2026-10-23)
+# Trophy: cloud architecture options (researched 2026-10-23)
 
-**New constraint:** nothing runs on the team's laptops. Laptops act as thin clients only: a browser, plus VS Code/Cursor over Remote-SSH. Compute runs on AWS ($10k YC University credits) or the listed credit services. Phones run the PWA in the browser.
+**Historical architecture research:** this document explores a cloud deployment using the credit estimates available at research time. Local work is allowed, and providers are adaptable. For current working defaults, see [build plan §0](../plan/build-plan.md#0-system-shape-deployment-baseline-updated-2026-10-23) and [agent guidance](../../CLAUDE.md). Verify budgets, pricing and API behavior before relying on these dated notes.
 
 This document moves the build plan's §0 process table and F1-F18 to the cloud. Source labels:
 - **[V]** verified today from a primary source (vendor docs or pricing page).
@@ -64,7 +64,7 @@ Prices come from [DevZero g6](https://www.devzero.io/instances/aws/families/g6),
 - **Approval speed:** there is no SLA. Anecdotes run from about 20-30 minutes (auto-approved), to denials within 20 minutes, to several days of human review [3P: [re:Post thread](https://repost.aws/questions/QUBBbH23A8TliNJqb8XliSYg/how-long-to-wait-for-a-response-to-a-quota-increase-reply), [yomotherboard](https://yomotherboard.com/question/can-i-spin-up-15-g5-xlarge-ec2-instances-on-a-new-aws-account/)]. New accounts with no usage history get the most scrutiny.
 - **What to request, now:**
   - us-west-2, On-Demand G and VT: **128 vCPU**. That covers g6e.4xlarge (16) + g6e.2xlarge (8) + 4× g6.2xlarge (32) + headroom. Request 64 if you want a smaller ask that is likelier to auto-approve.
-  - Use case text: "Hackathon (Cal Hacks), real-time computer vision inference, 40 hours, YC credits applied".
+  - Use case text: "Trophy sports analysis, real-time computer vision inference"; include the actual expected duration and billing arrangement.
   - File the same request in **us-east-2**, and file the **Spot G and VT** quota in both regions.
   - Open a support case (Account and billing support is free) to speed things up, and ask any AWS staff at the venue.
 - **Also check:**
@@ -148,7 +148,7 @@ Prices come from [DevZero g6](https://www.devzero.io/instances/aws/families/g6),
 - **Cost:** examples run $0.001-$0.11 per render. A 1-minute video from the same S3 bucket costs ≈ $0.017 in ≈ 19 s [V: [cost example](https://www.remotion.dev/docs/lambda/cost-example)]. A 20 s 9:16 trophy clip should cost about $0.01 and take 15-30 s [I].
 - **Notes:**
   - Put the RIFE-interpolated hero clip and source chunks in S3 in the **same region** as the Lambda (us-west-2), so the render doesn't pay egress or latency.
-  - Licensing: Remotion is free for individuals and companies of ≤ 3 people (the plan's note). A 4-person student hackathon team isn't a company, so this should be fine [I].
+  - Licensing: Remotion is free for individuals and companies of ≤ 3 people (the plan's note). Verify current eligibility for the actual user or organization.
   - Fallback: render with the plain Remotion CLI in a container on the batch box.
 
 ---
@@ -166,7 +166,7 @@ Prices come from [DevZero g6](https://www.devzero.io/instances/aws/families/g6),
 - Expected RTT from phone to us-west-2: **~55-80 ms median on 5G, p95 150-250 ms**. On LTE it's ~70-120 ms with heavier tails [I: Ookla latency plus ~20 ms SF→Oregon].
 - Each phone on its own radio gives **path diversity**. Use at least two carriers among the 4 phones.
 
-**Venue Wi-Fi** (Palace of Fine Arts, 2,000+ hackers; Cal Hacks 12 had 2,156 on Devpost):
+**Shared venue Wi-Fi:**
 - There are no published measurements [searched; none].
 - Assume it's congested at peaks (opening, demos), possibly with client isolation, and possibly blocking UDP. Uncongested RTT to Oregon would be ~25-40 ms [I].
 - **Test at hour 0 and again around 8 PM.** Check the ICE candidate types that win (`getStats()` `candidate-pair`), RTT, and achieved bitrate.
@@ -177,10 +177,10 @@ Prices come from [DevZero g6](https://www.devzero.io/instances/aws/families/g6),
 - Use `degradationPreference='maintain-framerate'` in the PWA (ball tracking needs frame rate more than resolution), plus a bitrate cap (`maxBitrate` 2.5 Mbps) and a 960×540 floor.
 
 **Recommendations:**
-1. **Live stream from each phone over its own 5G.** Use venue Wi-Fi only if the hour-0 test beats cellular. A dedicated 5G hotspot isn't a laptop and is allowed, but four separate radios beat one shared hotspot.
+1. **Live stream from each phone over its own 5G.** Use venue Wi-Fi only if the hour-0 test beats cellular. A dedicated 5G hotspot is another option; compare it with separate phone radios under real conditions.
 2. **Don't stream recordings.** Keep the 1080p recording on-phone (OPFS). Upload **only the chunks for a challenged or closing rally** (±1.5 s ≈ 4.5 MB per phone at 12 Mbps, under 3 s on 5G). Upload the full game after the game, over Wi-Fi, straight to **S3 multipart via presigned URLs**.
 3. **Clock sync over the internet is noisier.** Min-RTT NTP filtering over cellular with asymmetric paths gives roughly ±5-15 ms instead of ±1-3 ms on a LAN [I].
-   - **Rely on the per-camera QR-timecode calibration (F2).** It is optical, so network jitter doesn't affect it. Show it on any phone or tablet screen, not a laptop.
+   - **Rely on the per-camera QR-timecode calibration (F2).** It is optical, so network jitter doesn't affect it. Show it on a phone, tablet or laptop screen suitable for calibration.
    - Timestamp audio onsets against the **same phone's** `requestVideoFrameCallback` clock, so the audio-video offset comes from one device.
    - The network offset then matters only for display, not for fusing bounces.
 
@@ -246,7 +246,7 @@ Prices come from [DevZero g6](https://www.devzero.io/instances/aws/families/g6),
 - **Don't route the beep path through Supabase.** The phone already holds a WSS to `gateway` for clock sync and challenges. Pushing the call down that socket is one hop (EC2 → phone). Supabase is two (EC2 → Supabase REST → Realtime node → phone). Mirror every call to Supabase asynchronously for the UI and history.
 - **Keep Redis Streams on EC2** for internal fan-out between perception, engine and broadcast. Supabase Realtime's 100-500 msgs/s caps would throttle per-frame events, and the extra hops add latency. Supabase replaces Redis only for *client-facing* state.
 - **Recordings go to S3** (presigned multipart PUT from the phone, same region) instead of Supabase Storage. Free Supabase can't hold them, and S3 multipart has no 6 MB-chunk constraint.
-- **Convex** (event sponsor) could replace Supabase's reactive layer, and it has a **prize** (EP-133 + ESP32 display, ~$1.3k listed) [repo notes: `sponsor prize deep-dive.md`]. Pick **one** reactive backend. If you want the Convex prize, use Convex for the dashboard, scoreboard and Presence plus game data, and drop Supabase. Otherwise Supabase. Don't run both.
+- **Convex** could replace Supabase for reactive game state, dashboard, scoreboard and presence. Compare the alternatives on technical fit and maintenance; avoid duplicating backends without a concrete need.
 
 ---
 
@@ -255,13 +255,13 @@ Prices come from [DevZero g6](https://www.devzero.io/instances/aws/families/g6),
 | Service | Use? | Role | Facts |
 |---|---|---|---|
 | **Deepgram** ($15k credits) | **Yes** | **Nova-3 streaming STT with `keyterm=Trophy&keyterm=challenge…`** for voice commands ("Trophy, challenge!", "Trophy, replay", "Trophy, score"). The phone streams mic audio straight to Deepgram over WSS with a short-lived token minted by our backend. Alternative: **Flux** (turn-detecting conversational STT) for the "ask the ref" voice chat | Keyterm prompting supports Nova-3 and Flux, up to 100 terms [V: [Deepgram keyterm](https://developers.deepgram.com/docs/keyterm)]. Nova-3 streaming is $0.0048-0.0077/min [3P], so 4 phones × 10 h ≈ $12-18, covered by credits. Use a separate mic stream with `echoCancellation:true` for STT; the onset detector needs AEC/AGC off, so open two tracks, or use one raw track and accept slightly worse STT [I]. **Aura-2 TTS:** ~313 ms P50 time-to-first-audio vs Cartesia Sonic-3 ~188 ms in one (competitor-run) benchmark [3P: [Gradium/Coval](https://gradium.ai/content/tts-latency-benchmark-2026)]. Aura-2 is $0.030 per 1k characters [3P] |
-| **Cartesia** (event sponsor, prize) | **Yes, primary TTS** | Commentary and call announcements (F12) | Faster than Aura-2 in the benchmark above. **The free tier allows only 2 concurrent TTS requests and ~27 min/month; buy Pro at $5** [repo notes]. Keep **Aura-2 as an automatic TTS fallback** (paid from credits) |
+| **Cartesia** | **Yes, primary TTS** | Commentary and call announcements (F12) | Faster than Aura-2 in the benchmark above. **The free tier allows only 2 concurrent TTS requests and ~27 min/month; buy Pro at $5** [repo notes]. Keep **Aura-2 as an automatic TTS fallback** (paid from credits) |
 | **Anthropic Claude** | **Yes** | Commentary text, house-rule compiler (F10), rule-pack drafting, highlight re-rank, the 5-vote decide fallback | Unchanged from the plan |
 | **Google Gemini** ($2k) | **Yes, as decide fallback #1 and for highlight captions** | Replace local **Qwen3-VL on vLLM** with `gemini-3.8-flash` (stable) [V: [models](https://ai.google.dev/gemini-api/docs/models)]. Send 4 crops, or a **2-3 s clip inline with a custom `fps`** in the `processing` object (default sampling is 1 fps, which "might lose detail" on fast action) [V: [video understanding](https://ai.google.dev/gemini-api/docs/video-understanding)]. Use enum structured output with 5 shuffled votes, the same as Claude | Tokens: ~258 per frame at default resolution, 66 at low, plus ~32/s for audio [V]. Inline requests should stay < 20 MB. No published latency, so assume 1-3 s [I]. Fits challenge replays (6 s budget) and post-point calls, not the 1.5 s live tier. Post-game: captions and "Play of the Game" description over the highlight reel |
 | **OpenAI** ($1k) | Light | Fallback #3 (after Claude) for text-only decisions, or a structured-output check. Not needed if Gemini and Claude both work | — |
 | **Langfuse** | **Yes** (choose it over Respan) | Trace every `decide()` call (backend, latency, probs, p_cal, image hashes), prompt management for commentary and compiler prompts, **datasets** of labelled calls for calibration runs, LLM-as-judge on commentary hallucination | LLM-as-judge, annotation queues, prompt experiments and the playground became **MIT and free to self-host** on 2025-06-04 (self-host ≥ v3.65) [V: [Langfuse changelog](https://langfuse.com/changelog/2025-06-04-open-sourcing-langfuse)]. **The free cloud tier allows only 2 users** (50k units/mo) [3P], so with 4 people use the credits on Core ($29, unlimited users) or self-host on a CPU box |
 | **Respan** (formerly Keywords AI) | Skip | Managed observability, evals and gateway | No self-host found; it duplicates Langfuse [3P: [Respan docs](https://www.respan.ai/docs/documentation/overview)] |
-| **Vapi** | Optional P2 | "Ask the ref" by voice: a web call from the judge's phone, with tools that hit `gateway` (`get_rule`, `explain_call`, `game_state`) | $0.05/min platform fee plus providers. Function calling needs a Server URL. Pay-as-you-go may cap at 10 concurrent calls [3P: [Vapi FAQ](https://docs.vapi.ai/faq)]. **Cheaper to build in-house** with Deepgram Flux → Claude → Cartesia, which is also eligible for the Cartesia prize |
+| **Vapi** | Optional P2 | "Ask the ref" by voice: a web call from the judge's phone, with tools that hit `gateway` (`get_rule`, `explain_call`, `game_state`) | $0.05/min platform fee plus providers. Function calling needs a Server URL. Pay-as-you-go may cap at 10 concurrent calls [3P: [Vapi FAQ](https://docs.vapi.ai/faq)]. **Cheaper to build in-house** with Deepgram Flux → Claude → Cartesia |
 | **Tavus CVI** | Optional P2 wow | A "virtual referee" avatar that explains challenge verdicts. Create a conversation with `POST /v2/conversations` and embed the `conversation_url` iframe. **Echo mode** lets us push our own deterministic verdict text for the replica to speak, so it can't hallucinate [V: [Tavus docs](https://docs.tavus.io/sections/conversational-video-interface/quickstart/build-first-app)] | ~600 ms (vendor) to ~800 ms round-trip [3P]. **Billing starts at creation, with a 30 s minimum per conversation.** Pay-as-you-go is ~$0.32-0.37/min; the free tier has 25 min [3P: [Tavus pricing](https://www.tavus.io/pricing)]. Use `test_mode` while developing. Pre-create one conversation per challenge view, or record one pre-rendered explainer clip for the demo |
 | **AgentMail** | **Yes** (cheap, 1-2 h) | After the game, email each player their recap: score, calls, coach cards, trophy-clip and highlight links. A Supabase Edge Function or `broadcast` sends it | Python SDK `client.inboxes.messages.send`; **attachments supported** [V: [AgentMail docs index](https://docs.agentmail.to/llms.txt)]. Free tier is ~3 inboxes, 3k emails/mo, about a 100/day cap, an @agentmail.to sender and a footer [3P]. Send links, not MP4 attachments |
 | **Firecrawl** | **Yes** (1-2 h) | Scrape official rulebooks (USA Pickleball, BWF, ITTF, USA Football flag, roundnet, ACL cornhole) into Markdown and JSON as grounding for Claude's rule-pack compiler. Cache to Postgres | 1 credit per page, **+1 per PDF page**, **+4 for JSON extraction**, +4 for enhanced mode [V: [Firecrawl billing](https://docs.firecrawl.dev/billing)]. Prefer the Markdown output and let Claude extract (cheaper). Many rulebooks are PDFs, so check the new `/parse` endpoint |
@@ -269,9 +269,9 @@ Prices come from [DevZero g6](https://www.devzero.io/instances/aws/families/g6),
 | **Greptile** | **Yes** (5 min) | AI review on GitHub PRs. It catches integration bugs across 4 people's services | Install the GitHub app on the repo |
 | **Roboflow** | **Yes** | §3 | |
 | **SubQ Snap** | **Yes, primary decider** | Unchanged. Calls from AWS skip venue-Wi-Fi upload | Vendor ~1 s at 100K tokens; budget 0.3-1.0 s at ~3K tokens [repo notes: `Trophy - SubQ Snap coach.md`] |
-| **Convex** (event sponsor) | Either-or with Supabase | §4 | Prize ~$1.3k in hardware |
+| **Convex** | Alternative to Supabase | §4 | Evaluate against the shared-state requirements |
 | **sync.** (lip-sync) | Skip | Only useful if dubbing commentary onto a talking head; Tavus covers that | |
-| **Coinbase (Base, x402)** | Skip, unless spare time | The prize is $500 USDC per member for x402. A forced fit (a "pay-per-challenge" or rules-API paywall) | [repo notes] |
+| **Coinbase (Base, x402)** | Skip, unless spare time | Potential payment integration (a "pay-per-challenge" or rules-API paywall); outside the current core scope | [repo notes] |
 | **Sarvam AI** | Skip, unless you want multilingual commentary | Indic STT and TTS. Cartesia and Deepgram cover English | |
 | **Bolna** | Skip | India-focused voice-agent platform; duplicates Vapi | |
 | **Razorpay** | Skip | Indian payments; no use | |
@@ -397,7 +397,7 @@ EXTERNAL
 1. **AWS G and VT On-Demand quota.** Default is 0. Request 128 vCPU (or 64) in us-west-2, the same in us-east-2, plus the Spot G quota in both. Open a support case, and confirm the YC credits are on this account.
 2. **Domain and DNS.** Register or choose a domain. A records for `trophy.` and `turn.` point at the Elastic IPs once the boxes exist.
 3. **Roboflow.** Fork the Universe datasets and start RF-DETR Nano/Small training **tonight**, with an epoch cap. Decide on Core ($39) for weight download and dedicated deployments.
-4. **Supabase project in us-west-2.** Make sure it isn't paused. Or pick Convex instead, for its prize; don't run both.
+4. **Supabase project in us-west-2.** Make sure it isn't paused. Or evaluate Convex instead; avoid duplicate backends without a concrete need.
 5. **Keys and tiers:**
    - SubQ (100M free tokens, possibly waitlisted).
    - Cartesia **Pro** (the free tier allows only 2 concurrent TTS requests).

@@ -20,7 +20,7 @@ Tick items and record **measured** numbers (not estimates). The gates are in bui
 - [ ] F6 possession on basketball (recorded; courtcam make/miss) · [ ] F7 cornhole (live)
 - [ ] F8 engine + 3 packs · [ ] F9 decide() + fallback · [ ] F12 commentary (validator → Cartesia)
 - [ ] F13 challenge replay + evidence mode
-- [ ] **Sat noon gate:** each P0 family makes ≥ 1 correct call
+- [ ] **P0 checkpoint:** each P0 family makes ≥ 1 correct call
 
 ## P1
 - [ ] Pickleball (kitchen fault, in/out) · [ ] Badminton · [ ] Two-hand touch (snap, rush count, touch) · [ ] Roundnet live

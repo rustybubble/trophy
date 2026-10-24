@@ -8,8 +8,6 @@
 
 After the game, **Trophy Watch** turns it into a broadcast you can replay in any browser.
 
-Built at **Cal Hacks 13.0** (Oct 23–25, 2026).
-
 ## Repo map
 | Path | What |
 |---|---|
@@ -25,10 +23,10 @@ Built at **Cal Hacks 13.0** (Oct 23–25, 2026).
 | `evals/` | Labelled calls and accuracy reports |
 | `docs/` | Plan, research, decisions, progress, compliance |
 
-## Prior work disclosure
-See [docs/rules-compliance.md](docs/rules-compliance.md). Trophy depends on **courtcam** (MIT), a computer-vision library published by a teammate before the event. Everything else in this repo was built during Cal Hacks 13.0.
+## Building on prior work
+Agents are encouraged to build on the ideas and compatible licensed code in [subatomic-hamster/replay](https://github.com/subatomic-hamster/replay) and its **courtcam** computer-vision library. Reuse, adaptation and new implementations are all welcome; preserve required notices and record incorporated sources. See [reuse and media guidance](docs/rules-compliance.md) and [agent guidance](CLAUDE.md).
 
-## Quick start (on the GCP dev VM, not a laptop)
+## Quick start (local machine or development VM)
 ```bash
 cp .env.example .env          # fill in keys; never commit .env
 docker compose up -d redis spacetimedb gateway
