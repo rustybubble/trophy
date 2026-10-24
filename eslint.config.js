@@ -2,7 +2,7 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["**/node_modules/**", "**/dist/**", "packages/contracts/gen/**", "packages/state-client/src/bindings/**", "spikes/**"] },
+  { ignores: ["**/node_modules/**", "**/dist/**", "packages/contracts/gen/**", "packages/state-client/src/bindings/**", "spikes/**", "apps/*/dist/**"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

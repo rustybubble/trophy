@@ -321,6 +321,9 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 | `GET /voice/token` | → `{access_token, expires_at_ms}`: a short-lived Cartesia token minted server-side (§16). Never the API key |
 | `POST /ask` | `{question, sport?}` → proxied to the `rules` service `POST /ask` (§17) → `{answer, speech, citations, latency_ms}`; the gateway then sends an `ask_logged` ctl command |
 | `GET /healthz` | → `{ok, redis, adapter, recorder}` |
+| `POST /clips?call_id=&seg=&t_start_phone_ms=&t_end_phone_ms=` | body = one video segment (`video/mp4`, `video/webm` or `video/quicktime`, ≤ 250 MB); `cam` role; needs the camera's clock fit (409 otherwise) → `201` meta `{name, cam_id, seg, bytes, t_game_start_s, t_game_end_s, w, h, codec, duration_s}` (D-27) |
+| `GET /clips/{game_id}/{call_id}` | → `{clips: [meta + url]}` for that call, every camera |
+| `GET /clips/{game_id}/{call_id}/{name}` | the segment, with HTTP Range; `?token=` allowed because `<video>` can't send headers |
 
 **As built (2026-10-24, `services/gateway`):** join and `/public` also return `t0_ms`; `/healthz` also reports `spacetime` and `rules`; client `ctl` args are validated against the `*Args` schemas (422 otherwise); frames that arrive before the clock fit exists are stamped by arrival time with `sync_err_ms = 1000`; onsets need a fit and are dropped before one exists; audio onsets go to `ev:audio` only (not mirrored into `observation`); `call_ack` latencies go to `data/local/logs/call_ack.jsonl`. Replay routes come with the recorder.
 
@@ -354,6 +357,7 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 - **Intent parse** (client-side regex first, then the gateway falls back to a Claude Haiku classification): `challenge` · `ask:<question>` · `house_rule:<text>` · `score?` · `undo`. Each maps to `/api/ctl` or `/api/ask`.
 - **Verify on day 1:** the header vs. query auth forms, and the current `cartesia_version` value (search results show `2026-03-01`). Record what worked in `docs/status/a1.md`.
 - **Accessibility:** a "read everything" mode speaks every call and score change (Cartesia's "impact and responsibility" criterion).
+- **As built (2026-10-24, `apps/pwa`):** a new call cancels the line that's still playing (a fresh `context_id` per line, `cancel` on the old one, rather than one continued context per game). Push-to-talk **reuses the raw onset mic** when it's open instead of opening a second, echo-cancelled track, because iOS can mute an earlier capture when a second one starts; Ink-2 transcribed correctly without echo cancellation in the iPhone spike. Calls older than 15 s when they arrive (e.g. after a reconnect) are listed, not announced.
 
 ## 17. Ask the ref: Apify → Moss → Claude (Agent 3, `services/rules`)
 - **Apify actor "Sports Rulebook Scraper"** (`actors/rulebook-scraper/`, Python Apify SDK + Crawlee):

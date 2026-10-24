@@ -22,6 +22,8 @@ uv run python scripts/live_check.py      # acts like a phone against https://tro
 | `GET /voice/token` | any | → `{access_token, expires_at_ms, cartesia_version, voices: {calls, ref}}` (TTS + STT grants, 10 min) |
 | `POST /ask` `{question, sport?}` | any | → rules service (:8100) `/ask`; then `ask_logged` |
 | `GET /healthz` | none | `{ok, redis, spacetime, adapter, rules, recorder}` |
+| `POST /clips?call_id=&seg=&t_start_phone_ms=&t_end_phone_ms=` | `cam` | one high-quality phone segment for a challenged call (D-27); mapped onto game time with the camera's clock fit; stored in `data/local/clips/{game}/{call}/` with a JSON sidecar (ffprobe: w, h, codec, duration) |
+| `GET /clips/{game}/{call}`, `GET /clips/{game}/{call}/{name}` | same game (`?token=` ok) | list, and the file with Range support |
 | `GET /replay/...` | | **not yet**: comes with the recorder (§12) |
 
 The gateway doesn't write to Spacetime (D-14); the engine turns its ctl commands into rows. Audio onsets are not mirrored into `observation` (they're high-rate and raw; the vision module references them as `onset_id`). `python -m gateway.tokens` prints a 30-day `service` token for internal callers (the replay frames API).
