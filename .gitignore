@@ -29,11 +29,16 @@ weights/
 data/raw/
 data/recordings/
 data/clips/media/
+data/local/
+*.mlpackage/
+*.mlmodel
 *.mp4
 *.mov
 *.webm
 *.mkv
 *.wav
+# small synthetic fixtures (<= 5 MB, labelled synthetic) are versioned
+!evals/fixtures/synthetic/*.mp4
 
 # os / editor
 .DS_Store

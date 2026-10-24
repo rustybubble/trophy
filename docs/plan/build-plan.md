@@ -2,6 +2,8 @@
 
 *Updated 2026-10-23. This is a working plan with a cloud deployment baseline; local work and other suitable infrastructure are welcome. If a sport cannot be filmed, use the [clip library](clip-library.md). It builds on [Trophy v3](concept-v3.md). Scope, sequencing and implementation choices can evolve with the task.*
 
+**Current execution plan (2026-10-23):** [three-agent-plan.md](three-agent-plan.md) sets the current scope (the product outline: basketball, ping pong, two-hand touch, pickleball, tennis/badminton, volleyball, the Droid, replay; **no cornhole**), Milestone 1 (live ping pong + recorded basketball on an M5 Pro Mac), and the contracts in [interfaces-v1.md](interfaces-v1.md). Where they differ from this document (GCP-first, shared-memory rings, cornhole, "fouls are never called"), they take precedence (D-12 to D-18).
+
 **Working approach:** prefer proven models and methods when they help, and build or experiment where needed. Agents may reuse compatible licensed code, including Replay, or write new implementations at any time. Validate the resulting behavior; [CLAUDE.md](../../CLAUDE.md) describes autonomy and safeguards.
 
 Exact install pins, weight files, input/output shapes and known bugs are in three integration-card files (checked against source and docs today). This plan cites them as **[F]**, **[P]** and **[X]**:

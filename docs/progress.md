@@ -2,6 +2,18 @@
 
 Tick items and record **measured** numbers (not estimates). The gates are in build plan §5 and §7.
 
+## Milestone 1: live ping pong + recorded basketball (plan: `docs/plan/three-agent-plan.md` §3, §6)
+- [ ] **C0** contracts frozen (schemas, codegen, py-trophy, state-client MockState, synthetic fixtures, CI): tag `m1-c0`
+- [ ] Ping-pong tracker spike on the M5 Pro: classical ___ fps / BlurBall MPS ___ fps; recall ___ (OPEN-3 decision: ___)
+- [ ] **C1** phone → `frames:{cam}` at 720p ___ fps; `sync_err_ms` = ___; `audio_offset_ms` spread = ___
+- [ ] SpacetimeDB reducer (Python HTTP) → TS subscription on the Mac = ___ ms (target < 100)
+- [ ] **C2** `make e2e`: CC BY ping-pong segment → point calls; basketball segment → 2/3 calls + score; replay API returns clip + overlay
+- [ ] **C3** live ping pong: `event_to_ack_ms` p50 = ___ / p95 = ___ (targets ≤ 1500 / ≤ 2500); 15-min stability ___
+- [ ] **C3** rally scoring ___/___ (CI ___), target ≥ 90%; edge rule ___/20 staged (target ≥ 16), clip 8:36 edge ball p = ___
+- [ ] **C3** basketball made-basket points ___/___ (CI ___), target ≥ 90%; final score matches overlay: ___
+- [ ] **C3** challenge tap → replay playing = ___ s (target ≤ 4)
+- [ ] **C4** sign-off: decisions, licenses and status reports filed
+
 ## Hour 0: smoke tests (build plan §8)
 - [ ] GCP L4 VM up (or the Vultr fallback); `docker run --gpus all … nvidia-smi`
 - [ ] A phone on 5G opens `https://$TROPHY_DOMAIN`, a WebRTC test stream reaches ingest, RTT = ___ ms

@@ -9,7 +9,8 @@ Read this file for project context, then consult the plan and research relevant 
 - Trophy tracks the ball, players and objects and makes calls with **honest confidence**:
   - **AUTO** at ≥ 0.90, called automatically;
   - **BETA**, which stands but can be challenged and shows its uncertainty;
-  - **PLAYERS DECIDE**: fouls are never called, only shown in evidence mode.
+  - **PLAYERS DECIDE**: rules the sensors can't judge.
+  - **Fouls are identified** (D-17): measurable violations go through the normal gate, and judgment fouls are flagged as `foul_flag` calls capped at BETA, with evidence.
 - Players challenge by voice, gesture or button, and get a multi-angle replay with an error ellipse.
 - Calls are **spoken** (Trophy is a voice referee).
 - House rules can be typed or spoken and are compiled into the rule pack by a Factory Droid.
@@ -24,11 +25,13 @@ Read this file for project context, then consult the plan and research relevant 
 Each sport is a **rule pack** (YAML) on top of one family pipeline.
 
 **Demo:**
-- **Live demo:** table tennis, a tabletop cornhole set, and a typed house rule.
+- **Current scope (user outline, 2026-10-23; see `docs/plan/three-agent-plan.md`):** basketball (2/3-pointers, fouls, outs); ping pong (illegal serves, the edge rule); two-hand touch football; pickleball (kitchen, outs); tennis/badminton (outs); volleyball (hand over the net, outs); the Droid "add your own rule"; replay features. **Cornhole and the other catalog sports are out of scope for now.**
+- **Live demo:** table tennis and a typed house rule.
 - **Recorded examples:** pickleball kitchen fault, badminton, two-hand touch rush count and touch, basketball.
 - **Sport wall:** 28 tiles marked LIVE / VERIFIED / PACK, each verified sport showing its measured accuracy.
 
 ## Source-of-truth docs (in this repo)
+- `docs/plan/three-agent-plan.md`, `docs/plan/interfaces-v1.md` and `docs/plan/prompts/`: the current scope, three-agent split, Milestone 1, checkpoints and wire contracts. They take precedence over older plan text. Read these first when you are one of the three implementation agents.
 - `docs/plan/build-plan.md`: the working implementation plan: features F1–F19, §0 deployment architecture, §5B Trophy Watch, §7 milestones, §8 smoke tests.
 - `docs/plan/concept-v3.md`: the product, sport catalog, demo script and §9 integration priorities.
 - `docs/plan/clip-library.md`: licensed public clips per sport, and the license rules.
@@ -98,7 +101,7 @@ Post-game: Vultr L40S (RIFE, SAM 2.1 2.5D angles, GVHMR) · Remotion Lambda (AWS
 ## Priorities and gates
 - **P0:**
   - PWA join, record and stream; clock sync; beep/flash; challenge replay.
-  - Flight on table tennis (live); resting on cornhole (live); possession on basketball (recorded).
+  - Flight on table tennis (live); possession on basketball (recorded). M1 is defined in `docs/plan/three-agent-plan.md` §3.
   - Engine + 3 packs; `decide()`; commentary.
 - **P1:**
   - Pickleball, badminton and two-hand touch verified; roundnet live.
