@@ -1,12 +1,20 @@
-# Rule-pack template. Validated by packages/contracts/rulepack.schema.json.
-# Conditions are CEL expressions over `ev` (the current event), `rally` (rally state) and `game` (game state).
-# Copy to <sport>.yaml. Hand-write the P0 packs; Claude drafts the others; a human reviews the P1 ones.
+# Rule-pack template. Validated by packages/contracts/rulepack.schema.json (CI: scripts/validate_fixtures.py).
+# Conditions are CEL expressions over `ev` (the current event), `rally` (rally state), `game` (game state)
+# and `params`. Agent 3 owns rules/scoring/params/teams; Agent 2 owns field:.
 sport: example_sport
-family: flight            # flight | possession
+family: flight            # flight | possession | resting
 version: 1
+teams:
+  - {team_id: A, name: Team A, color: "#e4572e"}
+  - {team_id: B, name: Team B, color: "#2e86ab"}
+params: {}                # readable from CEL as params.*, e.g. edge_band_m
+variants: {}              # named param overrides, e.g. ittf_strict: {serve_min_toss_m: 0.16}
 field:
   units: m
+  frame: "origin and axes in words (interfaces-v1 §3)"
   dims: {length: 0.0, width: 0.0}
+  landmarks:              # tap order
+    - {name: A_left, pos_m: [0.0, 0.0], prompt: "Team A's end, left corner"}
   lines: {}               # name -> [[x1,y1],[x2,y2]]
   zones: {}               # name -> polygon [[x,y], ...]
 detectors: {}             # class -> weights id
@@ -16,14 +24,11 @@ scoring:
 rules:
   - id: example_in_out
     name: Ball in or out
-    tier: BETA            # AUTO | BETA | PLAYERS
+    tier: BETA            # AUTO | BETA | PLAYERS (a ceiling)
+    kind: line_call
     when: "ev.type == 'bounce'"
     check: code           # code (geometry, P(in) = Phi(d/sigma)) | ensemble (geometry + background AI votes on close calls)
     outcome: "in_or_out"
     rule_ref: ""          # official rule id, filled from Moss
-coach:
-  generator: flight_target_zones
-  flag_gap: 0.30
-  flag_actual_max: 0.15
 calibration:
   T: 1.0

@@ -1,0 +1,15 @@
+{
+  "name": "@trophy/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Generated TypeScript types for the Trophy JSON Schemas (make contracts). Never hand-edit gen/.",
+  "exports": {
+    ".": "./gen/ts/index.ts",
+    "./schemas/*": "./*"
+  },
+  "types": "./gen/ts/index.ts",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

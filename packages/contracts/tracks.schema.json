@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trophy.local/contracts/tracks.schema.json",
+  "title": "BallTrackSample",
+  "description": "One trk:ball:{cam} entry (field `json`), one per processed frame (interfaces-v1 §8). PlayersTrackSample is in $defs.",
+  "type": "object",
+  "required": ["t_game_s", "seq", "px", "conf"],
+  "properties": {
+    "t_game_s": { "type": "number" },
+    "seq": { "type": "integer", "minimum": 0 },
+    "px": {
+      "type": ["array", "null"],
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "null when the ball wasn't found in this frame"
+    },
+    "conf": { "type": "number", "minimum": 0, "maximum": 1 },
+    "pos_m": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+    "blur_len_px": { "type": "number" },
+    "blur_angle_rad": { "type": "number" }
+  },
+  "$defs": {
+    "PlayerBox": {
+      "title": "PlayerBox",
+      "type": "object",
+      "required": ["track_id", "bb_px"],
+      "properties": {
+        "track_id": { "type": "string" },
+        "team_id": { "type": "string" },
+        "bb_px": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4, "description": "[x, y, w, h]" },
+        "feet_m": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+        },
+        "kp_px": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+          "description": "Halpe-26 [x, y, conf]"
+        }
+      }
+    },
+    "PlayersTrackSample": {
+      "title": "PlayersTrackSample",
+      "description": "One trk:players:{cam} entry at 10-15 Hz",
+      "type": "object",
+      "required": ["t_game_s", "seq", "players"],
+      "properties": {
+        "t_game_s": { "type": "number" },
+        "seq": { "type": "integer", "minimum": 0 },
+        "players": { "type": "array", "items": { "$ref": "#/$defs/PlayerBox" } }
+      }
+    }
+  }
+}

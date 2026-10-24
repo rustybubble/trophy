@@ -1,86 +1,296 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "trophy/event",
+  "$id": "https://trophy.local/contracts/event.schema.json",
   "title": "Event",
+  "description": "trophy.event.v1: a measurement from a vision/audio module (interfaces-v1 §7). Perception emits measurements; only rule packs decide (D-18). Carried on Redis ev:* (field `json`) and mirrored 1:1 into the Spacetime `observation` table (§7.1).",
   "type": "object",
-  "required": [
-    "id",
-    "t_game_s",
-    "sport",
-    "type",
-    "cams",
-    "conf"
-  ],
+  "required": ["schema", "id", "game_id", "t_game_s", "sport", "type", "source", "cams", "conf"],
   "properties": {
-    "id": {
-      "type": "string"
+    "schema": { "const": "trophy.event.v1" },
+    "id": { "type": "string", "description": "ULID" },
+    "game_id": { "type": "string", "pattern": "^g_[0-9a-hjkmnp-tv-z]{8}$" },
+    "t_game_s": { "type": "number", "description": "Game time in seconds, copied from the frames/onsets used (§2)" },
+    "sport": { "type": "string", "description": "Rule-pack sport id, e.g. table_tennis" },
+    "type": { "$ref": "#/$defs/EventType" },
+    "source": { "$ref": "#/$defs/EventSource" },
+    "cams": { "type": "array", "items": { "type": "string" } },
+    "conf": { "type": "number", "minimum": 0, "maximum": 1, "description": "Probability the event happened at all" },
+    "evidence": { "type": "array", "items": { "$ref": "#/$defs/EvidenceRef" } },
+    "track_id": { "type": "string" },
+    "actor_id": { "type": "string", "description": "player_id or track_id" },
+    "team_id": { "type": "string" },
+    "side": { "$ref": "#/$defs/Side" },
+    "pos_m": { "$ref": "#/$defs/PosM" },
+    "sigma_m": { "type": "number", "minimum": 0, "description": "Isotropic 1-sigma position uncertainty, metres" },
+    "cov_m2": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 4,
+      "maxItems": 9,
+      "description": "Optional covariance, 2x2 or 3x3 row-major, m^2"
     },
-    "t_game_s": {
-      "type": "number",
-      "description": "game clock seconds"
-    },
-    "sport": {
-      "type": "string"
-    },
-    "type": {
+    "supersedes": { "type": "string", "description": "id of an earlier event this one replaces" },
+    "payload": {
+      "type": "object",
+      "description": "Type-specific payload; see the *Payload $defs. Any payload may carry calib_untrusted=true."
+    }
+  },
+  "$defs": {
+    "EventType": {
+      "title": "EventType",
       "enum": [
+        "audio_onset",
         "bounce",
-        "wall_bounce",
         "contact",
-        "contact_height",
-        "touch_count",
-        "rim_hit",
-        "possession",
-        "snap",
-        "step",
-        "in_zone",
-        "line_cross",
         "net",
-        "catch",
-        "player_touch",
-        "at_rest",
-        "score_zone",
-        "timer",
-        "audio_onset"
+        "ball_dead",
+        "serve_toss",
+        "person_feet",
+        "shot",
+        "line_cross",
+        "player_contact",
+        "reach_over_net",
+        "touch",
+        "heartbeat"
       ]
     },
-    "cams": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+    "EventSource": {
+      "title": "EventSource",
+      "enum": ["flight", "players", "possession", "audio", "manual", "synthetic", "file"]
     },
-    "pos_court_m": {
+    "Side": { "title": "Side", "enum": ["A", "B"] },
+    "PosM": {
+      "title": "PosM",
+      "description": "Field-frame position in metres, z up (§3)",
       "type": "object",
+      "required": ["x", "y"],
       "properties": {
-        "x": {
-          "type": "number"
-        },
-        "y": {
-          "type": "number"
-        },
-        "z": {
-          "type": "number"
-        }
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number", "default": 0 }
       }
     },
-    "sigma_m": {
-      "type": "number",
-      "description": "1-sigma position uncertainty, metres"
+    "EvidenceRef": {
+      "title": "EvidenceRef",
+      "type": "object",
+      "required": ["cam_id"],
+      "properties": {
+        "cam_id": { "type": "string" },
+        "seq0": { "type": "integer", "minimum": 0 },
+        "seq1": { "type": "integer", "minimum": 0 },
+        "t0_s": { "type": "number" },
+        "t1_s": { "type": "number" }
+      }
     },
-    "actor_id": {
-      "type": "string"
+    "AudioOnsetPayload": {
+      "title": "AudioOnsetPayload",
+      "type": "object",
+      "required": ["peak", "energy", "cam_id"],
+      "properties": {
+        "peak": { "type": "number" },
+        "energy": { "type": "number" },
+        "cam_id": { "type": "string" }
+      }
     },
-    "target_id": {
-      "type": "string"
+    "EdgeProbs": {
+      "title": "EdgeProbs",
+      "description": "Set only within edge_band_m of a table edge; sums to 1",
+      "type": "object",
+      "required": ["top_edge", "side_face", "surface"],
+      "properties": {
+        "top_edge": { "type": "number", "minimum": 0, "maximum": 1 },
+        "side_face": { "type": "number", "minimum": 0, "maximum": 1 },
+        "surface": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
     },
-    "payload": {
-      "type": "object"
+    "BouncePayload": {
+      "title": "BouncePayload",
+      "type": "object",
+      "required": ["surface", "side", "d_lines_m", "p_in"],
+      "properties": {
+        "surface": { "enum": ["table", "floor", "court"] },
+        "side": { "$ref": "#/$defs/Side" },
+        "d_lines_m": {
+          "type": "object",
+          "additionalProperties": { "type": "number" },
+          "description": "Signed distance to each named line in metres, + = inside"
+        },
+        "p_in": { "type": "number", "minimum": 0, "maximum": 1 },
+        "edge": { "anyOf": [{ "$ref": "#/$defs/EdgeProbs" }, { "type": "null" }] },
+        "timing": { "enum": ["audio", "track"] },
+        "onset_id": { "type": "string" },
+        "calib_untrusted": { "type": "boolean" }
+      }
     },
-    "conf": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1
+    "ContactPayload": {
+      "title": "ContactPayload",
+      "type": "object",
+      "required": ["side", "kind"],
+      "properties": {
+        "side": { "$ref": "#/$defs/Side" },
+        "kind": { "enum": ["racket", "hand", "body", "unknown"] },
+        "height_m": { "type": "number" },
+        "onset_id": { "type": "string" },
+        "calib_untrusted": { "type": "boolean" }
+      }
+    },
+    "NetPayload": {
+      "title": "NetPayload",
+      "type": "object",
+      "required": ["kind", "from_side"],
+      "properties": {
+        "kind": { "enum": ["touch", "into", "over"] },
+        "from_side": { "$ref": "#/$defs/Side" },
+        "calib_untrusted": { "type": "boolean" }
+      }
+    },
+    "BallDeadPayload": {
+      "title": "BallDeadPayload",
+      "description": "A hint that the rally has ended",
+      "type": "object",
+      "required": ["reason"],
+      "properties": {
+        "reason": { "enum": ["lost", "floor", "stopped", "out_of_view"] },
+        "last_side": { "$ref": "#/$defs/Side" }
+      }
+    },
+    "TossPoint": {
+      "title": "TossPoint",
+      "type": "object",
+      "required": ["t_s", "pos_m"],
+      "properties": {
+        "t_s": { "type": "number", "description": "Game time, s" },
+        "pos_m": { "$ref": "#/$defs/PosM" }
+      }
+    },
+    "ServeTossPayload": {
+      "title": "ServeTossPayload",
+      "description": "Weekend MUST (D-22). height_m = apex.z - release.z; angle_from_vertical_rad = max(rise_angle_rad, fall_angle_rad).",
+      "type": "object",
+      "required": [
+        "server_side",
+        "release",
+        "apex",
+        "contact",
+        "height_m",
+        "sigma_height_m",
+        "rise_angle_rad",
+        "fall_angle_rad",
+        "angle_from_vertical_rad",
+        "sigma_angle_rad"
+      ],
+      "properties": {
+        "server_side": { "$ref": "#/$defs/Side" },
+        "release": { "$ref": "#/$defs/TossPoint" },
+        "apex": { "$ref": "#/$defs/TossPoint" },
+        "contact": { "$ref": "#/$defs/TossPoint" },
+        "height_m": { "type": "number" },
+        "sigma_height_m": { "type": "number", "minimum": 0 },
+        "rise_angle_rad": { "type": "number" },
+        "fall_angle_rad": { "type": "number" },
+        "angle_from_vertical_rad": { "type": "number" },
+        "sigma_angle_rad": { "type": "number", "minimum": 0 },
+        "palm_still_s": { "type": "number", "minimum": 0 },
+        "observable_plane": { "enum": ["xz", "yz", "mixed"] },
+        "calib_untrusted": { "type": "boolean" }
+      }
+    },
+    "PersonFeetPayload": {
+      "title": "PersonFeetPayload",
+      "type": "object",
+      "required": ["feet_m", "min_signed_dist_m", "sigma_m"],
+      "properties": {
+        "player_id": { "type": "string" },
+        "team_id": { "type": "string" },
+        "feet_m": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+        },
+        "min_signed_dist_m": { "type": "object", "additionalProperties": { "type": "number" } },
+        "sigma_m": { "type": "number", "minimum": 0 },
+        "airborne_p": { "type": "number", "minimum": 0, "maximum": 1 },
+        "ref_event_id": { "type": "string" },
+        "calib_untrusted": { "type": "boolean" }
+      }
+    },
+    "ShotPayload": {
+      "title": "ShotPayload",
+      "type": "object",
+      "required": ["shooter_track_id", "release_pos_m", "behind_arc_p", "made"],
+      "properties": {
+        "shooter_track_id": { "type": "string" },
+        "team_id": { "type": "string" },
+        "release_pos_m": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "behind_arc_p": { "type": "number", "minimum": 0, "maximum": 1 },
+        "on_line_p": { "type": "number", "minimum": 0, "maximum": 1 },
+        "made": { "type": ["boolean", "null"], "description": "null = can't tell (caps at BETA)" },
+        "made_p": { "type": "number", "minimum": 0, "maximum": 1 },
+        "attempt_points_hint": { "enum": [2, 3] },
+        "calib_untrusted": { "type": "boolean" }
+      }
+    },
+    "LineCrossPayload": {
+      "title": "LineCrossPayload",
+      "type": "object",
+      "required": ["object", "boundary", "p_out"],
+      "properties": {
+        "object": { "enum": ["ball", "player"] },
+        "boundary": { "type": "string" },
+        "holder_track_id": { "type": "string" },
+        "p_out": { "type": "number", "minimum": 0, "maximum": 1 },
+        "calib_untrusted": { "type": "boolean" }
+      }
+    },
+    "PlayerContactPayload": {
+      "title": "PlayerContactPayload",
+      "type": "object",
+      "required": ["a_track_id", "b_track_id", "min_dist_m"],
+      "properties": {
+        "a_track_id": { "type": "string" },
+        "b_track_id": { "type": "string" },
+        "min_dist_m": { "type": "number" },
+        "closing_speed_mps": { "type": "number" },
+        "first_mover_track_id": { "type": "string" },
+        "during": { "enum": ["shot", "drive", "other"] }
+      }
+    },
+    "ReachOverNetPayload": {
+      "title": "ReachOverNetPayload",
+      "type": "object",
+      "required": ["team_id", "beyond_m", "sigma_m"],
+      "properties": {
+        "player_id": { "type": "string" },
+        "team_id": { "type": "string" },
+        "beyond_m": { "type": "number" },
+        "sigma_m": { "type": "number", "minimum": 0 },
+        "touched_ball_p": { "type": "number", "minimum": 0, "maximum": 1 },
+        "before_opp_attack_p": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "TouchPayload": {
+      "title": "TouchPayload",
+      "type": "object",
+      "required": ["defender_track_id", "carrier_track_id", "both_hands_p"],
+      "properties": {
+        "defender_track_id": { "type": "string" },
+        "carrier_track_id": { "type": "string" },
+        "both_hands_p": { "type": "number", "minimum": 0, "maximum": 1 },
+        "dt_s": { "type": "number" }
+      }
+    },
+    "HeartbeatPayload": {
+      "title": "HeartbeatPayload",
+      "description": "At most 1 per 5 s per service per camera",
+      "type": "object",
+      "required": ["service"],
+      "properties": {
+        "service": { "type": "string" },
+        "fps": { "type": "number" },
+        "lag_ms": { "type": "number" },
+        "model": { "type": "string" },
+        "device": { "type": "string" },
+        "ep": { "type": "string", "description": "Execution provider actually used (e.g. CoreML, CPU, MPS)" }
+      }
     }
   }
 }

@@ -1,0 +1,6 @@
+# Defaults for repo-level Python (scripts/). Each service/package pyproject.toml may override.
+line-length = 120
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]

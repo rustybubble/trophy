@@ -1,0 +1,347 @@
+{
+ "schema": "trophy.mock_script.v1",
+ "synthetic": true,
+ "label": "SYNTHETIC demo script: hand-made rows for UI development, not measurements or real calls",
+ "sport": "basketball",
+ "game_id": "g_dembb001",
+ "t0_ms": 1792000000000,
+ "steps": [
+  {
+   "at_ms": 0,
+   "table": "game",
+   "row": {
+    "game_id": "g_dembb001",
+    "sport": "basketball",
+    "pack_version": "basketball@1",
+    "status": "live",
+    "t0_ms": 1792000000000,
+    "period_no": 1,
+    "rally_no": 0,
+    "server_team_id": null,
+    "teams": [
+     {
+      "team_id": "home",
+      "name": "Home",
+      "color": "#f2a541"
+     },
+     {
+      "team_id": "away",
+      "name": "Away",
+      "color": "#5c4d7d"
+     }
+    ],
+    "params": {
+     "points_to_win": 21
+    },
+    "created_at_ms": 1792000000000
+   }
+  },
+  {
+   "at_ms": 100,
+   "table": "camera",
+   "row": {
+    "cam_id": "c_demca2",
+    "game_id": "g_dembb001",
+    "label": "Baseline cam",
+    "role": "cam",
+    "calib_trusted": true,
+    "connected": true,
+    "fps_in": 30,
+    "sync_err_ms": 5,
+    "last_seen_ms": 1792000000100
+   }
+  },
+  {
+   "at_ms": 100,
+   "table": "score",
+   "row": {
+    "game_id": "g_dembb001",
+    "team_id": "home",
+    "points": 0,
+    "display": "0–0",
+    "updated_at_ms": 1792000000100
+   }
+  },
+  {
+   "at_ms": 100,
+   "table": "score",
+   "row": {
+    "game_id": "g_dembb001",
+    "team_id": "away",
+    "points": 0,
+    "display": "0–0",
+    "updated_at_ms": 1792000000100
+   }
+  },
+  {
+   "at_ms": 3050,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000018",
+    "game_id": "g_dembb001",
+    "t_game_s": 3,
+    "sport": "basketball",
+    "type": "shot",
+    "source": "synthetic",
+    "cams": [
+     "c_demca2"
+    ],
+    "conf": 0.9,
+    "team_id": "home",
+    "payload": {
+     "shooter_track_id": "c_demca2:3",
+     "team_id": "home",
+     "release_pos_m": [
+      6.9,
+      2.1
+     ],
+     "behind_arc_p": 0.04,
+     "made": true,
+     "made_p": 0.9,
+     "attempt_points_hint": 2
+    }
+   }
+  },
+  {
+   "at_ms": 3400,
+   "table": "call",
+   "row": {
+    "schema": "trophy.call.v1",
+    "id": "01JDEMCAL00000000000000019",
+    "game_id": "g_dembb001",
+    "t_game_s": 3,
+    "rule_id": "basket",
+    "rule_version": "basketball@1",
+    "kind": "basket",
+    "outcome": "made_2",
+    "team_id": "home",
+    "points": 2,
+    "p": 0.95,
+    "p_source": "geometry",
+    "tier": "AUTO",
+    "shown": "auto",
+    "text": "Two — home (95%)",
+    "speech": "Two. home.",
+    "cue": {
+     "beep": "short",
+     "flash": "home"
+    },
+    "event_ids": [
+     "01JDEMOBS00000000000000018"
+    ],
+    "evidence": [
+     {
+      "cam_id": "c_demca2",
+      "t0_s": 1,
+      "t1_s": 4.5
+     }
+    ],
+    "status": "final",
+    "created_at_ms": 1792000003400
+   }
+  },
+  {
+   "at_ms": 3400,
+   "table": "score",
+   "row": {
+    "game_id": "g_dembb001",
+    "team_id": "home",
+    "points": 2,
+    "display": "2–0",
+    "updated_at_ms": 1792000003400
+   }
+  },
+  {
+   "at_ms": 3400,
+   "table": "score",
+   "row": {
+    "game_id": "g_dembb001",
+    "team_id": "away",
+    "points": 0,
+    "display": "2–0",
+    "updated_at_ms": 1792000003400
+   }
+  },
+  {
+   "at_ms": 9050,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000020",
+    "game_id": "g_dembb001",
+    "t_game_s": 9,
+    "sport": "basketball",
+    "type": "shot",
+    "source": "synthetic",
+    "cams": [
+     "c_demca2"
+    ],
+    "conf": 0.9,
+    "team_id": "away",
+    "payload": {
+     "shooter_track_id": "c_demca2:3",
+     "team_id": "away",
+     "release_pos_m": [
+      6.9,
+      2.1
+     ],
+     "behind_arc_p": 0.97,
+     "made": true,
+     "made_p": 0.9,
+     "attempt_points_hint": 3
+    }
+   }
+  },
+  {
+   "at_ms": 9400,
+   "table": "call",
+   "row": {
+    "schema": "trophy.call.v1",
+    "id": "01JDEMCAL00000000000000021",
+    "game_id": "g_dembb001",
+    "t_game_s": 9,
+    "rule_id": "basket",
+    "rule_version": "basketball@1",
+    "kind": "basket",
+    "outcome": "made_3",
+    "team_id": "away",
+    "points": 3,
+    "p": 0.93,
+    "p_source": "geometry",
+    "tier": "AUTO",
+    "shown": "auto",
+    "text": "Three — away (93%)",
+    "speech": "Three. away.",
+    "cue": {
+     "beep": "short",
+     "flash": "away"
+    },
+    "event_ids": [
+     "01JDEMOBS00000000000000020"
+    ],
+    "evidence": [
+     {
+      "cam_id": "c_demca2",
+      "t0_s": 7,
+      "t1_s": 10.5
+     }
+    ],
+    "status": "final",
+    "created_at_ms": 1792000009400
+   }
+  },
+  {
+   "at_ms": 9400,
+   "table": "score",
+   "row": {
+    "game_id": "g_dembb001",
+    "team_id": "home",
+    "points": 2,
+    "display": "2–3",
+    "updated_at_ms": 1792000009400
+   }
+  },
+  {
+   "at_ms": 9400,
+   "table": "score",
+   "row": {
+    "game_id": "g_dembb001",
+    "team_id": "away",
+    "points": 3,
+    "display": "2–3",
+    "updated_at_ms": 1792000009400
+   }
+  },
+  {
+   "at_ms": 15050,
+   "table": "observation",
+   "row": {
+    "schema": "trophy.event.v1",
+    "id": "01JDEMOBS00000000000000022",
+    "game_id": "g_dembb001",
+    "t_game_s": 15,
+    "sport": "basketball",
+    "type": "shot",
+    "source": "synthetic",
+    "cams": [
+     "c_demca2"
+    ],
+    "conf": 0.9,
+    "team_id": "home",
+    "payload": {
+     "shooter_track_id": "c_demca2:3",
+     "team_id": "home",
+     "release_pos_m": [
+      6.9,
+      2.1
+     ],
+     "behind_arc_p": 0.62,
+     "made": true,
+     "made_p": 0.9,
+     "attempt_points_hint": 3
+    }
+   }
+  },
+  {
+   "at_ms": 15400,
+   "table": "call",
+   "row": {
+    "schema": "trophy.call.v1",
+    "id": "01JDEMCAL00000000000000023",
+    "game_id": "g_dembb001",
+    "t_game_s": 15,
+    "rule_id": "basket",
+    "rule_version": "basketball@1",
+    "kind": "basket",
+    "outcome": "made_3",
+    "team_id": "home",
+    "points": 3,
+    "p": 0.62,
+    "p_source": "geometry",
+    "tier": "BETA",
+    "shown": "challengeable",
+    "text": "Three — home (62%)",
+    "speech": "Three. home.",
+    "cue": {
+     "beep": "short",
+     "flash": "home"
+    },
+    "event_ids": [
+     "01JDEMOBS00000000000000022"
+    ],
+    "evidence": [
+     {
+      "cam_id": "c_demca2",
+      "t0_s": 13,
+      "t1_s": 16.5
+     }
+    ],
+    "status": "final",
+    "created_at_ms": 1792000015400
+   }
+  },
+  {
+   "at_ms": 15400,
+   "table": "score",
+   "row": {
+    "game_id": "g_dembb001",
+    "team_id": "home",
+    "points": 5,
+    "display": "5–3",
+    "updated_at_ms": 1792000015400
+   }
+  },
+  {
+   "at_ms": 15400,
+   "table": "score",
+   "row": {
+    "game_id": "g_dembb001",
+    "team_id": "away",
+    "points": 3,
+    "display": "5–3",
+    "updated_at_ms": 1792000015400
+   }
+  }
+ ]
+}

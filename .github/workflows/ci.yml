@@ -1,0 +1,63 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - name: py-trophy lint + tests
+        working-directory: packages/py-trophy
+        run: |
+          uv sync --frozen
+          uv run --frozen ruff check .
+          uv run --frozen ruff format --check .
+          uv run --frozen pytest -q
+      - name: py-trophy imports on 3.12
+        working-directory: packages/py-trophy
+        run: |
+          uv venv --python 3.12 /tmp/py312
+          uv pip install --python /tmp/py312 .
+          /tmp/py312/bin/python -c "import trophy.world, trophy.framebus, trophy.contracts"
+      - name: scripts lint + fixture validation
+        run: |
+          uv run --project packages/py-trophy --frozen ruff check scripts
+          uv run --project packages/py-trophy --frozen python scripts/validate_fixtures.py
+
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+  codegen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: npm ci
+      - run: cd packages/py-trophy && uv sync --frozen
+      - name: make contracts + fixtures, then fail on any diff
+        run: |
+          node scripts/gen-contracts.mjs
+          node --experimental-strip-types packages/state-client/scripts/build-fixtures.ts
+          git diff --exit-code -- packages/contracts/gen packages/py-trophy/trophy/contracts packages/state-client/fixtures

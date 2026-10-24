@@ -1,150 +1,129 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "trophy/rulepack",
+  "$id": "https://trophy.local/contracts/rulepack.schema.json",
   "title": "RulePack",
+  "description": "rulepacks/*.yaml (Agent 3 owns rules/scoring/params/teams; Agent 2 owns field:). CEL conditions run over `ev` (the current event), `rally` and `game`.",
   "type": "object",
-  "required": [
-    "sport",
-    "family",
-    "field",
-    "scoring",
-    "rules"
-  ],
+  "required": ["sport", "family", "version", "teams", "field", "scoring", "rules"],
   "properties": {
-    "sport": {
-      "type": "string"
-    },
-    "family": {
-      "enum": [
-        "flight",
-        "possession"
-      ]
-    },
-    "version": {
-      "type": "integer",
-      "default": 1
-    },
-    "field": {
+    "sport": { "type": "string" },
+    "family": { "enum": ["flight", "possession", "resting"] },
+    "version": { "type": ["integer", "string"], "description": "Pack version; house rules use the house_rule rule_version" },
+    "name": { "type": "string" },
+    "teams": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/Team" } },
+    "params": {
       "type": "object",
-      "description": "dimensions (m), named lines, zones as polygons in court metres"
+      "description": "Pack params readable from CEL as `params.*`, e.g. edge_band_m, serve_min_toss_m (0.1524), serve_max_angle_rad (0.5236)"
     },
-    "detectors": {
+    "variants": {
       "type": "object",
-      "description": "weights per object class"
+      "additionalProperties": { "type": "object" },
+      "description": "Named param overrides, e.g. ittf_strict"
     },
-    "scoring": {
-      "type": "object",
-      "required": [
-        "template"
-      ],
-      "properties": {
-        "template": {
-          "enum": [
-            "rally",
-            "side_out",
-            "innings",
-            "cumulative",
-            "cancellation",
-            "frames"
-          ]
-        },
-        "params": {
-          "type": "object"
-        }
-      }
-    },
-    "rules": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "tier",
-          "when",
-          "check"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "tier": {
-            "enum": [
-              "AUTO",
-              "BETA",
-              "PLAYERS"
-            ]
-          },
-          "when": {
-            "type": "string",
-            "description": "CEL condition over events/state"
-          },
-          "check": {
-            "enum": [
-              "code",
-              "ensemble"
-            ]
-          },
-          "ensemble": {
-            "type": "object",
-            "description": "question + options for the background AI voters (interfaces-v1 §15)",
-            "properties": {
-              "type": {
-                "enum": [
-                  "choice",
-                  "yes_no"
-                ]
-              },
-              "question": {
-                "type": "string"
-              },
-              "options": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "outcome": {
-            "type": "string"
-          },
-          "rule_ref": {
-            "type": "string"
-          },
-          "house_rule": {
-            "type": "boolean",
-            "default": false
-          }
-        }
-      }
-    },
-    "coach": {
-      "type": "object",
-      "properties": {
-        "generator": {
-          "type": "string"
-        },
-        "flag_gap": {
-          "type": "number",
-          "default": 0.3
-        },
-        "flag_actual_max": {
-          "type": "number",
-          "default": 0.15
-        }
-      }
-    },
+    "field": { "$ref": "#/$defs/FieldTemplate" },
+    "detectors": { "type": "object", "description": "class -> weights id" },
+    "scoring": { "$ref": "#/$defs/Scoring" },
+    "rules": { "type": "array", "items": { "$ref": "#/$defs/Rule" } },
+    "coach": { "type": "object" },
     "calibration": {
       "type": "object",
+      "properties": { "T": { "type": "number", "default": 1.0 } }
+    }
+  },
+  "$defs": {
+    "Team": {
+      "title": "Team",
+      "type": "object",
+      "required": ["team_id"],
       "properties": {
-        "T": {
-          "type": "number",
-          "default": 1.0
+        "team_id": { "type": "string" },
+        "name": { "type": "string" },
+        "color": { "type": "string", "description": "#rrggbb" }
+      }
+    },
+    "Landmark": {
+      "title": "Landmark",
+      "type": "object",
+      "required": ["name", "pos_m"],
+      "properties": {
+        "name": { "type": "string" },
+        "pos_m": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 3 },
+        "prompt": { "type": "string", "description": "Tap-screen hint, e.g. \"Team A's end, left corner\"" }
+      }
+    },
+    "FieldTemplate": {
+      "title": "FieldTemplate",
+      "type": "object",
+      "required": ["frame", "landmarks"],
+      "properties": {
+        "units": { "const": "m" },
+        "frame": { "type": "string", "description": "Origin and axes in words (interfaces-v1 §3)" },
+        "dims": { "type": "object", "additionalProperties": { "type": "number" } },
+        "landmarks": { "type": "array", "items": { "$ref": "#/$defs/Landmark" }, "description": "In tap order" },
+        "lines": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 3 }
+          },
+          "description": "name -> polyline [[x,y], ...]"
+        },
+        "zones": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 3 }
+          },
+          "description": "name -> polygon [[x,y], ...]"
         }
+      }
+    },
+    "Scoring": {
+      "title": "Scoring",
+      "type": "object",
+      "required": ["template"],
+      "properties": {
+        "template": { "enum": ["rally", "side_out", "innings", "cumulative", "cancellation", "frames"] },
+        "params": {
+          "type": "object",
+          "description": "e.g. points_to_win, win_by, serves_per_turn, deuce_serves_per_turn, games_to_win"
+        }
+      }
+    },
+    "Ensemble": {
+      "title": "Ensemble",
+      "description": "Question + options for the background AI voters (§15)",
+      "type": "object",
+      "required": ["question", "options"],
+      "properties": {
+        "type": { "enum": ["choice", "yes_no"] },
+        "question": { "type": "string" },
+        "options": { "type": "array", "minItems": 2, "items": { "type": "string" } }
+      }
+    },
+    "Rule": {
+      "title": "Rule",
+      "type": "object",
+      "required": ["id", "name", "tier", "when", "check"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "tier": { "enum": ["AUTO", "BETA", "PLAYERS"], "description": "A ceiling; the gate can only lower it" },
+        "kind": {
+          "enum": ["point", "basket", "line_call", "edge_call", "violation", "foul_flag", "score_update", "info"]
+        },
+        "when": { "type": "string", "description": "CEL condition" },
+        "check": { "enum": ["code", "ensemble"] },
+        "ensemble": { "$ref": "#/$defs/Ensemble" },
+        "p": { "type": "string", "description": "CEL expression for the probability of outcome" },
+        "outcome": { "type": "string" },
+        "team": { "type": "string", "description": "CEL expression for the favoured team_id" },
+        "points": { "type": "integer" },
+        "text": { "type": "string", "description": "Display template" },
+        "speech": { "type": "string", "description": "Spoken template" },
+        "requires": { "type": "array", "items": { "type": "string" }, "description": "Event types this rule needs" },
+        "rule_ref": { "type": "string" },
+        "house_rule": { "type": "boolean", "default": false }
       }
     }
   }
