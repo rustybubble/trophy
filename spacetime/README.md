@@ -55,3 +55,25 @@ Caddy forwards only `/stdb/v1/{ping, identity, database/<db>/subscribe}` from th
 - `python spacetime/scripts/seed_demo.py --check`: every reducer through the right role, row counts and statuses, vote linking, scores, and six rejected calls (wrong role, anonymous, compiler approving, engine posting observations, engine registering a service, missing fields).
 - `TROPHY_STDB_IT=1 npx vitest run --root packages/state-client`: `SpacetimeState` receives engine and vision writes live, filters by game, and replays state to a late subscriber. Add `TROPHY_STDB_WS=wss://trophy.photo/stdb` to go through Caddy.
 - Neither runs in CI (CI has no Spacetime server); `tsc` on the module does.
+
+## Platform and Watch additions
+
+All reducers below take `{json: string}` (HTTP body `["<JSON text>"]`) and check the caller's service identity.
+
+| Role | Reducer | Payload |
+|---|---|---|
+| engine | `upsert_moment` | Full `Moment` from `state.schema.json`; same id replaces; game identity cannot change |
+| engine | `set_best_play` | `{game_id, moment_id, reasons}`; clears the previous best within this game |
+| engine | `post_commentary` | Full `Commentary`; keyed by `(moment_id, voice)` to retain both voices |
+| compiler | `update_droid_run` | Full `DroidRun` snapshot; cannot approve/reject or overwrite a final run |
+| engine | `set_droid_run_status` | `{run_id, status: approved\|rejected, error?}`; approval requires `ready`, passing results and a commit |
+| engine | `upsert_sport_module` | Full `SportModuleRow`; compiler modules require a matching approved run/commit; key `(game_id or empty, sport)` |
+
+`moment`, `commentary`, `droid_run`, and `sport_module` expose typed filter columns plus the complete contract in `json`.
+Module versions increase per scope. Handwritten modules can be registered by the engine without a compiler run.
+The compiler still needs to call these reducers; this PR supplies storage, not a new execution path for generated code.
+
+Run `npm test -w spacetime` for unit coverage. After local publishing, run
+`python spacetime/scripts/provision.py --check-platform` for real-role smoke checks.
+Use `--env-file /path/to/test.env` and `SPACETIME_ROOT=/path/to/isolated/root` for an isolated database;
+only that environment file is updated. Smoke rows are explicitly synthetic.

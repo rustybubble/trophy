@@ -202,6 +202,33 @@ class WsServerMessage(BaseModel):
     args: dict[str, Any] | None = None
 
 
+class BookmarkArgs(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    t_game_s: float | None = Field(None, ge=0.0)
+    label: str | None = Field(None, max_length=80)
+
+
+class ClipThatArgs(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    t_game_s: float | None = Field(None, ge=0.0)
+
+
+class ReviewCallArgs(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    call_id: str = Field(..., min_length=1)
+    result: Literal["confirm", "correct"]
+    replacement: Replacement | None = None
+
+
 class CtlCommand(BaseModel):
     """
     trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 §9). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (§13).
@@ -230,6 +257,9 @@ class CtlCommand(BaseModel):
         "approve_house_rule",
         "reject_house_rule",
         "ask_logged",
+        "bookmark",
+        "clip_that",
+        "review_call",
     ] = Field(..., title="CtlCmd")
     game_id: str
     t_srv_ms: float

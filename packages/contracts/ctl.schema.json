@@ -2,17 +2,33 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://trophy.local/contracts/ctl.schema.json",
   "title": "CtlCommand",
-  "description": "trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 §9). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (§13).",
+  "description": "trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 \u00a79). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (\u00a713).",
   "type": "object",
   "required": ["schema", "req_id", "cmd", "game_id", "t_srv_ms", "args"],
   "properties": {
-    "schema": { "const": "trophy.ctl.v1" },
-    "req_id": { "type": "string", "description": "ULID" },
-    "cmd": { "$ref": "#/$defs/CtlCmd" },
-    "game_id": { "type": "string" },
-    "t_srv_ms": { "type": "number" },
-    "by_cam_id": { "type": ["string", "null"], "description": "null for gateway-originated commands" },
-    "args": { "type": "object" }
+    "schema": {
+      "const": "trophy.ctl.v1"
+    },
+    "req_id": {
+      "type": "string",
+      "description": "ULID"
+    },
+    "cmd": {
+      "$ref": "#/$defs/CtlCmd"
+    },
+    "game_id": {
+      "type": "string"
+    },
+    "t_srv_ms": {
+      "type": "number"
+    },
+    "by_cam_id": {
+      "type": ["string", "null"],
+      "description": "null for gateway-originated commands"
+    },
+    "args": {
+      "type": "object"
+    }
   },
   "$defs": {
     "CtlCmd": {
@@ -33,7 +49,10 @@
         "submit_house_rule",
         "approve_house_rule",
         "reject_house_rule",
-        "ask_logged"
+        "ask_logged",
+        "bookmark",
+        "clip_that",
+        "review_call"
       ]
     },
     "TeamSpec": {
@@ -41,9 +60,15 @@
       "type": "object",
       "required": ["team_id"],
       "properties": {
-        "team_id": { "type": "string" },
-        "name": { "type": "string" },
-        "color": { "type": "string" }
+        "team_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        }
       }
     },
     "CreateGameArgs": {
@@ -51,10 +76,21 @@
       "type": "object",
       "required": ["sport", "t0_ms"],
       "properties": {
-        "sport": { "type": "string" },
-        "t0_ms": { "type": "number" },
-        "teams": { "type": "array", "items": { "$ref": "#/$defs/TeamSpec" } },
-        "params": { "type": "object" }
+        "sport": {
+          "type": "string"
+        },
+        "t0_ms": {
+          "type": "number"
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TeamSpec"
+          }
+        },
+        "params": {
+          "type": "object"
+        }
       }
     },
     "RegisterCameraArgs": {
@@ -62,10 +98,19 @@
       "type": "object",
       "required": ["cam_id", "label", "role"],
       "properties": {
-        "cam_id": { "type": "string" },
-        "label": { "type": "string" },
-        "role": { "type": "string", "description": "cam|display|judge, comma-combinable" },
-        "device": { "type": "object" }
+        "cam_id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "description": "cam|display|judge, comma-combinable"
+        },
+        "device": {
+          "type": "object"
+        }
       }
     },
     "CameraHealthArgs": {
@@ -73,13 +118,27 @@
       "type": "object",
       "required": ["cam_id", "connected"],
       "properties": {
-        "cam_id": { "type": "string" },
-        "connected": { "type": "boolean" },
-        "fps_in": { "type": "number" },
-        "w": { "type": "integer" },
-        "h": { "type": "integer" },
-        "sync_err_ms": { "type": "number" },
-        "last_seen_ms": { "type": "number" }
+        "cam_id": {
+          "type": "string"
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "fps_in": {
+          "type": "number"
+        },
+        "w": {
+          "type": "integer"
+        },
+        "h": {
+          "type": "integer"
+        },
+        "sync_err_ms": {
+          "type": "number"
+        },
+        "last_seen_ms": {
+          "type": "number"
+        }
       }
     },
     "SetCalibrationArgs": {
@@ -87,34 +146,55 @@
       "type": "object",
       "required": ["cam_id", "calibration"],
       "properties": {
-        "cam_id": { "type": "string" },
-        "calibration": { "type": "object", "description": "trophy.calibration.v1" }
+        "cam_id": {
+          "type": "string"
+        },
+        "calibration": {
+          "type": "object",
+          "description": "trophy.calibration.v1"
+        }
       }
     },
     "StartGameArgs": {
       "title": "StartGameArgs",
       "type": "object",
-      "properties": { "first_server": { "enum": ["A", "B"] } }
+      "properties": {
+        "first_server": {
+          "enum": ["A", "B"]
+        }
+      }
     },
     "SetServerArgs": {
       "title": "SetServerArgs",
       "type": "object",
       "required": ["team_id"],
-      "properties": { "team_id": { "type": "string" } }
+      "properties": {
+        "team_id": {
+          "type": "string"
+        }
+      }
     },
     "ChallengeArgs": {
       "title": "ChallengeArgs",
       "type": "object",
       "required": ["call_id"],
-      "properties": { "call_id": { "type": "string" } }
+      "properties": {
+        "call_id": {
+          "type": "string"
+        }
+      }
     },
     "Replacement": {
       "title": "Replacement",
       "type": "object",
       "required": ["outcome"],
       "properties": {
-        "outcome": { "type": "string" },
-        "team_id": { "type": "string" }
+        "outcome": {
+          "type": "string"
+        },
+        "team_id": {
+          "type": "string"
+        }
       }
     },
     "ResolveChallengeArgs": {
@@ -122,19 +202,33 @@
       "type": "object",
       "required": ["challenge_id", "result"],
       "properties": {
-        "challenge_id": { "type": "string" },
-        "result": { "enum": ["upheld", "overturned"] },
-        "replacement": { "$ref": "#/$defs/Replacement" }
+        "challenge_id": {
+          "type": "string"
+        },
+        "result": {
+          "enum": ["upheld", "overturned"]
+        },
+        "replacement": {
+          "$ref": "#/$defs/Replacement"
+        }
       }
     },
-    "EmptyArgs": { "title": "EmptyArgs", "type": "object", "description": "undo_last_call, end_period, end_game" },
+    "EmptyArgs": {
+      "title": "EmptyArgs",
+      "type": "object",
+      "description": "undo_last_call, end_period, end_game"
+    },
     "AdjustScoreArgs": {
       "title": "AdjustScoreArgs",
       "type": "object",
       "required": ["team_id", "delta"],
       "properties": {
-        "team_id": { "type": "string" },
-        "delta": { "type": "integer" }
+        "team_id": {
+          "type": "string"
+        },
+        "delta": {
+          "type": "integer"
+        }
       }
     },
     "SubmitHouseRuleArgs": {
@@ -142,8 +236,14 @@
       "type": "object",
       "required": ["text", "source"],
       "properties": {
-        "text": { "type": "string", "minLength": 1, "maxLength": 500 },
-        "source": { "enum": ["typed", "voice"] }
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "source": {
+          "enum": ["typed", "voice"]
+        }
       }
     },
     "HouseRuleVersionArgs": {
@@ -151,17 +251,30 @@
       "description": "approve_house_rule, reject_house_rule",
       "type": "object",
       "required": ["rule_version"],
-      "properties": { "rule_version": { "type": "string" } }
+      "properties": {
+        "rule_version": {
+          "type": "string"
+        }
+      }
     },
     "AskCitation": {
       "title": "AskCitation",
       "type": "object",
       "required": ["rule_id", "title", "url", "quote"],
       "properties": {
-        "rule_id": { "type": "string" },
-        "title": { "type": "string" },
-        "url": { "type": "string" },
-        "quote": { "type": "string", "description": "<= 25 words" }
+        "rule_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "quote": {
+          "type": "string",
+          "description": "<= 25 words"
+        }
       }
     },
     "AskLoggedArgs": {
@@ -169,11 +282,24 @@
       "type": "object",
       "required": ["question", "answer", "citations", "latency_ms"],
       "properties": {
-        "question": { "type": "string" },
-        "answer": { "type": "string" },
-        "citations": { "type": "array", "items": { "$ref": "#/$defs/AskCitation" } },
-        "latency_ms": { "type": "number" },
-        "moss_ms": { "type": "number" }
+        "question": {
+          "type": "string"
+        },
+        "answer": {
+          "type": "string"
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AskCitation"
+          }
+        },
+        "latency_ms": {
+          "type": "number"
+        },
+        "moss_ms": {
+          "type": "number"
+        }
       }
     },
     "WsClientMessage": {
@@ -182,18 +308,43 @@
       "type": "object",
       "required": ["type"],
       "properties": {
-        "type": { "enum": ["ping", "health", "onset", "call_ack"] },
-        "t0": { "type": "number", "description": "ping: phone send time, ms" },
-        "prev": { "$ref": "#/$defs/ClockSample" },
-        "t_phone_ms": { "type": "number" },
-        "peak": { "type": "number" },
-        "energy": { "type": "number" },
-        "call_id": { "type": "string" },
-        "fps": { "type": "number" },
-        "w": { "type": "integer" },
-        "h": { "type": "integer" },
-        "battery": { "type": "number" },
-        "thermal": { "type": "string" }
+        "type": {
+          "enum": ["ping", "health", "onset", "call_ack"]
+        },
+        "t0": {
+          "type": "number",
+          "description": "ping: phone send time, ms"
+        },
+        "prev": {
+          "$ref": "#/$defs/ClockSample"
+        },
+        "t_phone_ms": {
+          "type": "number"
+        },
+        "peak": {
+          "type": "number"
+        },
+        "energy": {
+          "type": "number"
+        },
+        "call_id": {
+          "type": "string"
+        },
+        "fps": {
+          "type": "number"
+        },
+        "w": {
+          "type": "integer"
+        },
+        "h": {
+          "type": "integer"
+        },
+        "battery": {
+          "type": "number"
+        },
+        "thermal": {
+          "type": "string"
+        }
       }
     },
     "ClockSample": {
@@ -202,10 +353,18 @@
       "type": "object",
       "required": ["t0", "t1", "t2", "t3"],
       "properties": {
-        "t0": { "type": "number" },
-        "t1": { "type": "number" },
-        "t2": { "type": "number" },
-        "t3": { "type": "number" }
+        "t0": {
+          "type": "number"
+        },
+        "t1": {
+          "type": "number"
+        },
+        "t2": {
+          "type": "number"
+        },
+        "t3": {
+          "type": "number"
+        }
       }
     },
     "WsServerMessage": {
@@ -214,15 +373,75 @@
       "type": "object",
       "required": ["type"],
       "properties": {
-        "type": { "enum": ["pong", "sync", "cmd"] },
-        "t0": { "type": "number" },
-        "t1": { "type": "number" },
-        "t2": { "type": "number" },
-        "offset_ms": { "type": "number" },
-        "sync_err_ms": { "type": "number" },
-        "cmd": { "type": "string" },
-        "args": { "type": "object" }
+        "type": {
+          "enum": ["pong", "sync", "cmd"]
+        },
+        "t0": {
+          "type": "number"
+        },
+        "t1": {
+          "type": "number"
+        },
+        "t2": {
+          "type": "number"
+        },
+        "offset_ms": {
+          "type": "number"
+        },
+        "sync_err_ms": {
+          "type": "number"
+        },
+        "cmd": {
+          "type": "string"
+        },
+        "args": {
+          "type": "object"
+        }
       }
+    },
+    "BookmarkArgs": {
+      "title": "BookmarkArgs",
+      "type": "object",
+      "properties": {
+        "t_game_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 80
+        }
+      },
+      "additionalProperties": false
+    },
+    "ClipThatArgs": {
+      "title": "ClipThatArgs",
+      "type": "object",
+      "properties": {
+        "t_game_s": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "ReviewCallArgs": {
+      "title": "ReviewCallArgs",
+      "type": "object",
+      "required": ["call_id", "result"],
+      "properties": {
+        "call_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "enum": ["confirm", "correct"]
+        },
+        "replacement": {
+          "$ref": "#/$defs/Replacement"
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

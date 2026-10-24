@@ -20,7 +20,10 @@ export type CtlCmd =
   | "submit_house_rule"
   | "approve_house_rule"
   | "reject_house_rule"
-  | "ask_logged";
+  | "ask_logged"
+  | "bookmark"
+  | "clip_that"
+  | "review_call";
 
 /**
  * trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 §9). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (§13).
@@ -240,4 +243,28 @@ export interface WsServerMessage {
   sync_err_ms?: number;
   cmd?: string;
   args?: {};
+}
+/**
+ * This interface was referenced by `CtlCommand`'s JSON-Schema
+ * via the `definition` "BookmarkArgs".
+ */
+export interface BookmarkArgs {
+  t_game_s?: number;
+  label?: string;
+}
+/**
+ * This interface was referenced by `CtlCommand`'s JSON-Schema
+ * via the `definition` "ClipThatArgs".
+ */
+export interface ClipThatArgs {
+  t_game_s?: number;
+}
+/**
+ * This interface was referenced by `CtlCommand`'s JSON-Schema
+ * via the `definition` "ReviewCallArgs".
+ */
+export interface ReviewCallArgs {
+  call_id: string;
+  result: "confirm" | "correct";
+  replacement?: Replacement;
 }

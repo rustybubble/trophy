@@ -23,8 +23,12 @@ from .ctl import (
     WsClientMessage,
     ClockSample,
     WsServerMessage,
+    BookmarkArgs,
+    ClipThatArgs,
+    ReviewCallArgs,
 )
 from .decide import Decide, DecideRequest, Vote, DecideResult
+from .droidrun import DroidRun, DroidRunTrigger, DroidRunStep, DroidRunTest, DroidRunCallChange, DroidRunResults
 from .event import (
     Event,
     PosM,
@@ -47,6 +51,7 @@ from .event import (
 )
 from .frame import FrameMeta
 from .rulepack import RulePack, Team, Landmark, FieldTemplate, Scoring, Ensemble, Rule
+from .sportmodule import SportConfig, SportModuleRow
 from .state import (
     StateTables,
     GameTeam,
@@ -64,6 +69,8 @@ from .state import (
     TrackSample,
     Citation,
     Ask,
+    Moment,
+    Commentary,
 )
 from .tracks import BallTrackSample, PlayerBox, PlayersTrackSample
 
@@ -76,6 +83,7 @@ __all__ = [
     "AudioOnsetPayload",
     "BallDeadPayload",
     "BallTrackSample",
+    "BookmarkArgs",
     "BounceMark",
     "BouncePayload",
     "Calibration",
@@ -87,7 +95,9 @@ __all__ = [
     "Challenge",
     "ChallengeArgs",
     "Citation",
+    "ClipThatArgs",
     "ClockSample",
+    "Commentary",
     "ContactPayload",
     "CreateGameArgs",
     "CtlCommand",
@@ -95,6 +105,12 @@ __all__ = [
     "Decide",
     "DecideRequest",
     "DecideResult",
+    "DroidRun",
+    "DroidRunCallChange",
+    "DroidRunResults",
+    "DroidRunStep",
+    "DroidRunTest",
+    "DroidRunTrigger",
     "EdgeProbs",
     "EmptyArgs",
     "Ensemble",
@@ -114,6 +130,7 @@ __all__ = [
     "ImageSize",
     "Landmark",
     "LineCrossPayload",
+    "Moment",
     "NetPayload",
     "Overlay",
     "PersonFeetPayload",
@@ -126,6 +143,7 @@ __all__ = [
     "RegisterCameraArgs",
     "Replacement",
     "ResolveChallengeArgs",
+    "ReviewCallArgs",
     "Rule",
     "RulePack",
     "Score",
@@ -134,6 +152,8 @@ __all__ = [
     "SetCalibrationArgs",
     "SetServerArgs",
     "ShotPayload",
+    "SportConfig",
+    "SportModuleRow",
     "StartGameArgs",
     "StateTables",
     "SubmitHouseRuleArgs",

@@ -174,6 +174,60 @@ const ask = table(
   },
 );
 
+const moment = table(
+  { name: "moment", public: true },
+  {
+    moment_id: t.string().primaryKey(),
+    game_id: t.string().index(),
+    kind: t.string(),
+    t_game_s: t.f64(),
+    t_start_s: t.f64(),
+    t_end_s: t.f64(),
+    label: t.string(),
+    highlight_score: t.f64(),
+    is_best_play: t.bool(),
+    json: t.string(),
+  },
+);
+const commentary = table(
+  { name: "commentary", public: true },
+  {
+    commentary_key: t.string().primaryKey(),
+    moment_id: t.string().index(),
+    game_id: t.string().index(),
+    voice: t.string(),
+    text: t.string(),
+    validated: t.bool(),
+    created_at_ms: t.f64(),
+    json: t.string(),
+  },
+);
+const droid_run = table(
+  { name: "droid_run", public: true },
+  {
+    run_id: t.string().primaryKey(),
+    game_id: t.string().index(),
+    sport: t.string().index(),
+    kind: t.string(),
+    status: t.string().index(),
+    updated_at_ms: t.f64(),
+    json: t.string(),
+  },
+);
+const sport_module = table(
+  { name: "sport_module", public: true },
+  {
+    module_key: t.string().primaryKey(),
+    sport: t.string().index(),
+    game_id: t.string().index(),
+    version: t.u32(),
+    run_id: t.string(),
+    path: t.string(),
+    approved_at_ms: t.f64(),
+    json: t.string(),
+  },
+);
+
 const spacetimedb = schema({
   owner,
   service,
@@ -188,6 +242,10 @@ const spacetimedb = schema({
   observation,
   track_sample,
   ask,
+  moment,
+  commentary,
+  droid_run,
+  sport_module,
 });
 export default spacetimedb;
 
@@ -634,4 +692,222 @@ export const prune_track_samples = spacetimedb.reducer({ json: t.string() }, (ct
   requireRole(ctx, "engine");
   const o = parseObj(json);
   pruneCam(ctx, str(o, "cam_id"), num(o, "before_t_game_s"));
+});
+
+// ---------------------------------------------------------------- post-game metadata and compiler runs
+function oneOf(o: Obj, key: string, values: readonly string[]): string {
+  const v = str(o, key);
+  if (!values.includes(v)) throw new SenderError(`${key} must be ${values.join("|")}`);
+  return v;
+}
+function strings(o: Obj, key: string): string[] {
+  const v = o[key];
+  if (!Array.isArray(v) || v.some((x) => typeof x !== "string")) throw new SenderError(`${key} must be a string array`);
+  return v as string[];
+}
+function boolean(o: Obj, key: string): boolean {
+  if (typeof o[key] !== "boolean") throw new SenderError(`${key} must be a boolean`);
+  return o[key] as boolean;
+}
+function record(o: Obj, key: string): Obj {
+  const v = o[key];
+  if (!v || typeof v !== "object" || Array.isArray(v)) throw new SenderError(`${key} must be an object`);
+  return v as Obj;
+}
+function integer(o: Obj, key: string, min: number): number {
+  const v = num(o, key);
+  if (!Number.isInteger(v) || v < min) throw new SenderError(`${key} must be an integer >= ${min}`);
+  return v;
+}
+function writeMoment(ctx: Ctx, m: Obj): void {
+  const kind = oneOf(m, "kind", [
+    "point",
+    "serve_fault",
+    "edge",
+    "challenge",
+    "basket",
+    "bookmark",
+    "house_rule",
+    "rally",
+  ]);
+  const t_start_s = num(m, "t_start_s"),
+    t_end_s = num(m, "t_end_s");
+  if (t_end_s < t_start_s) throw new SenderError("moment ends before it starts");
+  const highlight_score = num(m, "highlight_score");
+  if (highlight_score < 0 || highlight_score > 1) throw new SenderError("highlight_score outside [0,1]");
+  strings(m, "tags");
+  strings(m, "reasons");
+  str(m, "score_after");
+  num(m, "thumb_t_s");
+  const label = str(m, "label");
+  if (label.length > 80) throw new SenderError("label exceeds 80 characters");
+  const row = {
+    moment_id: str(m, "moment_id"),
+    game_id: str(m, "game_id"),
+    kind,
+    t_game_s: num(m, "t_game_s"),
+    t_start_s,
+    t_end_s,
+    label,
+    highlight_score,
+    is_best_play: boolean(m, "is_best_play"),
+    json: JSON.stringify(m),
+  };
+  const old = ctx.db.moment.moment_id.find(row.moment_id);
+  if (old && old.game_id !== row.game_id) throw new SenderError("moment game_id is immutable");
+  if (old) ctx.db.moment.moment_id.update(row);
+  else ctx.db.moment.insert(row);
+}
+/** Engine. Full Moment, idempotently replaced. */
+export const upsert_moment = spacetimedb.reducer({ json: t.string() }, (ctx, { json }) => {
+  requireRole(ctx, "engine");
+  const m = parseObj(json);
+  // Preserve a single best play even when a caller re-posts an old snapshot.
+  if (m.is_best_play === true)
+    for (const r of [...ctx.db.moment.game_id.filter(str(m, "game_id"))]) {
+      if (r.is_best_play && r.moment_id !== m.moment_id) writeMoment(ctx, { ...obj(r.json), is_best_play: false });
+    }
+  writeMoment(ctx, m);
+});
+/** Engine. {game_id, moment_id, reasons}; target must belong to this game. */
+export const set_best_play = spacetimedb.reducer({ json: t.string() }, (ctx, { json }) => {
+  requireRole(ctx, "engine");
+  const o = parseObj(json),
+    game_id = str(o, "game_id"),
+    moment_id = str(o, "moment_id");
+  const reasons = strings(o, "reasons"),
+    target = ctx.db.moment.moment_id.find(moment_id);
+  if (!target || target.game_id !== game_id) throw new SenderError("no such moment in this game");
+  for (const r of [...ctx.db.moment.game_id.filter(game_id)]) {
+    if (r.is_best_play || r.moment_id === moment_id)
+      writeMoment(ctx, {
+        ...obj(r.json),
+        is_best_play: r.moment_id === moment_id,
+        ...(r.moment_id === moment_id ? { reasons } : {}),
+      });
+  }
+});
+/** Engine. Full Commentary; one row per (moment_id, voice), so both voices survive. */
+export const post_commentary = spacetimedb.reducer({ json: t.string() }, (ctx, { json }) => {
+  requireRole(ctx, "engine");
+  const c = parseObj(json),
+    moment_id = str(c, "moment_id"),
+    game_id = str(c, "game_id");
+  const m = ctx.db.moment.moment_id.find(moment_id);
+  if (!m || m.game_id !== game_id) throw new SenderError("no such moment in this game");
+  const voice = oneOf(c, "voice", ["pbp", "colour"]);
+  record(c, "facts");
+  oneOf(c, "source", ["claude", "template"]);
+  const row = {
+    commentary_key: JSON.stringify([moment_id, voice]),
+    moment_id,
+    game_id,
+    voice,
+    text: str(c, "text"),
+    validated: boolean(c, "validated"),
+    created_at_ms: num(c, "created_at_ms"),
+    json: JSON.stringify(c),
+  };
+  if (ctx.db.commentary.commentary_key.find(row.commentary_key)) ctx.db.commentary.commentary_key.update(row);
+  else ctx.db.commentary.insert(row);
+});
+function writeDroidRun(ctx: Ctx, o: Obj): void {
+  oneOf(o, "schema", ["trophy.droid_run.v1"]);
+  oneOf(o, "backend", ["droid", "claude-fallback"]);
+  record(o, "trigger");
+  str(o, "model");
+  str(o, "plan_md");
+  str(o, "diff");
+  if (!Array.isArray(o.steps)) throw new SenderError("steps must be an array");
+  integer(o, "attempt", 0);
+  integer(o, "max_attempts", 1);
+  num(o, "started_at_ms");
+  if (!("results" in o) || (o.results !== null && (typeof o.results !== "object" || Array.isArray(o.results)))) {
+    throw new SenderError("results must be an object or null");
+  }
+  const row = {
+    run_id: str(o, "run_id"),
+    game_id: str(o, "game_id", false),
+    sport: str(o, "sport"),
+    kind: oneOf(o, "kind", ["compile", "house_rule", "retune"]),
+    status: oneOf(o, "status", ["queued", "running", "ready", "failed", "approved", "rejected"]),
+    updated_at_ms: num(o, "updated_at_ms"),
+    json: JSON.stringify(o),
+  };
+  if (ctx.db.droid_run.run_id.find(row.run_id)) ctx.db.droid_run.run_id.update(row);
+  else ctx.db.droid_run.insert(row);
+}
+/** Compiler. Full DroidRun snapshot, never approval/rejection. */
+export const update_droid_run = spacetimedb.reducer({ json: t.string() }, (ctx, { json }) => {
+  requireRole(ctx, "compiler");
+  const o = parseObj(json);
+  oneOf(o, "status", ["queued", "running", "ready", "failed"]);
+  const old = ctx.db.droid_run.run_id.find(str(o, "run_id"));
+  if (old) {
+    if (["approved", "rejected"].includes(old.status)) throw new SenderError("run is already final");
+    if (old.sport !== str(o, "sport") || old.game_id !== str(o, "game_id", false) || old.kind !== str(o, "kind")) {
+      throw new SenderError("run identity is immutable");
+    }
+    if (num(o, "updated_at_ms") < old.updated_at_ms) throw new SenderError("stale run snapshot");
+  }
+  writeDroidRun(ctx, o);
+});
+/** Engine. {run_id, status: approved|rejected, error?}; approval requires a ready, passing run. */
+export const set_droid_run_status = spacetimedb.reducer({ json: t.string() }, (ctx, { json }) => {
+  requireRole(ctx, "engine");
+  const o = parseObj(json),
+    status = oneOf(o, "status", ["approved", "rejected"]);
+  const old = ctx.db.droid_run.run_id.find(str(o, "run_id"));
+  if (!old) throw new SenderError("no such run");
+  if (old.status === status) return;
+  if (["approved", "rejected"].includes(old.status)) throw new SenderError("run is already final");
+  const cur = obj(old.json);
+  if (
+    status === "approved" &&
+    (old.status !== "ready" || record(cur, "results").passed !== true || !str(cur, "commit", false))
+  ) {
+    throw new SenderError("approval requires ready status, passing results and a commit");
+  }
+  writeDroidRun(ctx, {
+    ...cur,
+    status,
+    ...(o.error !== undefined ? { error: str(o, "error") } : {}),
+    updated_at_ms: Number(ctx.timestamp.toMillis()),
+  });
+});
+/** Engine. Full SportModuleRow; per-game modules don't overwrite a base module. */
+export const upsert_sport_module = spacetimedb.reducer({ json: t.string() }, (ctx, { json }) => {
+  requireRole(ctx, "engine");
+  const o = parseObj(json),
+    sport = str(o, "sport"),
+    game_id = str(o, "game_id", false);
+  const backend = oneOf(o, "backend", ["droid", "claude-fallback", "handwritten"]);
+  const run_id = str(o, "run_id"),
+    version = integer(o, "version", 1);
+  if (backend !== "handwritten") {
+    const run = ctx.db.droid_run.run_id.find(run_id);
+    if (
+      !run ||
+      run.status !== "approved" ||
+      run.sport !== sport ||
+      run.game_id !== game_id ||
+      str(obj(run.json), "commit") !== str(o, "commit")
+    ) {
+      throw new SenderError("module requires a matching approved run and commit");
+    }
+  }
+  const row = {
+    module_key: JSON.stringify([game_id, sport]),
+    sport,
+    game_id,
+    version,
+    run_id,
+    path: str(o, "path"),
+    approved_at_ms: num(o, "approved_at_ms"),
+    json: JSON.stringify(o),
+  };
+  const old = ctx.db.sport_module.module_key.find(row.module_key);
+  if (old && version <= old.version && old.json !== row.json) throw new SenderError("module version must increase");
+  if (old) ctx.db.sport_module.module_key.update(row);
+  else ctx.db.sport_module.insert(row);
 });

@@ -127,3 +127,19 @@ def test_ctl_roundtrip_and_roles(r):
     assert role_allows("cam,judge", "approve_house_rule")
     assert not role_allows("judge", "create_game")  # gateway only
     assert not role_allows("judge", "ask_logged")
+
+
+def test_watch_commands_survive_live_ctl_parsing():
+    from trophy.streams import make_ctl, parse_ctl, role_allows
+
+    for cmd, args in [
+        ("bookmark", {"t_game_s": 1}),
+        ("clip_that", {}),
+        ("review_call", {"call_id": "call1", "result": "confirm"}),
+    ]:
+        wire = make_ctl(cmd, "g1", args).model_dump_json(by_alias=True)
+        assert parse_ctl(wire).cmd == cmd
+        assert role_allows("judge", cmd)
+    assert role_allows("display", "bookmark")
+    assert role_allows("cam", "clip_that")
+    assert not role_allows("display", "review_call")
