@@ -23,7 +23,10 @@ P0, 2026-10-24. The API key stays on the server (`.env`); clients only ever get 
 
 Through `https://trophy.photo/spike/voice/` in **desktop Firefox 158 on Windows** (single runs, posted back by the page): TTS first chunk **110 ms** after the request (574 ms after the tap, including the token mint). Push-to-talk: the first try returned an empty transcript (the button was released during the mic permission prompt; fixed in the page); the second try transcribed "Hello." with `turn.end` **591 ms** after release.
 
-**Not yet measured: the iPhone** (TTS playback after a tap, and the push-to-talk mic → Ink-2). That needs an HTTPS origin.
+**iPhone (iOS 18.7, Firefox for iOS 158, i.e. WebKit), on campus Wi-Fi through `https://trophy.photo/spike/voice/` → the Windows PC** (single runs, 2026-10-24 ~19:04 UTC):
+- **TTS:** played; 2.64 s of audio at 48 kHz; first chunk **112 ms** after the request, **234 ms after the tap** (token already cached).
+- **Ink-2 push-to-talk:** "This is on" (`turn.end` 82 ms after release), then "This is on my phone." (`turn.end` 2 ms after release; the turn detector had already ended the turn while the button was held).
+- Not yet run in Safari itself (same WebKit engine, but its own permission and audio policies).
 
 ## Run it
 ```bash

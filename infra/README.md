@@ -10,7 +10,7 @@
     python infra/dns/porkbun_set_ip.py   # A trophy.photo -> this machine's LAN IP (rerun when DHCP changes it)
     python infra/caddy/run.py            # Caddy with only TROPHY_DOMAIN + PORKBUN_* from .env
     ```
-  - **Status (2026-10-24):** the apex A record points at the PC (10.31.241.146 on campus Wi-Fi); the Let's Encrypt certificate was obtained by DNS-01 in about 9 s; Windows Firewall allows `caddy.exe` inbound (Public profile); campus DNS does not filter private-IP answers (tested with a temporary record). Phones on the same Wi-Fi are **not tested yet** (client isolation unknown).
+  - **Status (2026-10-24):** the apex A record points at the PC (10.31.241.146 on campus Wi-Fi); the Let's Encrypt certificate was obtained by DNS-01 in about 9 s; Windows Firewall allows `caddy.exe` inbound (Public profile); campus DNS does not filter private-IP answers (tested with a temporary record). An iPhone on the same campus Wi-Fi loaded it and ran the voice test, so there's no client isolation on this network.
   - Watch for router **DNS-rebind protection** (it blocks public names that resolve to private IPs) and **client isolation** on campus/guest Wi-Fi (phones can't reach the laptop). A travel router avoids both. On Windows, inbound 443 must also be allowed in the firewall, which only the user can change.
 - **Vultr (GPU fallback, MLH track):** only if the ball tracker can't reach 25 fps on the Mac. Flight then runs on a Vultr GPU instance, reading the same Redis frames over a private tunnel. **The user creates the account and approves the instance and its hourly cost.** Stop it when idle.
 - `docker-compose.yml` is a Linux deployment sketch for later. It isn't used this weekend.
