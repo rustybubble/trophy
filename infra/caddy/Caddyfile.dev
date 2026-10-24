@@ -20,9 +20,15 @@
 	handle /api/* {
 		reverse_proxy 127.0.0.1:8000
 	}
-	# SpacetimeDB (no TLS of its own); HTTP + WebSocket subscriptions
-	handle_path /stdb/* {
+	# SpacetimeDB (no TLS of its own). Browsers only need the subscription WebSocket (+ identity, ping);
+	# reducer calls, SQL and publishing stay on 127.0.0.1:3000 for backend services, so the LAN can't reach them.
+	@stdb_client path_regexp ^/stdb/v1/(ping|identity(/websocket-token)?|database/[A-Za-z0-9_-]+/subscribe)$
+	handle @stdb_client {
+		uri strip_prefix /stdb
 		reverse_proxy 127.0.0.1:3000
+	}
+	handle /stdb/* {
+		respond "forbidden" 403
 	}
 	# PWA (Vite dev server, base "/cam/")
 	handle /cam/* {

@@ -1,0 +1,13 @@
+{
+  "name": "@trophy/spacetime-module",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The Trophy SpacetimeDB module (interfaces-v1 §11): shared world state + game state. TypeScript, SpacetimeDB 2.13.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "spacetimedb": "2.13.0"
+  }
+}

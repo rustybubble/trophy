@@ -16,6 +16,19 @@ class GameTeam(BaseModel):
     color: str | None = None
 
 
+class Params(BaseModel):
+    """
+    Pack params for this game (e.g. points_to_win). Seeded/demo games set synthetic = true and a label the UI must show.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    synthetic: bool | None = None
+    label: str | None = None
+
+
 class Game(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -30,7 +43,10 @@ class Game(BaseModel):
     rally_no: int
     server_team_id: str | None = None
     teams: list[GameTeam]
-    params: dict[str, Any]
+    params: Params = Field(
+        ...,
+        description="Pack params for this game (e.g. points_to_win). Seeded/demo games set synthetic = true and a label the UI must show.",
+    )
     created_at_ms: float
 
 

@@ -65,6 +65,7 @@ describe("MockState", () => {
   });
 
   it("rejects unimplemented backends clearly", () => {
-    expect(() => createState("spacetime")).toThrow(/not implemented yet/);
+    expect(() => createState("ws")).toThrow(/not implemented yet/);
+    expect(() => createState("spacetime")).toThrow(/needs opts.uri/);
   });
 });

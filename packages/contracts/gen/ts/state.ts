@@ -39,7 +39,14 @@ export interface Game {
   rally_no: number;
   server_team_id?: string | null;
   teams: GameTeam[];
-  params: {};
+  /**
+   * Pack params for this game (e.g. points_to_win). Seeded/demo games set synthetic = true and a label the UI must show.
+   */
+  params: {
+    synthetic?: boolean;
+    label?: string;
+    [k: string]: unknown;
+  };
   created_at_ms: number;
 }
 /**
