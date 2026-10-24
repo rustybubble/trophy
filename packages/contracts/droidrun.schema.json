@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trophy.local/contracts/droidrun.schema.json",
+  "title": "DroidRun",
+  "description": "trophy.droid_run.v1: one Factory Droid compiler run (services/compiler), streamed live so the dashboard renders the plan, steps, diff and test table. Proposed Spacetime table `droid_run` keyed by run_id (Agent 1 adds the reducers update_droid_run / set_droid_run_status); until then house-rule runs are mirrored into house_rule via update_house_rule_progress.",
+  "type": "object",
+  "required": ["schema", "run_id", "sport", "kind", "trigger", "status", "backend", "model", "attempt", "max_attempts", "plan_md", "steps", "diff", "results", "started_at_ms", "updated_at_ms"],
+  "properties": {
+    "schema": { "const": "trophy.droid_run.v1" },
+    "run_id": { "type": "string", "description": "ULID" },
+    "game_id": { "type": ["string", "null"] },
+    "sport": { "type": "string", "description": "The module being produced or edited" },
+    "base_sport": { "type": ["string", "null"], "description": "The reference module a compile derives from" },
+    "kind": { "enum": ["compile", "house_rule", "retune"] },
+    "trigger": { "$ref": "#/$defs/DroidRunTrigger" },
+    "status": { "$ref": "#/$defs/DroidRunStatus" },
+    "backend": { "enum": ["droid", "claude-fallback"] },
+    "model": { "type": "string" },
+    "attempt": { "type": "integer", "minimum": 0 },
+    "max_attempts": { "type": "integer", "minimum": 1 },
+    "plan_md": { "type": "string" },
+    "steps": { "type": "array", "items": { "$ref": "#/$defs/DroidRunStep" } },
+    "diff": { "type": "string", "description": "Unified diff of the allowlisted files vs the sandbox base commit" },
+    "results": { "anyOf": [{ "$ref": "#/$defs/DroidRunResults" }, { "type": "null" }] },
+    "allowlist": { "type": "array", "items": { "type": "string" }, "description": "Paths the Droid may edit in the sandbox" },
+    "blocked": { "type": "array", "items": { "type": "string" }, "description": "Tool calls the runner refused (path or command)" },
+    "workspace": { "type": "string", "description": "Sandbox directory (local path, kept as the run artifact)" },
+    "commit": { "type": ["string", "null"], "description": "Sandbox git commit of the final module" },
+    "module_version": { "type": ["integer", "null"] },
+    "error": { "type": ["string", "null"] },
+    "started_at_ms": { "type": "number" },
+    "updated_at_ms": { "type": "number" },
+    "finished_at_ms": { "type": ["number", "null"] },
+    "duration_ms": { "type": ["number", "null"] },
+    "gate_ms": { "type": "array", "items": { "type": "number" }, "description": "replay_test wall time per attempt" },
+    "token_usage": { "type": ["object", "null"], "properties": { "input": { "type": "integer" }, "output": { "type": "integer" } } }
+  },
+  "$defs": {
+    "DroidRunStatus": { "title": "DroidRunStatus", "enum": ["queued", "running", "ready", "failed", "approved", "rejected"] },
+    "DroidRunTrigger": {
+      "title": "DroidRunTrigger",
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "source": { "enum": ["cli", "house_rule", "session", "health_stat"] },
+        "rule_version": { "type": "string", "description": "house_rule.rule_version when source = house_rule" },
+        "text": { "type": "string", "description": "The house rule, or the retune reason" },
+        "scene": { "type": "string", "description": "Path of the scene descriptor used" },
+        "samples": { "type": "array", "items": { "type": "string" } },
+        "metric": { "type": "string" },
+        "value": { "type": "number" },
+        "threshold": { "type": "number" }
+      }
+    },
+    "DroidRunStep": {
+      "title": "DroidRunStep",
+      "type": "object",
+      "required": ["t_ms", "kind", "text"],
+      "properties": {
+        "t_ms": { "type": "number", "description": "ms since the run started" },
+        "kind": { "enum": ["plan", "message", "tool", "edit", "test", "repair", "blocked", "error"] },
+        "text": { "type": "string" },
+        "tool": { "type": "string" },
+        "path": { "type": "string" },
+        "attempt": { "type": "integer" }
+      }
+    },
+    "DroidRunTest": {
+      "title": "DroidRunTest",
+      "type": "object",
+      "required": ["name", "pass"],
+      "properties": {
+        "name": { "type": "string" },
+        "before": { "type": "string", "description": "Value with the baseline module (empty when there is none)" },
+        "after": { "type": "string", "description": "Value with the candidate module" },
+        "pass": { "type": "boolean" },
+        "detail": { "type": "string" }
+      }
+    },
+    "DroidRunCallChange": {
+      "title": "DroidRunCallChange",
+      "type": "object",
+      "required": ["rally_no", "before", "after"],
+      "properties": { "rally_no": { "type": "integer" }, "call_id": { "type": "string" }, "before": { "type": "string" }, "after": { "type": "string" } }
+    },
+    "DroidRunResults": {
+      "title": "DroidRunResults",
+      "description": "replay_test output (also written as JSON in the sandbox at .trophy/results.json)",
+      "type": "object",
+      "required": ["passed", "tests", "calls_changed", "engine", "summary"],
+      "properties": {
+        "passed": { "type": "boolean" },
+        "tests": { "type": "array", "items": { "$ref": "#/$defs/DroidRunTest" } },
+        "calls_changed": { "type": "array", "items": { "$ref": "#/$defs/DroidRunCallChange" }, "description": "Rallies whose call changes between baseline and candidate; filled once the rule engine replays calls (stage 2), empty before" },
+        "engine": { "type": "string", "description": "What was replayed, e.g. 'events-only' or 'events+rules'" },
+        "summary": { "type": "string" },
+        "events": { "type": "object", "description": "Per-sample counts: {sample: {bounce, net, ball_dead, contact}}" },
+        "duration_ms": { "type": "number" }
+      }
+    }
+  }
+}

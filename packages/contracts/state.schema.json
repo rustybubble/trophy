@@ -125,7 +125,7 @@
       "required": ["t_ms", "kind", "text"],
       "properties": {
         "t_ms": { "type": "number" },
-        "kind": { "enum": ["plan", "edit", "test", "repair", "message", "error"] },
+        "kind": { "enum": ["plan", "edit", "test", "repair", "message", "error", "tool", "blocked"] },
         "text": { "type": "string" }
       }
     },

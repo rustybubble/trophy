@@ -121,7 +121,7 @@ class HouseRuleStep(BaseModel):
         populate_by_name=True,
     )
     t_ms: float
-    kind: Literal["plan", "edit", "test", "repair", "message", "error"]
+    kind: Literal["plan", "edit", "test", "repair", "message", "error", "tool", "blocked"]
     text: str
 
 

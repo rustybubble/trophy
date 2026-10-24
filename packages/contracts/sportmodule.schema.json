@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trophy.local/contracts/sportmodule.schema.json",
+  "title": "SportConfig",
+  "description": "sports/<sport>/config.yaml: detector parameters for the sport module's events.py (the Factory Droid's unit of work, with events.py and rules.yaml). Metres, seconds, pixels. Agent 3 owns the shape; Agent 2's detectors read it.",
+  "type": "object",
+  "required": [
+    "sport",
+    "version",
+    "court",
+    "ball",
+    "capture",
+    "bounce",
+    "dead"
+  ],
+  "properties": {
+    "sport": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "court": {
+      "type": "object",
+      "required": [
+        "template",
+        "length_m",
+        "width_m",
+        "plane_z_m",
+        "net_x_m"
+      ],
+      "properties": {
+        "template": {
+          "type": "string",
+          "description": "Court template id (field.frame in rules.yaml describes the axes)"
+        },
+        "length_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "width_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "plane_z_m": {
+          "type": "number",
+          "description": "z of the play surface in the field frame (0 for a table top or the ground)"
+        },
+        "net_x_m": {
+          "type": "number",
+          "description": "The net plane x = net_x_m"
+        },
+        "net_height_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "floor_z_m": {
+          "type": "number",
+          "description": "z of the floor relative to the play surface (negative for a table)"
+        },
+        "surface": {
+          "enum": [
+            "table",
+            "court"
+          ],
+          "default": "table",
+          "description": "What a bounce on the play plane is called in bounce.payload.surface"
+        }
+      }
+    },
+    "ball": {
+      "type": "object",
+      "required": [
+        "diameter_m",
+        "radius_px"
+      ],
+      "properties": {
+        "diameter_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "colour": {
+          "type": "string"
+        },
+        "hsv_lo": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "hsv_hi": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "radius_px": {
+          "type": "object",
+          "required": [
+            "min",
+            "max"
+          ],
+          "properties": {
+            "min": {
+              "type": "number",
+              "minimum": 0
+            },
+            "max": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "required": [
+        "fps",
+        "min_conf"
+      ],
+      "properties": {
+        "fps": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "min_conf": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Ball samples below this confidence are ignored"
+        }
+      }
+    },
+    "bounce": {
+      "type": "object",
+      "required": [
+        "min_track_len",
+        "min_vy_px_s",
+        "plane_margin_m",
+        "edge_band_m",
+        "sigma_m",
+        "merge_window_s"
+      ],
+      "properties": {
+        "min_track_len": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Samples required on each side of the apex"
+        },
+        "min_vy_px_s": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Minimum |vertical pixel velocity| before and after the flip"
+        },
+        "plane_margin_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "A flip mapped within court + margin is a surface bounce, else a floor bounce"
+        },
+        "edge_band_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Edge probabilities are set within this distance of a line"
+        },
+        "sigma_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "1-sigma position uncertainty of a bounce from one trusted camera"
+        },
+        "merge_window_s": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Bounces from different cameras within this window are the same event (inverse-variance merge)"
+        }
+      }
+    },
+    "net": {
+      "type": "object",
+      "properties": {
+        "window_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "|x - net_x_m| within which a reversal counts as a net"
+        }
+      }
+    },
+    "dead": {
+      "type": "object",
+      "required": [
+        "gap_s"
+      ],
+      "properties": {
+        "gap_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "No ball samples for this long after the last one -> ball_dead"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "SportModuleRow": {
+      "title": "SportModuleRow",
+      "description": "Spacetime `sport_module` row (requested from Agent 1): the approved module the perception worker hot-loads.",
+      "type": "object",
+      "required": [
+        "sport",
+        "version",
+        "backend",
+        "run_id",
+        "path",
+        "approved_at_ms"
+      ],
+      "properties": {
+        "sport": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "backend": {
+          "enum": [
+            "droid",
+            "claude-fallback",
+            "handwritten"
+          ]
+        },
+        "run_id": {
+          "type": "string",
+          "description": "The DroidRun that produced it; 'handwritten' modules use the git commit"
+        },
+        "path": {
+          "type": "string",
+          "description": "Directory holding config.yaml, events.py, rules.yaml"
+        },
+        "commit": {
+          "type": "string",
+          "description": "Git commit of the module (in the run workspace or the repo)"
+        },
+        "game_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Set for a house rule (per game); null for a base module"
+        },
+        "approved_at_ms": {
+          "type": "number"
+        },
+        "approved_by": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

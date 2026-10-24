@@ -159,7 +159,7 @@ export interface HouseRule {
  */
 export interface HouseRuleStep {
   t_ms: number;
-  kind: "plan" | "edit" | "test" | "repair" | "message" | "error";
+  kind: "plan" | "edit" | "test" | "repair" | "message" | "error" | "tool" | "blocked";
   text: string;
 }
 /**

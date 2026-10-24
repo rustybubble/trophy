@@ -26,6 +26,14 @@ jobs:
           uv run --frozen ruff check .
           uv run --frozen ruff format --check .
           uv run --frozen pytest -q
+      - name: engine lint + tests (sport modules, replay_test gate, synthetic fixtures)
+        working-directory: services/engine
+        run: |
+          uv sync --frozen
+          uv run --frozen ruff check . ../../sports
+          uv run --frozen ruff format --check .
+          uv run --frozen pytest -q
+          uv run --frozen replay-test --module ../../sports/table_tennis --samples ../../evals/fixtures/synthetic/table_tennis --quiet
       - name: py-trophy imports on 3.12
         working-directory: packages/py-trophy
         run: |
@@ -45,9 +53,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - name: engine venv for the compiler's run-loop tests (scripted agent + the real replay_test gate; no Factory key needed)
+        working-directory: services/engine
+        run: uv sync --frozen
       - run: npm test
       - run: npm run build -w @trophy/pwa
 

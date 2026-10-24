@@ -25,6 +25,7 @@ from .ctl import (
     WsServerMessage,
 )
 from .decide import Decide, DecideRequest, Vote, DecideResult
+from .droidrun import DroidRun, DroidRunTrigger, DroidRunStep, DroidRunTest, DroidRunCallChange, DroidRunResults
 from .event import (
     Event,
     PosM,
@@ -47,6 +48,8 @@ from .event import (
 )
 from .frame import FrameMeta
 from .rulepack import RulePack, Team, Landmark, FieldTemplate, Scoring, Ensemble, Rule
+from .scene import SceneDescriptor, SceneCamera, SceneCourt, SceneBall, L1Record, BounceLabel, SampleLabels
+from .sportmodule import SportConfig, SportModuleRow
 from .state import (
     StateTables,
     GameTeam,
@@ -76,6 +79,7 @@ __all__ = [
     "AudioOnsetPayload",
     "BallDeadPayload",
     "BallTrackSample",
+    "BounceLabel",
     "BounceMark",
     "BouncePayload",
     "Calibration",
@@ -95,6 +99,12 @@ __all__ = [
     "Decide",
     "DecideRequest",
     "DecideResult",
+    "DroidRun",
+    "DroidRunCallChange",
+    "DroidRunResults",
+    "DroidRunStep",
+    "DroidRunTest",
+    "DroidRunTrigger",
     "EdgeProbs",
     "EmptyArgs",
     "Ensemble",
@@ -112,6 +122,7 @@ __all__ = [
     "HouseRuleTest",
     "HouseRuleVersionArgs",
     "ImageSize",
+    "L1Record",
     "Landmark",
     "LineCrossPayload",
     "NetPayload",
@@ -128,12 +139,19 @@ __all__ = [
     "ResolveChallengeArgs",
     "Rule",
     "RulePack",
+    "SampleLabels",
+    "SceneBall",
+    "SceneCamera",
+    "SceneCourt",
+    "SceneDescriptor",
     "Score",
     "Scoring",
     "ServeTossPayload",
     "SetCalibrationArgs",
     "SetServerArgs",
     "ShotPayload",
+    "SportConfig",
+    "SportModuleRow",
     "StartGameArgs",
     "StateTables",
     "SubmitHouseRuleArgs",

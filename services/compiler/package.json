@@ -1,0 +1,27 @@
+{
+  "name": "@trophy/compiler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Trophy's Factory Droid compiler (Agent 3): a Droid derives and edits sport modules (sports/<sport>/) in a throwaway sandbox, gated by replay_test, with the plan, steps, diff and test table streamed live for approval.",
+  "bin": {
+    "trophy-droid": "./src/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "cli": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@factory/droid-sdk": "0.10.0",
+    "@trophy/contracts": "*",
+    "@trophy/state-client": "*",
+    "spacetimedb": "2.13.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
+  }
+}

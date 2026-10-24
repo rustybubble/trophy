@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trophy.local/contracts/scene.schema.json",
+  "title": "SceneDescriptor",
+  "description": "trophy.scene.v1: what Agent 2 writes after calibration and the Droid compiler reads to derive a sport module (camera count + homographies, best court template, ball blob, people count, sample frames, a layer-1 log). Also defines the layer-1 JSONL record and the sample labels the replay_test gate checks against.",
+  "type": "object",
+  "required": ["schema", "game_id", "created_at_ms", "duration_s", "cameras", "court", "ball", "people_count", "sample_frames", "l1_log", "synthetic"],
+  "properties": {
+    "schema": { "const": "trophy.scene.v1" },
+    "game_id": { "type": "string" },
+    "sport_hint": { "type": ["string", "null"], "description": "What the user said they are playing, if anything" },
+    "created_at_ms": { "type": "number" },
+    "duration_s": { "type": "number", "minimum": 0, "description": "Length of the layer-1 log" },
+    "cameras": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/SceneCamera" } },
+    "court": { "$ref": "#/$defs/SceneCourt" },
+    "ball": { "$ref": "#/$defs/SceneBall" },
+    "people_count": { "type": "integer", "minimum": 0 },
+    "sample_frames": { "type": "array", "items": { "type": "string" }, "description": "Paths to up to 3 JPEG frames (empty for synthetic scenes)" },
+    "l1_log": { "type": "string", "description": "Path to the layer-1 JSONL log (L1Record lines), ~10 s" },
+    "labels": { "type": "string", "description": "Path to SampleLabels for the log, when labelled" },
+    "synthetic": { "type": "boolean" },
+    "label": { "type": "string", "description": "Shown by every UI when synthetic" }
+  },
+  "$defs": {
+    "SceneCamera": {
+      "title": "SceneCamera",
+      "type": "object",
+      "required": ["cam_id", "image_size", "H_img_to_field", "reproj_err_px", "trusted", "fps"],
+      "properties": {
+        "cam_id": { "type": "string" },
+        "image_size": { "type": "object", "required": ["w", "h"], "properties": { "w": { "type": "integer" }, "h": { "type": "integer" } } },
+        "H_img_to_field": { "type": "array", "items": { "type": "number" }, "minItems": 9, "maxItems": 9, "description": "px -> field metres on the play plane, row-major" },
+        "reproj_err_px": { "type": "number", "minimum": 0 },
+        "trusted": { "type": "boolean" },
+        "fps": { "type": "number", "minimum": 0 },
+        "position_m": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+      }
+    },
+    "SceneCourt": {
+      "title": "SceneCourt",
+      "type": "object",
+      "required": ["template", "score", "length_m", "width_m"],
+      "properties": {
+        "template": { "type": "string", "description": "Best-matching template id, e.g. table_tennis, pickleball" },
+        "score": { "type": "number", "minimum": 0, "maximum": 1, "description": "Template match score (uncalibrated)" },
+        "length_m": { "type": "number" },
+        "width_m": { "type": "number" },
+        "net_x_m": { "type": "number" },
+        "candidates": { "type": "array", "items": { "type": "object", "required": ["template", "score"], "properties": { "template": { "type": "string" }, "score": { "type": "number" } } } }
+      }
+    },
+    "SceneBall": {
+      "title": "SceneBall",
+      "type": "object",
+      "required": ["radius_px_mean"],
+      "properties": {
+        "colour": { "type": "string" },
+        "hsv_mean": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+        "radius_px_mean": { "type": "number", "minimum": 0 },
+        "radius_px_sd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "L1Record": {
+      "title": "L1Record",
+      "description": "One line of a layer-1 JSONL log: a Spacetime-shaped row. `camera` rows carry the calibration (state Camera); `ball_sample` rows are BallTrackSample (tracks.schema.json) plus cam_id.",
+      "type": "object",
+      "required": ["table", "cam_id", "row"],
+      "properties": {
+        "table": { "enum": ["camera", "ball_sample"] },
+        "cam_id": { "type": "string" },
+        "row": { "type": "object" }
+      }
+    },
+    "BounceLabel": {
+      "title": "BounceLabel",
+      "type": "object",
+      "required": ["t_game_s", "side", "surface"],
+      "properties": {
+        "t_game_s": { "type": "number" },
+        "side": { "enum": ["A", "B"] },
+        "surface": { "enum": ["table", "floor", "court"] },
+        "pos_m": { "type": "object", "required": ["x", "y"], "properties": { "x": { "type": "number" }, "y": { "type": "number" } } }
+      }
+    },
+    "SampleLabels": {
+      "title": "SampleLabels",
+      "description": "Ground truth for one layer-1 log, checked by replay_test. Synthetic logs say so.",
+      "type": "object",
+      "required": ["synthetic", "sport", "bounces", "tol_count", "tol_t_s", "alternate_sides", "min_recall"],
+      "properties": {
+        "synthetic": { "type": "boolean" },
+        "label": { "type": "string" },
+        "sport": { "type": "string" },
+        "labeller": { "type": "string" },
+        "bounces": { "type": "array", "items": { "$ref": "#/$defs/BounceLabel" } },
+        "tol_count": { "type": "integer", "minimum": 0, "description": "Allowed |detected - labelled| surface-bounce count" },
+        "tol_t_s": { "type": "number", "minimum": 0, "description": "A detected bounce matches a label within this time" },
+        "tol_pos_m": { "type": "number", "minimum": 0 },
+        "alternate_sides": { "type": "boolean", "description": "Consecutive surface bounces must alternate A/B" },
+        "min_recall": { "type": "number", "minimum": 0, "maximum": 1 },
+        "min_precision": { "type": "number", "minimum": 0, "maximum": 1 },
+        "expect_ball_dead": { "type": "boolean" }
+      }
+    }
+  }
+}
