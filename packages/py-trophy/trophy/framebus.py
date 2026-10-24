@@ -8,6 +8,7 @@ newest frame; ``mode="all"`` returns consecutive frames but jumps to the newest 
 from __future__ import annotations
 
 import struct
+from collections import deque
 from dataclasses import dataclass
 from typing import Literal
 
@@ -190,6 +191,7 @@ class FrameReader:
         self.last_id: str | None = None
         self.last_seq: int | None = None
         self.skipped = 0
+        self._pending: deque = deque()  # entries fetched in one XREAD and not yet returned ("all" mode)
 
     def _newest(self) -> Frame | None:
         got = self.r.xrevrange(self.key, count=1)
@@ -215,22 +217,23 @@ class FrameReader:
             f = self._newest()
             return self._accept(f) if f and f.entry_id != self.last_id else None
 
-        got = self.r.xread({self.key: self.last_id}, count=self.max_lag + 1, block=block_ms or None)
-        if not got:
-            return None
-        entries = got[0][1]
-        if len(entries) > self.max_lag:
-            newest = self._newest()
-            self.skipped += len(entries)  # at least this many dropped
-            return self._accept(newest)
-        for entry in entries:
-            f = _decode(*entry)
-            self.last_id = f.entry_id
-            if f.seq == self.last_seq:
-                continue
-            self.last_seq = f.seq
-            return f
-        return None
+        while True:
+            while self._pending:  # serve what one XREAD fetched before fetching again (a backlog costs one read)
+                f = _decode(*self._pending.popleft())
+                self.last_id = f.entry_id
+                if f.seq == self.last_seq:
+                    continue
+                self.last_seq = f.seq
+                return f
+            got = self.r.xread({self.key: self.last_id}, count=self.max_lag + 1, block=block_ms or None)
+            if not got:
+                return None
+            entries = got[0][1]
+            if len(entries) > self.max_lag:
+                newest = self._newest()
+                self.skipped += len(entries)  # at least this many dropped
+                return self._accept(newest)
+            self._pending.extend(entries)
 
     def _accept(self, f: Frame | None) -> Frame | None:
         if f is None:

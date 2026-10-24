@@ -1,10 +1,13 @@
 """Play a recorded game clip into the running gateway as if a phone were filming it, then exercise a challenge
 with a high-quality (original-resolution) replay segment. For testing on real footage, locally only.
 
-    uv run python scripts/clip_as_phone.py ../../data/local/ttClips/side_IMG_4342.mp4 --start 5 --seconds 12
+    uv run --with opencv-python-headless==4.10.0.84 python scripts/clip_as_phone.py \
+        ../../data/local/ttClips/side_IMG_4342.mp4 --start 5 --seconds 12
 
 1. Creates a game, joins as cam+judge, syncs the clock over /api/ws/ctl.
 2. Streams the clip from --start, scaled to 1280x720 JPEG at 30 fps in real time over /api/ws/frames (like the PWA).
+   Frames are encoded with libjpeg (OpenCV) at quality 70, 4:2:0, like the PWA's canvas encoder at 0.7; ffmpeg's
+   MJPEG encoder loses noticeably more of a small ball's colour at a similar size, so it isn't used.
 3. Posts a BETA test call (as the engine, SPACETIME_ENGINE_TOKEN) at the end, opens a challenge on it, and uploads a
    6 s segment cut from the ORIGINAL file around the call (`ffmpeg -c copy`, no re-encode) to /api/clips (as D-27's
    phone recorder would).
@@ -57,7 +60,11 @@ def reducer(name: str, payload: object, token: str) -> None:
 
 
 async def jpeg_frames(path: Path, start: float, seconds: float):
-    """1280x720 JPEGs at 30 fps from ffmpeg (MJPEG on a pipe), with each frame's clip time."""
+    """1280x720 JPEGs at 30 fps (ffmpeg decodes and scales, libjpeg encodes), with each frame's clip time."""
+    import cv2  # dev tool only: `uv run --with opencv-python-headless==4.10.0.84`
+    import numpy as np
+
+    w, h = 1280, 720
     proc = await asyncio.create_subprocess_exec(
         "ffmpeg",
         "-v",
@@ -69,36 +76,29 @@ async def jpeg_frames(path: Path, start: float, seconds: float):
         "-i",
         str(path),
         "-vf",
-        "fps=30,scale=1280:720",
-        "-q:v",
-        "5",
+        f"fps=30,scale={w}:{h}:flags=area",
         "-f",
-        "image2pipe",
-        "-vcodec",
-        "mjpeg",
+        "rawvideo",
+        "-pix_fmt",
+        "bgr24",
         "-",
         stdout=asyncio.subprocess.PIPE,
     )
-    buf = b""
     n = 0
     assert proc.stdout
     while True:
-        chunk = await proc.stdout.read(1 << 16)
-        if not chunk:
+        try:
+            raw = await proc.stdout.readexactly(w * h * 3)
+        except asyncio.IncompleteReadError:
             break
-        buf += chunk
-        while True:
-            s = buf.find(b"\xff\xd8")
-            e = buf.find(b"\xff\xd9", s + 2)
-            if s < 0 or e < 0:
-                break
-            yield start + n / 30, buf[s : e + 2]
-            n += 1
-            buf = buf[e + 2 :]
+        img = np.frombuffer(raw, np.uint8).reshape(h, w, 3)
+        _, jpeg = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 70])
+        yield start + n / 30, jpeg.tobytes()
+        n += 1
     await proc.wait()
 
 
-async def main(path: Path, start: float, seconds: float) -> None:
+async def main(path: Path, start: float, seconds: float, no_challenge: bool = False) -> None:
     e = env()
     async with httpx.AsyncClient(base_url=BASE, timeout=30) as http:
         g = (await http.post("/api/games", json={"sport": "table_tennis"})).json()
@@ -150,84 +150,90 @@ async def main(path: Path, start: float, seconds: float) -> None:
                 await fws.send(pack_header(sent, t_phone) + jpeg)
                 sent += 1
 
-        # a challenged call at the end of the streamed window; the replay segment is cut from the original file
-        call_clip_t = start + seconds - 1.0
-        t_call_game = (wall0 + (call_clip_t - start) * 1000 - t0_game_ms) / 1000
-        call_id = "01JCLP" + secrets.token_hex(10).upper()[:20]
-        reducer(
-            "post_call",
-            {
-                "schema": "trophy.call.v1",
-                "id": call_id,
-                "game_id": gid,
-                "t_game_s": t_call_game,
-                "rule_id": "edge_ball",
-                "rule_version": "table_tennis@1",
-                "kind": "edge_call",
-                "outcome": "edge_good",
-                "team_id": "A",
-                "p": 0.66,
-                "p_source": "manual",
-                "tier": "BETA",
-                "shown": "challengeable",
-                "text": "TEST call on recorded footage (hand-posted)",
-                "speech": "Test call.",
-                "cue": {"beep": "none", "flash": "none"},
-                "event_ids": [],
-                "evidence": [{"cam_id": cam, "t0_s": t_call_game - 2, "t1_s": t_call_game}],
-                "status": "final",
-                "created_at_ms": now_ms(),
-            },
-            e["SPACETIME_ENGINE_TOKEN"],
-        )
-        reducer(
-            "open_challenge",
-            {
-                "challenge_id": "01JCHL" + secrets.token_hex(10).upper()[:20],
-                "game_id": gid,
-                "call_id": call_id,
-                "by_cam_id": cam,
-                "status": "open",
-                "result": None,
-                "created_at_ms": now_ms(),
-            },
-            e["SPACETIME_ENGINE_TOKEN"],
-        )
-        seg_start = max(start, start + seconds - 6.0)
-        with tempfile.TemporaryDirectory() as td:
-            seg = Path(td) / "seg.mp4"
-            subprocess.run(
-                [
-                    "ffmpeg",
-                    "-v",
-                    "error",
-                    "-y",
-                    "-ss",
-                    str(seg_start),
-                    "-t",
-                    "6",
-                    "-i",
-                    str(path),
-                    "-c",
-                    "copy",
-                    "-an",
-                    "-movflags",
-                    "+faststart",
-                    str(seg),
-                ],
-                check=True,
+        if not no_challenge:
+            # a challenged call at the end of the streamed window; the replay segment is cut from the original file
+            call_clip_t = start + seconds - 1.0
+            t_call_game = (wall0 + (call_clip_t - start) * 1000 - t0_game_ms) / 1000
+            call_id = "01JCLP" + secrets.token_hex(10).upper()[:20]
+            reducer(
+                "post_call",
+                {
+                    "schema": "trophy.call.v1",
+                    "id": call_id,
+                    "game_id": gid,
+                    "t_game_s": t_call_game,
+                    "rule_id": "edge_ball",
+                    "rule_version": "table_tennis@1",
+                    "kind": "edge_call",
+                    "outcome": "edge_good",
+                    "team_id": "A",
+                    "p": 0.66,
+                    "p_source": "manual",
+                    "tier": "BETA",
+                    "shown": "challengeable",
+                    "text": "TEST call on recorded footage (hand-posted)",
+                    "speech": "Test call.",
+                    "cue": {"beep": "none", "flash": "none"},
+                    "event_ids": [],
+                    "evidence": [{"cam_id": cam, "t0_s": t_call_game - 2, "t1_s": t_call_game}],
+                    "status": "final",
+                    "created_at_ms": now_ms(),
+                },
+                e["SPACETIME_ENGINE_TOKEN"],
             )
-            t_seg0 = wall0 + (seg_start - start) * 1000
-            t = time.perf_counter()
-            async with httpx.AsyncClient(base_url=BASE, timeout=120) as http:
-                r = await http.post(
-                    "/api/clips",
-                    params={"call_id": call_id, "seg": 0, "t_start_phone_ms": t_seg0, "t_end_phone_ms": t_seg0 + 6000},
-                    content=seg.read_bytes(),
-                    headers={"Authorization": f"Bearer {tok}", "Content-Type": "video/mp4"},
+            reducer(
+                "open_challenge",
+                {
+                    "challenge_id": "01JCHL" + secrets.token_hex(10).upper()[:20],
+                    "game_id": gid,
+                    "call_id": call_id,
+                    "by_cam_id": cam,
+                    "status": "open",
+                    "result": None,
+                    "created_at_ms": now_ms(),
+                },
+                e["SPACETIME_ENGINE_TOKEN"],
+            )
+            seg_start = max(start, start + seconds - 6.0)
+            with tempfile.TemporaryDirectory() as td:
+                seg = Path(td) / "seg.mp4"
+                subprocess.run(
+                    [
+                        "ffmpeg",
+                        "-v",
+                        "error",
+                        "-y",
+                        "-ss",
+                        str(seg_start),
+                        "-t",
+                        "6",
+                        "-i",
+                        str(path),
+                        "-c",
+                        "copy",
+                        "-an",
+                        "-movflags",
+                        "+faststart",
+                        str(seg),
+                    ],
+                    check=True,
                 )
-            up_s = time.perf_counter() - t
-            meta = r.json()
+                t_seg0 = wall0 + (seg_start - start) * 1000
+                t = time.perf_counter()
+                async with httpx.AsyncClient(base_url=BASE, timeout=120) as http:
+                    r = await http.post(
+                        "/api/clips",
+                        params={
+                            "call_id": call_id,
+                            "seg": 0,
+                            "t_start_phone_ms": t_seg0,
+                            "t_end_phone_ms": t_seg0 + 6000,
+                        },
+                        content=seg.read_bytes(),
+                        headers={"Authorization": f"Bearer {tok}", "Content-Type": "video/mp4"},
+                    )
+                up_s = time.perf_counter() - t
+                meta = r.json()
         await ctl.close()
 
     rows = redis.Redis().xrange(f"frames:{cam}")
@@ -237,6 +243,9 @@ async def main(path: Path, start: float, seconds: float) -> None:
     fps = (len(rows) - 1) / span if span else 0
     size = f"{rows[-1][1][b'w'].decode()}x{rows[-1][1][b'h'].decode()}"
     print(f"gateway kept {len(rows)} frames: {fps:.1f} fps over {span:.1f}s, w,h={size}")
+    if no_challenge:
+        print(f"game {gid} join key {g['join_key']}")
+        return
     print(
         f"HQ replay segment: HTTP {r.status_code}, {meta.get('w')}x{meta.get('h')} {meta.get('codec')}, "
         f"{meta.get('bytes', 0) / 1e6:.1f} MB, {meta.get('duration_s')} s, upload {up_s:.2f} s (localhost), "
@@ -250,5 +259,6 @@ if __name__ == "__main__":
     ap.add_argument("clip", type=Path)
     ap.add_argument("--start", type=float, default=5.0)
     ap.add_argument("--seconds", type=float, default=12.0)
+    ap.add_argument("--no-challenge", action="store_true", help="only stream (e.g. to test flight.live)")
     a = ap.parse_args()
-    asyncio.run(main(a.clip, a.start, a.seconds))
+    asyncio.run(main(a.clip, a.start, a.seconds, a.no_challenge))

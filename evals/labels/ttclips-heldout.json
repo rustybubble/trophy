@@ -1,0 +1,590 @@
+{
+  "schema": "trophy.manual-ball-labels.v1",
+  "reviewed_by": "Codex visual review of unannotated source contact sheets",
+  "source_sha256": {
+    "side": "dfcf4305bcd58ca707507504177544697ace389e8b67afe482926e8734cee6a1",
+    "diagonal": "8687e666442f5eb2f6c3c990099680a9908295ca96f125d4f2ef89c249700819"
+  },
+  "method": "Source centers estimated visually at 960\u00d7540 without detector overlays. Ambiguous/occluded/cropped ball = unassessable, not negative.",
+  "split": "Held-out fixed-time slices 40\u201341.1 and 87\u201388.1 seconds, not used to change tracker settings. Mostly occlusion/held-ball interval; not an active-rally benchmark.",
+  "tolerance_source_px": 32,
+  "limitations": "Single reviewer, approximate labels, one serve/rally interval; no labeled absent frames or independent real 3D truth.",
+  "labels": [
+    {
+      "cam_id": "side",
+      "seq": 2400,
+      "t_source_s": 40.0,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 2406,
+      "t_source_s": 40.1,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 2412,
+      "t_source_s": 40.2,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 2418,
+      "t_source_s": 40.3,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 2424,
+      "t_source_s": 40.4,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 2430,
+      "t_source_s": 40.5,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 2436,
+      "t_source_s": 40.6,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 2442,
+      "t_source_s": 40.7,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 2448,
+      "t_source_s": 40.8,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 2454,
+      "t_source_s": 40.9,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 2460,
+      "t_source_s": 41.0,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 2466,
+      "t_source_s": 41.1,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5220,
+      "t_source_s": 87.0,
+      "status": "visible",
+      "x": 844,
+      "y": 1272,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5226,
+      "t_source_s": 87.1,
+      "status": "visible",
+      "x": 792,
+      "y": 1240,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5232,
+      "t_source_s": 87.2,
+      "status": "visible",
+      "x": 772,
+      "y": 1164,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5238,
+      "t_source_s": 87.3,
+      "status": "visible",
+      "x": 752,
+      "y": 1132,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5244,
+      "t_source_s": 87.4,
+      "status": "visible",
+      "x": 700,
+      "y": 1152,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5250,
+      "t_source_s": 87.5,
+      "status": "visible",
+      "x": 660,
+      "y": 1148,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5256,
+      "t_source_s": 87.6,
+      "status": "visible",
+      "x": 624,
+      "y": 1200,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5262,
+      "t_source_s": 87.7,
+      "status": "visible",
+      "x": 624,
+      "y": 1256,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5268,
+      "t_source_s": 87.8,
+      "status": "visible",
+      "x": 652,
+      "y": 1256,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5274,
+      "t_source_s": 87.9,
+      "status": "visible",
+      "x": 668,
+      "y": 1244,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5280,
+      "t_source_s": 88.0,
+      "status": "visible",
+      "x": 676,
+      "y": 1228,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "side",
+      "seq": 5286,
+      "t_source_s": 88.1,
+      "status": "visible",
+      "x": 696,
+      "y": 1200,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2400,
+      "t_source_s": 40.0,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2406,
+      "t_source_s": 40.1,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2412,
+      "t_source_s": 40.2,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2418,
+      "t_source_s": 40.3,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2424,
+      "t_source_s": 40.4,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2430,
+      "t_source_s": 40.5,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2436,
+      "t_source_s": 40.6,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2442,
+      "t_source_s": 40.7,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2448,
+      "t_source_s": 40.8,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2454,
+      "t_source_s": 40.9,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2460,
+      "t_source_s": 41.0,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 2466,
+      "t_source_s": 41.1,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5220,
+      "t_source_s": 87.0,
+      "status": "visible",
+      "x": 2000,
+      "y": 1424,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5226,
+      "t_source_s": 87.1,
+      "status": "visible",
+      "x": 2008,
+      "y": 1544,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5232,
+      "t_source_s": 87.2,
+      "status": "visible",
+      "x": 2012,
+      "y": 1472,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5238,
+      "t_source_s": 87.3,
+      "status": "visible",
+      "x": 2016,
+      "y": 1408,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5244,
+      "t_source_s": 87.4,
+      "status": "visible",
+      "x": 2024,
+      "y": 1376,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5250,
+      "t_source_s": 87.5,
+      "status": "visible",
+      "x": 2040,
+      "y": 1364,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5256,
+      "t_source_s": 87.6,
+      "status": "visible",
+      "x": 2092,
+      "y": 1428,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5262,
+      "t_source_s": 87.7,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5268,
+      "t_source_s": 87.8,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5274,
+      "t_source_s": 87.9,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5280,
+      "t_source_s": 88.0,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "cam_id": "diagonal",
+      "seq": 5286,
+      "t_source_s": 88.1,
+      "status": "unassessable",
+      "x": null,
+      "y": null,
+      "source_size": [
+        3840,
+        2160
+      ]
+    }
+  ]
+}

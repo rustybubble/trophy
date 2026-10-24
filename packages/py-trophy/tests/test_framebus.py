@@ -85,6 +85,21 @@ def test_all_reader_consecutive_then_skips_backlog(r, jpeg):
     assert rd.skipped > 0
 
 
+def test_all_reader_fetches_a_backlog_once(r, jpeg):
+    fw = FrameWriter(r)
+    _write(fw, 0, jpeg)
+    rd = FrameReader(r, "c_abcdef", mode="all", max_lag=8)
+    assert rd.read(block_ms=0).seq == 0
+    for s in range(1, 7):
+        _write(fw, s, jpeg)
+    calls = []
+    real = r.xread
+    r.xread = lambda *a, **k: calls.append(1) or real(*a, **k)
+    assert [rd.read(block_ms=0).seq for _ in range(6)] == [1, 2, 3, 4, 5, 6]
+    assert len(calls) == 1  # not one XREAD (re-fetching the whole backlog) per frame
+    assert rd.read(block_ms=0) is None
+
+
 def test_stream_is_capped(r, jpeg):
     fw = FrameWriter(r, maxlen=10)
     for s in range(50):
