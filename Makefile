@@ -34,3 +34,8 @@ recorder-check:
 gateway-check:
 	uv run --frozen --project services/gateway ruff check services/gateway
 	uv run --frozen --project services/gateway pytest -q services/gateway/tests
+
+.PHONY: eval-live-check
+eval-live-check:
+	uv run --frozen --project packages/py-trophy ruff check tools/eval_live.py tests/test_eval_live.py
+	uv run --frozen --project packages/py-trophy python -m pytest -q tests/test_eval_live.py
