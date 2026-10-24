@@ -10,6 +10,19 @@ export type GameStatus = "lobby" | "live" | "paused" | "ended";
  * via the `definition` "HouseRuleStatus".
  */
 export type HouseRuleStatus = "pending" | "compiling" | "ready" | "approved" | "rejected" | "failed";
+/**
+ * This interface was referenced by `StateTables`'s JSON-Schema
+ * via the `definition` "MomentKind".
+ */
+export type MomentKind =
+  | "point"
+  | "serve_fault"
+  | "edge"
+  | "challenge"
+  | "basket"
+  | "bookmark"
+  | "house_rule"
+  | "rally";
 
 /**
  * Spacetime game-state rows as clients see them through @trophy/state-client (interfaces-v1 §11). The module stores *_json columns as strings; the state client parses them, so these types use the parsed field names (e.g. teams, not teams_json). `call` rows are Call (call.schema.json) and `observation` rows are Event (event.schema.json).
@@ -24,6 +37,8 @@ export interface StateTables {
   ai_vote?: AiVote;
   track_sample?: TrackSample;
   ask?: Ask;
+  moment?: Moment;
+  commentary?: Commentary;
 }
 /**
  * This interface was referenced by `StateTables`'s JSON-Schema
@@ -261,4 +276,48 @@ export interface Citation {
   title: string;
   url: string;
   quote: string;
+}
+/**
+ * Written live by the engine as calls happen (interfaces-v1 §19). highlight_score and reasons come from event features only (no crowd audio).
+ *
+ * This interface was referenced by `StateTables`'s JSON-Schema
+ * via the `definition` "Moment".
+ */
+export interface Moment {
+  /**
+   * ULID
+   */
+  moment_id: string;
+  game_id: string;
+  kind: MomentKind;
+  t_game_s: number;
+  t_start_s: number;
+  t_end_s: number;
+  label: string;
+  team_id?: string | null;
+  track_id?: string | null;
+  call_id?: string | null;
+  rally_no?: number | null;
+  score_after: string;
+  tags: string[];
+  highlight_score: number;
+  reasons: string[];
+  is_best_play: boolean;
+  thumb_t_s: number;
+}
+/**
+ * A grounded broadcast line per moment (voices pbp and colour), validated against the moment's facts.
+ *
+ * This interface was referenced by `StateTables`'s JSON-Schema
+ * via the `definition` "Commentary".
+ */
+export interface Commentary {
+  moment_id: string;
+  game_id: string;
+  voice: "pbp" | "colour";
+  text: string;
+  facts: {};
+  validated: boolean;
+  source: "claude" | "template";
+  created_at_ms: number;
 }

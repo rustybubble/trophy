@@ -67,6 +67,8 @@ from .state import (
     TrackSample,
     Citation,
     Ask,
+    Moment,
+    Commentary,
 )
 from .tracks import BallTrackSample, PlayerBox, PlayersTrackSample
 
@@ -92,6 +94,7 @@ __all__ = [
     "ChallengeArgs",
     "Citation",
     "ClockSample",
+    "Commentary",
     "ContactPayload",
     "CreateGameArgs",
     "CtlCommand",
@@ -125,6 +128,7 @@ __all__ = [
     "L1Record",
     "Landmark",
     "LineCrossPayload",
+    "Moment",
     "NetPayload",
     "Overlay",
     "PersonFeetPayload",

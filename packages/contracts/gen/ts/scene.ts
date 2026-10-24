@@ -153,4 +153,9 @@ export interface SampleLabels {
   min_recall: number;
   min_precision?: number;
   expect_ball_dead?: boolean;
+  /**
+   * Who the rally's point goes to under the sport's base rules
+   */
+  rally_winner?: "A" | "B";
+  first_server?: "A" | "B";
 }

@@ -18,7 +18,8 @@ def test_golden_passes() -> None:
     res = run_replay(TT, SAMPLES)
     assert res.passed, format_table(res)
     assert res.calls_changed == []
-    assert res.engine.startswith("events-only")
+    assert res.engine.startswith("events+rules")
+    assert any(t["name"].endswith("calls:winner") and t["pass"] for t in res.tests)
     for name, counts in res.events.items():
         assert counts["bounce"] >= 6, (name, counts)
         assert counts["ball_dead"] == 1
@@ -65,3 +66,20 @@ def test_wrong_event_type_is_rejected(tmp_path: Path) -> None:
     )
     res = run_replay(cand, SAMPLES)
     assert any(t["name"].endswith("events:schema") and not t["pass"] for t in res.tests)
+
+
+def test_calls_changed_between_baseline_and_candidate(tmp_path: Path) -> None:
+    """A rule edit that flips who wins a dead ball shows up as a changed call; the labelled winner no longer matches."""
+    cand = tmp_path / "table_tennis"
+    shutil.copytree(TT, cand)
+    y = (cand / "rules.yaml").read_text()
+    flipped = y.replace(
+        'team: "opponent(rally.at_fault_side)"\n    points: 1\n    text: "Point {team}: no return"',
+        'team: "rally.at_fault_side"\n    points: 1\n    text: "Point {team}: no return"',
+    )
+    assert flipped != y
+    (cand / "rules.yaml").write_text(flipped)
+    res = run_replay(cand, SAMPLES, baseline_dir=TT)
+    assert res.calls_changed, format_table(res)
+    assert all(c["before"] != c["after"] for c in res.calls_changed)
+    assert not res.passed

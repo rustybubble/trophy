@@ -119,6 +119,10 @@ class SampleLabels(BaseModel):
     min_recall: float = Field(..., ge=0.0, le=1.0)
     min_precision: float | None = Field(None, ge=0.0, le=1.0)
     expect_ball_dead: bool | None = None
+    rally_winner: Literal["A", "B"] | None = Field(
+        None, description="Who the rally's point goes to under the sport's base rules"
+    )
+    first_server: Literal["A", "B"] | None = None
 
 
 class SceneDescriptor(BaseModel):

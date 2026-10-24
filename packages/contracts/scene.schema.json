@@ -99,7 +99,9 @@
         "alternate_sides": { "type": "boolean", "description": "Consecutive surface bounces must alternate A/B" },
         "min_recall": { "type": "number", "minimum": 0, "maximum": 1 },
         "min_precision": { "type": "number", "minimum": 0, "maximum": 1 },
-        "expect_ball_dead": { "type": "boolean" }
+        "expect_ball_dead": { "type": "boolean" },
+        "rally_winner": { "enum": ["A", "B"], "description": "Who the rally's point goes to under the sport's base rules" },
+        "first_server": { "enum": ["A", "B"] }
       }
     }
   }

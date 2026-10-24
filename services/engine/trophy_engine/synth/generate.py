@@ -264,11 +264,15 @@ def generate(
     lines += [json.dumps({"table": "ball_sample", "cam_id": c, "row": r}) for _t, c, r in samples]
     (out / f"{name}.l1.jsonl").write_text("\n".join(lines) + "\n", "utf8")
     duration = pts[-1][0] if pts else 0.0
+    # the last return sails past the far end: the side that hit it loses, so the receiver of that return wins
+    last_surface = [b for b in bounce_labels if b["surface"] != "floor"][-1]["side"]
     labels = {
         "synthetic": True,
         "label": LABEL,
         "sport": sport,
         "labeller": "trophy-synth",
+        "rally_winner": "B" if last_surface == "A" else "A",
+        "first_server": "A",
         "bounces": bounce_labels,
         "tol_count": 0,
         "tol_t_s": 0.06,

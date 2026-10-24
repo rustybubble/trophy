@@ -247,6 +247,55 @@ class Ask(BaseModel):
     created_at_ms: float
 
 
+class Moment(BaseModel):
+    """
+    Written live by the engine as calls happen (interfaces-v1 §19). highlight_score and reasons come from event features only (no crowd audio).
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    moment_id: str = Field(..., description="ULID")
+    game_id: str
+    kind: Literal["point", "serve_fault", "edge", "challenge", "basket", "bookmark", "house_rule", "rally"] = Field(
+        ..., title="MomentKind"
+    )
+    t_game_s: float
+    t_start_s: float
+    t_end_s: float
+    label: str = Field(..., max_length=80)
+    team_id: str | None = None
+    track_id: str | None = None
+    call_id: str | None = None
+    rally_no: int | None = None
+    score_after: str
+    tags: list[str]
+    highlight_score: float = Field(..., ge=0.0, le=1.0)
+    reasons: list[str]
+    is_best_play: bool
+    thumb_t_s: float
+
+
+class Commentary(BaseModel):
+    """
+    A grounded broadcast line per moment (voices pbp and colour), validated against the moment's facts.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    moment_id: str
+    game_id: str
+    voice: Literal["pbp", "colour"]
+    text: str
+    facts: dict[str, Any]
+    validated: bool
+    source: Literal["claude", "template"]
+    created_at_ms: float
+
+
 class StateTables(BaseModel):
     """
     Spacetime game-state rows as clients see them through @trophy/state-client (interfaces-v1 §11). The module stores *_json columns as strings; the state client parses them, so these types use the parsed field names (e.g. teams, not teams_json). `call` rows are Call (call.schema.json) and `observation` rows are Event (event.schema.json).
@@ -265,3 +314,5 @@ class StateTables(BaseModel):
     ai_vote: AiVote | None = None
     track_sample: TrackSample | None = None
     ask: Ask | None = None
+    moment: Moment | None = None
+    commentary: Commentary | None = None

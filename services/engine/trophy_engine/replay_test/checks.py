@@ -1,7 +1,8 @@
 """The gate's checks. Every check is one row of the test table: name, before (baseline), after (candidate), pass.
 
-Stage 1 replays *events only* (layer 1 -> layer 2). Once the rule engine lands (stage 2) the same table grows a
-"calls" section and ``calls_changed`` fills in; until then ``engine = "events-only"`` says so.
+Events (layer 1 -> layer 2) are checked against the labels; then the same events run through the rule engine with
+the candidate pack (and the baseline's, when given) so the table ends with the calls each rally produced, the labelled
+rally winner, and ``calls_changed``: the rallies whose scoring call differs between baseline and candidate.
 """
 
 from __future__ import annotations
@@ -132,6 +133,7 @@ def run_replay(
     tests: list[dict[str, Any]] = []
     counts: dict[str, dict[str, int]] = {}
     cand_events: dict[str, list[dict[str, Any]]] = {}
+    calls_changed: list[dict[str, Any]] = []
 
     def row(name: str, ok: bool, after: str, before: str = "", detail: str = "") -> None:
         tests.append({"name": name, "before": before, "after": after, "pass": bool(ok), "detail": detail})
@@ -235,12 +237,95 @@ def run_replay(
         if labels.get("expect_ball_dead"):
             has = any(e.get("type") == "ball_dead" for e in events)
             row(f"{pre}ball_dead:present", has, "ok" if has else "missing")
+        # 9. calls: replay the events through the rule engine with the candidate pack (and the baseline's)
+        cand_calls, cand_err = _replay_calls(mod, events, game_id, labels)
+        base_calls = _replay_calls(base, base_events, game_id, labels)[0] if base is not None and base_events else []
+        if cand_err:
+            row(f"{pre}calls:replay", False, cand_err)
+        else:
+            row(
+                f"{pre}calls:replay",
+                True,
+                _calls_summary(cand_calls),
+                before=_calls_summary(base_calls) if base is not None else "",
+            )
+            if labels.get("rally_winner"):
+                pts = [c for c in cand_calls if c.get("points")]
+                won = pts[0].get("team_id") if pts else None
+                ok = len(pts) == 1 and won == labels["rally_winner"]
+                row(
+                    f"{pre}calls:winner",
+                    ok,
+                    f"{won or 'none'} ({len(pts)} point calls; labelled {labels['rally_winner']})",
+                    before=_winner_str(base_calls) if base is not None else "",
+                )
+            changed = _calls_changed(base_calls, cand_calls, s.name) if base is not None else []
+            calls_changed.extend(changed)
 
-    return _finish(tests, counts, cand_events, t0)
+    return _finish(tests, counts, cand_events, t0, calls_changed)
+
+
+def _replay_calls(mod: SportModule, events: list[dict[str, Any]], game_id: str, labels: dict[str, Any]):
+    """Run the events through the engine with this module's pack, in memory. Returns (calls, error)."""
+    from ..engine import Engine
+    from ..state import MemoryState
+
+    try:
+        eng = Engine(MemoryState(), modules_dir=mod.path.parent)
+        eng.create_game(
+            game_id, mod.sport, t0_ms=0, module_dir=mod.path, params={"synthetic": True, "label": "SYNTHETIC"}
+        )
+        eng.start_game(game_id, labels.get("first_server") or "A")
+        calls: list[dict[str, Any]] = []
+        for ev in events:
+            calls += eng.feed(ev)
+        return calls, None
+    except Exception as e:  # noqa: BLE001 - reported as a failed check for the Droid
+        return [], f"{type(e).__name__}: {e}"
+
+
+def _calls_summary(calls: list[dict[str, Any]]) -> str:
+    if not calls:
+        return "no calls"
+    return "; ".join(f"{c['rule_id']}→{c['outcome']}{' ' + c['team_id'] if c.get('team_id') else ''}" for c in calls)[
+        :120
+    ]
+
+
+def _winner_str(calls: list[dict[str, Any]]) -> str:
+    pts = [c for c in calls if c.get("points")]
+    return (pts[0].get("team_id") or "?") if pts else "none"
+
+
+def _calls_changed(before: list[dict[str, Any]], after: list[dict[str, Any]], sample: str) -> list[dict[str, Any]]:
+    """Rallies whose scoring call differs between the baseline and the candidate pack."""
+
+    def by_rally(calls):
+        out = {}
+        for c in calls:
+            if c.get("points") or c.get("outcome") == "let":
+                out.setdefault(int(c.get("rally_no") or 0), c)
+        return out
+
+    b, a = by_rally(before), by_rally(after)
+    changed = []
+    for rally in sorted(set(b) | set(a)):
+        cb, ca = b.get(rally), a.get(rally)
+        sb = f"{cb['outcome']} {cb.get('team_id', '')}".strip() if cb else "no call"
+        sa = f"{ca['outcome']} {ca.get('team_id', '')}".strip() if ca else "no call"
+        if sb != sa:
+            changed.append(
+                {"rally_no": rally, "call_id": ca["id"] if ca else None, "before": f"{sample}: {sb}", "after": sa}
+            )
+    return changed
 
 
 def _finish(
-    tests: list[dict[str, Any]], counts: dict[str, dict[str, int]], cand: dict[str, list[dict[str, Any]]], t0: float
+    tests: list[dict[str, Any]],
+    counts: dict[str, dict[str, int]],
+    cand: dict[str, list[dict[str, Any]]],
+    t0: float,
+    calls_changed: list[dict[str, Any]] | None = None,
 ) -> ReplayResult:
     passed = all(t["pass"] for t in tests) and bool(tests)
     n_fail = sum(1 for t in tests if not t["pass"])
@@ -248,8 +333,8 @@ def _finish(
     return ReplayResult(
         passed=passed,
         tests=tests,
-        calls_changed=[],
-        engine="events-only (rule engine arrives in stage 2; no calls replayed)",
+        calls_changed=calls_changed or [],
+        engine="events+rules (layer 1 -> events.py -> rule engine with rules.yaml, in memory)",
         summary=summary,
         events=counts,
         duration_ms=(time.perf_counter() - t0) * 1000,

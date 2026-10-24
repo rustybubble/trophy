@@ -1,6 +1,8 @@
 # Sport module: table tennis rule pack (handwritten golden reference). Validated by rulepack.schema.json.
-# CEL conditions run over ev (the current layer-2 event), rally, game and params (interfaces-v1 §10).
-# Stage 1 ships the pack; the engine that evaluates it is stage 2. Agent 2 owns field:.
+# CEL conditions run over ev (the current layer-2 event), rally (rally.phase, bounces, last_bounce_side,
+# last_bounce_surface, at_fault_side, server_side, receiver, last_hitter, shots), game (points, server_side,
+# game_point_for) and params; functions opponent(side) and phi(x). Rules are checked in order; the first scoring
+# rule (kind point/violation/basket with points, or outcome let) ends the rally. Agent 2 owns field:.
 sport: table_tennis
 family: flight
 version: 1
@@ -61,10 +63,10 @@ rules:
     name: Two bounces on one side
     tier: AUTO
     kind: point
-    when: "ev.type == 'bounce' && ev.payload.surface == 'table' && rally.last_bounce_side == ev.side && rally.phase != 'serve'"
+    when: "ev.type == 'bounce' && ev.payload.surface == 'table' && rally.last_bounce_side == ev.side"
     check: code
     outcome: point
-    team: "rally.opponent_of(ev.side)"
+    team: "opponent(ev.side)"
     points: 1
     text: "Point: two bounces on side {ev.side}"
     speech: "Point, {team}."
@@ -78,7 +80,7 @@ rules:
     check: code
     p: "1.0 - ev.payload.p_in"
     outcome: out
-    team: "rally.opponent_of(rally.last_hitter)"
+    team: "opponent(rally.at_fault_side)"
     points: 1
     text: "Out. Point {team}"
     speech: "Out. Point, {team}."
@@ -88,7 +90,7 @@ rules:
     name: Edge ball (top edge good, side face fault)
     tier: BETA
     kind: edge_call
-    when: "ev.type == 'bounce' && ev.payload.edge != null && ev.payload.edge.side_face > 0.15"
+    when: "ev.type == 'bounce' && has(ev.payload.edge) && ev.payload.edge.side_face > 0.15"
     check: ensemble
     ensemble:
       type: choice
@@ -96,8 +98,7 @@ rules:
       options: [top_edge, side_face]
     p: "ev.payload.edge.top_edge + ev.payload.edge.surface"
     outcome: edge_good
-    team: "rally.opponent_of(ev.side)"
-    points: 1
+    team: "opponent(ev.side)"
     text: "Edge ball: good ({p}%)"
     speech: "Edge ball. Good."
     requires: [bounce]
@@ -109,7 +110,7 @@ rules:
     when: "ev.type == 'net' && ev.payload.kind == 'into'"
     check: code
     outcome: net
-    team: "rally.opponent_of(ev.payload.from_side)"
+    team: "opponent(ev.payload.from_side)"
     points: 1
     text: "Net. Point {team}"
     speech: "Net. Point, {team}."
@@ -123,7 +124,7 @@ rules:
     check: code
     p: "0.8"
     outcome: point
-    team: "rally.opponent_of(rally.last_bounce_side)"
+    team: "opponent(rally.at_fault_side)"
     points: 1
     text: "Point {team}: no return"
     speech: "Point, {team}."
