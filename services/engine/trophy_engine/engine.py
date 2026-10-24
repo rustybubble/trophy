@@ -88,6 +88,9 @@ class Engine:
         self.now_ms = now_ms or (lambda: time.time() * 1000.0)
         self.labels_dir = labels_dir or ROOT / "evals" / "labels"
         self.games: dict[str, GameState] = {}
+        # Crops for the voters: (game_id, evidence windows) -> <= 4 base64 JPEGs. Set once the gateway serves
+        # GET /api/replay/{game_id}/frames (interfaces §13); until then votes run on observations and facts only.
+        self.crops: Any = None
 
     # ------------------------------------------------------------ games
 
@@ -282,7 +285,7 @@ class Engine:
             "question": str(ens.get("question") or f"Is the call '{call['outcome']}' correct?"),
             "options": options,
             "context": f"{call.get('text', '')}. {call.get('why') or ''}".strip(),
-            "images": [],
+            "images": list(self.crops(g.game["game_id"], call.get("evidence") or []))[:4] if self.crops else [],
             "observations": [ev] if ev else [],
             "p_geometry": p_geo,
             "timeout_s": 4,

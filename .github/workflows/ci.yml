@@ -34,6 +34,20 @@ jobs:
           uv run --frozen ruff format --check .
           uv run --frozen pytest -q
           uv run --frozen replay-test --module ../../sports/table_tennis --samples ../../evals/fixtures/synthetic/table_tennis --quiet
+      - name: rules lint + tests (ask the ref; fakes only, no keys)
+        working-directory: services/rules
+        run: |
+          uv sync --frozen
+          uv run --frozen ruff check .
+          uv run --frozen ruff format --check .
+          uv run --frozen pytest -q
+      - name: rulebook-scraper actor lint + tests (splitter fixtures, no network)
+        working-directory: actors/rulebook-scraper
+        run: |
+          uv sync --frozen
+          uv run --frozen ruff check .
+          uv run --frozen ruff format --check .
+          uv run --frozen pytest -q
       - name: py-trophy imports on 3.12
         working-directory: packages/py-trophy
         run: |

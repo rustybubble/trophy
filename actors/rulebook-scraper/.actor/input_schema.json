@@ -1,0 +1,28 @@
+{
+  "title": "Sports Rulebook Scraper input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "sources": {
+      "title": "Sources",
+      "type": "array",
+      "description": "Official, public rulebook pages or PDFs. Each item: {sport, url, kind: \"html\"|\"pdf\", source?, license_note?}. Leave empty to use the bundled list (ITTF, USA Pickleball, FIBA, BWF, FIVB).",
+      "editor": "json",
+      "prefill": [
+        { "sport": "table_tennis", "url": "https://www.ittf.com/handbook/", "kind": "html" }
+      ],
+      "items": {
+        "type": "object",
+        "properties": {
+          "sport": { "type": "string" },
+          "url": { "type": "string" },
+          "kind": { "type": "string", "enum": ["html", "pdf"] },
+          "source": { "type": "string" },
+          "license_note": { "type": "string" }
+        },
+        "required": ["sport", "url"]
+      }
+    }
+  },
+  "required": []
+}

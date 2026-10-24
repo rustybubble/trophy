@@ -1,0 +1,40 @@
+{
+  "_note": "Official, public rulebooks only (no login, no paywall). URLs were collected on 2026-10-24; the ITTF and BWF sites answered 403 to our fetcher, so confirm those two before a run. The actor respects robots.txt and skips a source it may not fetch.",
+  "sources": [
+    {
+      "sport": "table_tennis",
+      "url": "https://www.ittf.com/handbook/",
+      "kind": "html",
+      "source": "ITTF Handbook, chapter 2: The Laws of Table Tennis",
+      "license_note": "© ITTF. The ITTF Handbook states that reproduction of its information is encouraged provided the source is mentioned."
+    },
+    {
+      "sport": "pickleball",
+      "url": "https://usapickleball.org/docs/2025-USA-Pickleball-Rulebook.pdf",
+      "kind": "pdf",
+      "source": "USA Pickleball Official Rulebook 2025",
+      "license_note": "© USA Pickleball. Quoted for rule lookup with attribution; not redistributed."
+    },
+    {
+      "sport": "basketball",
+      "url": "https://assets.fiba.basketball/image/upload/documents-corporate-fiba-official-rules-2024-v10.pdf",
+      "kind": "pdf",
+      "source": "FIBA Official Basketball Rules 2024",
+      "license_note": "© FIBA. Quoted for rule lookup with attribution; not redistributed."
+    },
+    {
+      "sport": "badminton",
+      "url": "https://corporate.bwfbadminton.com/statutes/",
+      "kind": "html",
+      "source": "BWF Statutes, Section 4.1: Laws of Badminton",
+      "license_note": "© BWF. Quoted for rule lookup with attribution; not redistributed."
+    },
+    {
+      "sport": "volleyball",
+      "url": "https://www.fivb.com/wp-content/uploads/2025/01/FIVB-Volleyball_Rules2025_2028-EN-v05.pdf",
+      "kind": "pdf",
+      "source": "FIVB Official Volleyball Rules 2025-2028",
+      "license_note": "© FIVB. Quoted for rule lookup with attribution; not redistributed."
+    }
+  ]
+}

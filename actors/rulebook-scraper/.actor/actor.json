@@ -1,0 +1,33 @@
+{
+  "actorSpecification": 1,
+  "name": "sports-rulebook-scraper",
+  "title": "Sports Rulebook Scraper",
+  "description": "Turns official sports rulebooks (HTML pages or PDFs) into one dataset item per numbered rule clause: {sport, rule_id, title, text, url, source, license_note, fetched_at}. Built for Trophy's ask-the-ref (Moss index -> Claude).",
+  "version": "0.1",
+  "buildTag": "latest",
+  "dockerfile": "../Dockerfile",
+  "input": "./input_schema.json",
+  "readme": "../README.md",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "Rules",
+      "views": {
+        "rules": {
+          "title": "Rules",
+          "transformation": { "fields": ["sport", "rule_id", "title", "text", "url", "source", "license_note", "fetched_at"] },
+          "display": {
+            "component": "table",
+            "properties": {
+              "sport": { "label": "Sport", "format": "text" },
+              "rule_id": { "label": "Rule", "format": "text" },
+              "title": { "label": "Title", "format": "text" },
+              "text": { "label": "Text", "format": "text" },
+              "url": { "label": "URL", "format": "link" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

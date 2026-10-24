@@ -364,3 +364,48 @@ def test_post_call_latency_p50_under_100ms() -> None:
     p50 = lat[len(lat) // 2]
     assert p50 <= 100, f"p50 {p50:.1f} ms"
     Path("/tmp/trophy_engine_latency.json").write_text(json.dumps({"p50_ms": p50, "max_ms": lat[-1], "n": len(lat)}))
+
+
+def test_serve_toss_rules_from_d22() -> None:
+    """The 6 in / 30° serve rules (STRETCH for perception, but the engine and pack handle serve_toss observations)."""
+    eng, _ = new_engine()
+
+    def toss(t, height, angle, sigma_h=0.01, sigma_a=0.05):
+        return {
+            "schema": "trophy.event.v1",
+            "id": f"s{t}",
+            "game_id": GAME,
+            "t_game_s": t,
+            "sport": "table_tennis",
+            "type": "serve_toss",
+            "source": "synthetic",
+            "cams": ["c_syn001"],
+            "conf": 0.9,
+            "side": "A",
+            "payload": {
+                "server_side": "A",
+                "release": {"t_s": t - 0.4, "pos_m": {"x": -1.5, "y": 0.0, "z": 0.2}},
+                "apex": {"t_s": t - 0.2, "pos_m": {"x": -1.5, "y": 0.0, "z": 0.2 + height}},
+                "contact": {"t_s": t, "pos_m": {"x": -1.5, "y": 0.0, "z": 0.25}},
+                "height_m": height,
+                "sigma_height_m": sigma_h,
+                "rise_angle_rad": angle,
+                "fall_angle_rad": angle,
+                "angle_from_vertical_rad": angle,
+                "sigma_angle_rad": sigma_a,
+                "palm_still_s": 0.5,
+                "observable_plane": "xz",
+            },
+        }
+
+    low = eng.feed(toss(1.0, 0.10, 0.1))
+    assert (
+        low and low[-1]["outcome"] == "illegal_toss_height" and low[-1]["team_id"] == "B" and low[-1]["tier"] == "AUTO"
+    )
+    assert low[-1]["speech"] == "Fault. Toss too low." and low[-1]["overlay"]["serve_toss_event_id"] == "s1.0"
+    near = eng.feed(toss(5.0, 0.148, 0.1))  # 4 mm under the limit with σ 1 cm -> BETA
+    assert near[-1]["outcome"] == "illegal_toss_height" and near[-1]["tier"] == "BETA" and 0.5 < near[-1]["p"] < 0.9
+    angled = eng.feed(toss(9.0, 0.25, 0.7))
+    assert angled[-1]["outcome"] == "illegal_toss_angle" and angled[-1]["speech"] == "Fault. Toss not vertical."
+    legal = eng.feed(toss(13.0, 0.25, 0.1))
+    assert legal == []
