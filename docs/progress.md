@@ -3,7 +3,7 @@
 Tick items and record **measured** numbers (not estimates). The gates are in `docs/plan/three-agent-plan.md` §5.
 
 ## Cal Hacks weekend (plan: `docs/plan/three-agent-plan.md` §3, §5)
-- [ ] **C0** contracts + codegen + py-trophy + MockState + CI: tag `wk-c0`
+- [x] **C0** contracts + codegen + py-trophy + MockState + CI: tag `wk-c0` (merged 2026-10-24, rustybubble/trophy#1; waiting on A2/A3 acknowledgement)
 - [ ] Spikes: tracker classical ___ fps / BlurBall MPS ___ fps (OPEN-3 → ___); Spacetime reducer→subscription **p50 3.4–5.0 ms, p95 5.1–7.6 ms** (Windows 11 localhost, not the Mac; Python HTTP → Node TS subscriber, 200 calls at 20 Hz; `spikes/spacetime-latency/`); Cartesia TTS on iPhone ✓/✗; Ink STT transcript ✓/✗; Droid hello ✓/✗; Moss query ___ ms; Claude / Gemini / Bitdeer vision calls ✓/✗; domain ___
 - [ ] **C1** iPhone 720p ___ fps through the domain origin; onsets arriving; a Cartesia line plays
 - [ ] **C2** `make e2e` on the CC BY ping-pong segment ✓/✗; replay API ✓/✗; `/ask` cited answer ✓/✗
