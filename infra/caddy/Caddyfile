@@ -1,0 +1,25 @@
+{$TROPHY_DOMAIN} {
+	encode zstd gzip
+
+	handle_path /api/* {
+		reverse_proxy gateway:8000
+	}
+	handle_path /stdb/* {
+		reverse_proxy spacetimedb:3000
+	}
+	handle_path /cam/* {
+		root * /srv/cam
+		try_files {path} /index.html
+		file_server
+	}
+	handle_path /watch/* {
+		root * /srv/watch
+		try_files {path} /index.html
+		file_server
+	}
+	handle {
+		root * /srv/dashboard
+		try_files {path} /index.html
+		file_server
+	}
+}

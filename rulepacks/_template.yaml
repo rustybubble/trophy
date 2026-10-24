@@ -1,0 +1,29 @@
+# Rule-pack template. Validated by packages/contracts/rulepack.schema.json.
+# Conditions are CEL expressions over `ev` (the current event), `rally` (rally state) and `game` (game state).
+# Copy to <sport>.yaml. Hand-write the P0 packs; Claude drafts the others; a human reviews the P1 ones.
+sport: example_sport
+family: flight            # flight | possession | resting
+version: 1
+field:
+  units: m
+  dims: {length: 0.0, width: 0.0}
+  lines: {}               # name -> [[x1,y1],[x2,y2]]
+  zones: {}               # name -> polygon [[x,y], ...]
+detectors: {}             # class -> weights id
+scoring:
+  template: rally         # rally | side_out | innings | cumulative | cancellation | frames
+  params: {}
+rules:
+  - id: example_in_out
+    name: Ball in or out
+    tier: BETA            # AUTO | BETA | PLAYERS
+    when: "ev.type == 'bounce'"
+    check: code           # code (geometry, P(in) = Phi(d/sigma)) | snap (decision model)
+    outcome: "in_or_out"
+    rule_ref: ""          # official rule id, filled from Moss
+coach:
+  generator: flight_target_zones
+  flag_gap: 0.30
+  flag_actual_max: 0.15
+calibration:
+  T: 1.0

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "trophy/event",
+  "title": "Event",
+  "type": "object",
+  "required": [
+    "id",
+    "t_game_s",
+    "sport",
+    "type",
+    "cams",
+    "conf"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "t_game_s": {
+      "type": "number",
+      "description": "game clock seconds"
+    },
+    "sport": {
+      "type": "string"
+    },
+    "type": {
+      "enum": [
+        "bounce",
+        "wall_bounce",
+        "contact",
+        "contact_height",
+        "touch_count",
+        "rim_hit",
+        "possession",
+        "snap",
+        "step",
+        "in_zone",
+        "line_cross",
+        "net",
+        "catch",
+        "player_touch",
+        "at_rest",
+        "score_zone",
+        "timer",
+        "audio_onset"
+      ]
+    },
+    "cams": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pos_court_m": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        }
+      }
+    },
+    "sigma_m": {
+      "type": "number",
+      "description": "1-sigma position uncertainty, metres"
+    },
+    "actor_id": {
+      "type": "string"
+    },
+    "target_id": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "conf": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  }
+}

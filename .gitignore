@@ -1,0 +1,41 @@
+# secrets
+.env
+*.pem
+*.key
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+
+# node
+node_modules/
+dist/
+.vite/
+out/
+
+# models, footage, data (keep on the VM disk or in GCS)
+*.pt
+*.pth
+*.pth.tar
+*.onnx
+*.engine
+*.ckpt
+*.safetensors
+weights/
+data/raw/
+data/recordings/
+data/clips/media/
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.wav
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/

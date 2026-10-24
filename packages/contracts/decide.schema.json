@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "trophy/decide",
+  "title": "Decide",
+  "type": "object",
+  "properties": {
+    "request": {
+      "type": "object",
+      "required": [
+        "question",
+        "options",
+        "state"
+      ],
+      "properties": {
+        "question": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 255,
+          "items": {
+            "type": "string"
+          }
+        },
+        "state": {},
+        "images": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "string",
+            "description": "base64 jpeg/png/webp, tight crops"
+          }
+        },
+        "timeout_s": {
+          "type": "number",
+          "default": 2.0
+        }
+      }
+    },
+    "response": {
+      "type": "object",
+      "required": [
+        "choice",
+        "probs",
+        "p_cal",
+        "backend",
+        "latency_ms"
+      ],
+      "properties": {
+        "choice": {
+          "type": "string"
+        },
+        "probs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "p_cal": {
+          "type": "number"
+        },
+        "backend": {
+          "enum": [
+            "snap",
+            "gemini",
+            "claude",
+            "geometry"
+          ]
+        },
+        "latency_ms": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

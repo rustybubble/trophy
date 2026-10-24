@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "trophy/call",
+  "title": "Call",
+  "type": "object",
+  "required": [
+    "id",
+    "t_game_s",
+    "rule_id",
+    "outcome",
+    "p",
+    "tier",
+    "shown"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "t_game_s": {
+      "type": "number"
+    },
+    "rule_id": {
+      "type": "string"
+    },
+    "outcome": {
+      "type": "string"
+    },
+    "p": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "calibrated probability of outcome"
+    },
+    "tier": {
+      "enum": [
+        "AUTO",
+        "BETA",
+        "PLAYERS"
+      ]
+    },
+    "shown": {
+      "enum": [
+        "auto",
+        "challengeable",
+        "replay",
+        "evidence"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "cams": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "t0": {
+          "type": "number"
+        },
+        "t1": {
+          "type": "number"
+        },
+        "frames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "rule_ref": {
+      "type": "string",
+      "description": "official rule citation from Moss, if any"
+    },
+    "why": {
+      "type": "string"
+    }
+  }
+}

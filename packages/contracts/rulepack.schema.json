@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "trophy/rulepack",
+  "title": "RulePack",
+  "type": "object",
+  "required": [
+    "sport",
+    "family",
+    "field",
+    "scoring",
+    "rules"
+  ],
+  "properties": {
+    "sport": {
+      "type": "string"
+    },
+    "family": {
+      "enum": [
+        "flight",
+        "possession",
+        "resting"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "default": 1
+    },
+    "field": {
+      "type": "object",
+      "description": "dimensions (m), named lines, zones as polygons in court metres"
+    },
+    "detectors": {
+      "type": "object",
+      "description": "weights per object class"
+    },
+    "scoring": {
+      "type": "object",
+      "required": [
+        "template"
+      ],
+      "properties": {
+        "template": {
+          "enum": [
+            "rally",
+            "side_out",
+            "innings",
+            "cumulative",
+            "cancellation",
+            "frames"
+          ]
+        },
+        "params": {
+          "type": "object"
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "tier",
+          "when",
+          "check"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tier": {
+            "enum": [
+              "AUTO",
+              "BETA",
+              "PLAYERS"
+            ]
+          },
+          "when": {
+            "type": "string",
+            "description": "CEL condition over events/state"
+          },
+          "check": {
+            "enum": [
+              "code",
+              "snap"
+            ]
+          },
+          "snap": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "enum": [
+                  "choice",
+                  "noul",
+                  "score"
+                ]
+              },
+              "question": {
+                "type": "string"
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "rule_ref": {
+            "type": "string"
+          },
+          "house_rule": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    "coach": {
+      "type": "object",
+      "properties": {
+        "generator": {
+          "type": "string"
+        },
+        "flag_gap": {
+          "type": "number",
+          "default": 0.3
+        },
+        "flag_actual_max": {
+          "type": "number",
+          "default": 0.15
+        }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "properties": {
+        "T": {
+          "type": "number",
+          "default": 1.0
+        }
+      }
+    }
+  }
+}
