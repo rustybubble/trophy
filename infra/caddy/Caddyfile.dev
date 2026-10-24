@@ -1,0 +1,35 @@
+# Dev origin for the phones: https://trophy.photo on the demo machine's LAN IP (interfaces-v1 §14).
+# Certificate: ACME DNS-01 through Porkbun's DNS API, so nothing has to be reachable from the internet.
+# Caddy must include the module: https://caddyserver.com/download?package=github.com%2Fcaddy-dns%2Fporkbun
+# (or `xcaddy build --with github.com/caddy-dns/porkbun`). Run from the repo root with .env loaded:
+#   caddy run --config infra/caddy/Caddyfile.dev --envfile .env
+{$TROPHY_DOMAIN} {
+	tls {
+		dns porkbun {
+			api_key {env.PORKBUN_API_KEY}
+			api_secret_key {env.PORKBUN_SECRET_API_KEY}
+		}
+	}
+	encode zstd gzip
+
+	# gateway: routes live under /api (§13), so keep the prefix
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+	# SpacetimeDB (no TLS of its own); HTTP + WebSocket subscriptions
+	handle_path /stdb/* {
+		reverse_proxy 127.0.0.1:3000
+	}
+	# PWA (Vite dev server, base "/cam/")
+	handle /cam/* {
+		reverse_proxy 127.0.0.1:5173
+	}
+	# P0 voice spike (spikes/cartesia-voice/serve.py)
+	handle_path /spike/voice/* {
+		reverse_proxy 127.0.0.1:8765
+	}
+	# dashboard (Vite dev server)
+	handle {
+		reverse_proxy 127.0.0.1:5174
+	}
+}

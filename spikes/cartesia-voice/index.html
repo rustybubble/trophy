@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Trophy voice test</title>
+<style>
+  :root { color-scheme: light dark; --bg: #0f1115; --fg: #f3f4f6; --muted: #9ca3af; --acc: #f59e0b; --ok: #22c55e; --bad: #ef4444; }
+  body { margin: 0; padding: 16px; font: 16px/1.4 -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.note { color: var(--muted); margin: 0 0 16px; font-size: 14px; }
+  button { display: block; width: 100%; padding: 18px; margin: 12px 0; font-size: 18px; font-weight: 600; border: 0; border-radius: 14px; background: #1f2937; color: var(--fg); touch-action: none; -webkit-user-select: none; user-select: none; }
+  button.primary { background: var(--acc); color: #111; }
+  button.talk.active { background: var(--bad); }
+  input { width: 100%; box-sizing: border-box; padding: 12px; font-size: 16px; border-radius: 10px; border: 1px solid #374151; background: #111827; color: var(--fg); }
+  #transcript { min-height: 1.4em; font-size: 20px; margin: 8px 0; }
+  pre { white-space: pre-wrap; font-size: 12px; color: var(--muted); background: #111827; padding: 10px; border-radius: 10px; max-height: 40vh; overflow: auto; }
+  .k { color: var(--ok); font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Trophy voice test (P0 spike)</h1>
+<p class="note">Cartesia Sonic TTS and Ink-2 STT, using a short-lived token from the server. Results are sent back to the laptop.</p>
+
+<input id="line" value="Edge ball. Good. Point, B." aria-label="Line to speak" />
+<button id="speak" class="primary">1. Speak this line</button>
+<button id="talk" class="talk">2. Hold to talk</button>
+<div id="transcript" aria-live="polite"></div>
+<pre id="log"></pre>
+
+<script>
+const BASE = location.pathname.replace(/\/[^/]*$/, "");
+const logEl = document.getElementById("log");
+const log = (...a) => { logEl.textContent = a.join(" ") + "\n" + logEl.textContent; };
+const report = (row) => fetch(`${BASE}/spike/result`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ua: navigator.userAgent, ...row }) }).catch(() => {});
+let ctx, tok;
+
+async function token() {
+  if (tok && tok.expires_at_ms - Date.now() > 20000) return tok;
+  const t = performance.now();
+  tok = await (await fetch(`${BASE}/voice/token`)).json();
+  log(`token minted in ${Math.round(performance.now() - t)} ms (version ${tok.cartesia_version})`);
+  return tok;
+}
+
+function audio() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state !== "running") ctx.resume();
+  return ctx;
+}
+
+document.getElementById("speak").onclick = async () => {
+  const ac = audio(); // unlock on the tap (iOS)
+  const tap = performance.now();
+  const t = await token();
+  const ws = new WebSocket(`wss://api.cartesia.ai/tts/websocket?cartesia_version=${t.cartesia_version}&access_token=${encodeURIComponent(t.access_token)}`);
+  let next = 0, first = null, samples = 0, sent = 0;
+  ws.onopen = () => {
+    sent = performance.now();
+    ws.send(JSON.stringify({
+      model_id: "sonic-3.6", transcript: document.getElementById("line").value, voice: { mode: "id", id: t.voice },
+      language: "en", context_id: crypto.randomUUID(), max_buffer_delay_ms: 0, continue: false,
+      output_format: { container: "raw", encoding: "pcm_f32le", sample_rate: ac.sampleRate },
+    }));
+  };
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.type === "error") { log("TTS error:", m.title, m.message); report({ test: "tts", ok: false, error: m.title }); return; }
+    if (m.type === "chunk" && m.data) {
+      const bin = atob(m.data), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const f = new Float32Array(bytes.buffer);
+      if (!f.length) return;
+      const buf = ac.createBuffer(1, f.length, ac.sampleRate);
+      buf.copyToChannel(f, 0);
+      const src = ac.createBufferSource();
+      src.buffer = buf; src.connect(ac.destination);
+      next = Math.max(next, ac.currentTime + 0.02);
+      src.start(next); next += buf.duration; samples += f.length;
+      if (first === null) first = performance.now();
+    }
+    if (m.done) {
+      ws.close();
+      const row = { test: "tts", ok: samples > 0, sample_rate: ac.sampleRate, audio_s: +(samples / ac.sampleRate).toFixed(2),
+        tap_to_first_chunk_ms: Math.round(first - tap), request_to_first_chunk_ms: Math.round(first - sent) };
+      log("TTS ok", JSON.stringify(row));
+      report(row);
+    }
+  };
+  ws.onerror = () => { log("TTS socket error"); report({ test: "tts", ok: false, error: "socket" }); };
+};
+
+// ---- push-to-talk STT: a separate mic track with echo cancellation ON (the onset track keeps it off)
+const WORKLET = `class Tap extends AudioWorkletProcessor { process(i) { const c = i[0] && i[0][0]; if (c) this.port.postMessage(c.slice(0)); return true; } } registerProcessor("tap", Tap);`;
+let mic, node, stt, pending = [], releasedAt = 0, ratio = 3, carry = new Float32Array(0);
+
+async function startTalk() {
+  const ac = audio();
+  if (!mic) {
+    mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    await ac.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: "application/javascript" })));
+    node = new AudioWorkletNode(ac, "tap");
+    ac.createMediaStreamSource(mic).connect(node);
+    ratio = ac.sampleRate / 16000;
+    node.port.onmessage = (e) => onAudio(e.data);
+  }
+  const t = await token();
+  document.getElementById("transcript").textContent = "…";
+  releasedAt = 0; pending = [];
+  stt = new WebSocket(`wss://api.cartesia.ai/stt/turns/websocket?model=ink-2&encoding=pcm_s16le&sample_rate=16000&cartesia_version=${t.cartesia_version}&access_token=${encodeURIComponent(t.access_token)}`);
+  stt.binaryType = "arraybuffer";
+  stt.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.type === "turn.update" || m.type === "turn.eager_end") document.getElementById("transcript").textContent = m.transcript;
+    if (m.type === "turn.end") {
+      document.getElementById("transcript").textContent = m.transcript;
+      const row = { test: "stt", ok: true, transcript: m.transcript, release_to_turn_end_ms: releasedAt ? Math.round(performance.now() - releasedAt) : null };
+      log("STT ok", JSON.stringify(row));
+      report(row);
+      stt.close();
+    }
+    if (m.type === "error") { log("STT error:", m.title, m.message); report({ test: "stt", ok: false, error: m.title }); }
+  };
+}
+
+function onAudio(f32) {
+  if (!stt || stt.readyState > 1 || (releasedAt && performance.now() - releasedAt > 1500)) return;
+  // naive decimation to 16 kHz (fine for speech at 48 kHz in; a spike, not the product)
+  const all = new Float32Array(carry.length + f32.length); all.set(carry); all.set(f32, carry.length);
+  const n = Math.floor(all.length / ratio), out = new Int16Array(n);
+  for (let i = 0; i < n; i++) { const s = Math.max(-1, Math.min(1, all[Math.floor(i * ratio)])); out[i] = s < 0 ? s * 0x8000 : s * 0x7fff; }
+  carry = all.slice(Math.floor(n * ratio));
+  pending.push(out);
+  if (pending.reduce((a, b) => a + b.length, 0) >= 1600) { // 100 ms
+    const len = pending.reduce((a, b) => a + b.length, 0), buf = new Int16Array(len);
+    let o = 0; for (const p of pending) { buf.set(p, o); o += p.length; } pending = [];
+    if (stt.readyState === 1) stt.send(buf.buffer);
+  }
+}
+
+function stopTalk() {
+  releasedAt = performance.now();
+  // keep ~1.5 s of mic audio flowing so the turn detector sees the silence, then close
+  setTimeout(() => { if (stt && stt.readyState === 1) stt.send(JSON.stringify({ type: "close" })); }, 1500);
+}
+
+const talk = document.getElementById("talk");
+talk.addEventListener("pointerdown", (e) => { e.preventDefault(); talk.classList.add("active"); startTalk().catch((err) => log("mic error:", err.name, err.message)); });
+for (const ev of ["pointerup", "pointercancel", "pointerleave"]) talk.addEventListener(ev, () => { if (talk.classList.contains("active")) { talk.classList.remove("active"); stopTalk(); } });
+
+log(`ready. secure context: ${window.isSecureContext}. ${navigator.userAgent}`);
+</script>
+</body>
+</html>
