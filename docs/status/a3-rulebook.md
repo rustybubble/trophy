@@ -19,6 +19,28 @@ file, `docs/status/a3.md`.*
   a template fallback). When #6 merges, this branch rebases and keeps its versions of those paths, `.env.example`'s
   rulebooks block and the separate `rules:` CI job.
 
+## Findings: where PR #6's rules service and actor deviate from the Part 2 brief (requested by the planning session, 2026-10-24)
+Anchors are in `origin/a3/wk-rules-droid` @ `f819f87` (PR #6). "Fixed in #8" means this branch's rework already
+addresses it; nothing here edits PR #6's branch.
+
+| # | File:line (PR #6) | What | Why it matters | In #8 |
+|---|---|---|---|---|
+| 1 | `services/rules/rules/search.py:56-57, 150` | One Moss index **per sport** (`rules-<sport>`), plus one per game for moments | The free Developer plan allows 3 indexes; 3 sports + any moment index exceeds it. The brief's design is one index with a `sport` filter | one index `trophy-rules-v1` + filter (D-30) |
+| 2 | `services/rules/rules/app.py:30, 49, 113-114`; `cli.py:65` | No startup key check: the app boots keyless, `/healthz` answers `ok: true`, routes return 503 `not_configured`; `serve` runs uvicorn without checking keys | The brief and the user's rule: refuse to start without the 3 keys (exit 3, one line). The gateway's health probe would show `rules` healthy while every `/ask` fails | `require_keys()` at startup, exit 3; index load fails fast |
+| 3 | `services/rules/rules/ask.py:75-80` | `verified_quote` **replaces** a non-verbatim quote with the clause's first 25 words | A fabricated or wrong quote is silently swapped for a generic one, so the citation looks verified when the model's claim wasn't; the brief says drop failing citations and return `found: false` when none survive | citations dropped; zero survivors → not found |
+| 4 | `services/rules/rules/search.py:140` | `QueryOptions(top_k=top_k)` only: no `sport` filter, no `alpha`, no clause-number keyword pass | Needed for one index; hybrid tuning and "law 2.6.2" questions | filter + alpha 0.8 / 0.3 merge |
+| 5 | `services/rules/rules/app.py:152` | `GET /rule_ref?sport&q` = top-1 search only; no exact resolution of the pack's `"ITTF 2.6.2"` strings, no gate | Part 1's `rules.yaml` refs must resolve exactly; a search-only ref can point at the wrong clause with no signal | `POST /rule_ref` exact via `get_docs`, else gated search, `how` field |
+| 6 | `actors/rulebook-scraper/src/rulebook_scraper/splitter.py:146` | `rule_id` is the bare number (`2.6.2`) with no source slug | Ids collide across sources (ITTF 2.1 vs FIBA 2.1) and can't be looked up by `get_docs` in one index | `"<slug>:<number>"` |
+| 7 | `actors/rulebook-scraper/src/rulebook_scraper/sources.json:6, 13` | Sources include `ittf.com/handbook/` (403 on 2026-10-24) and a 2025 USA Pickleball URL (404'd) | A run would skip table tennis entirely; the brief names the TTE and Pickleball Canada PDFs | proposed list (awaiting approval) |
+| 8 | `actors/rulebook-scraper/src/rulebook_scraper/main.py:52-55` | `max_request_retries=2`, default concurrency, the HTTP client's default browser-impersonation headers, no `max_pages` input | The brief's crawl policy: no retry on 403/429, one request at a time, a descriptive UA with contact, a hard cap | retries 0, concurrency 1, named UA, `max_pages`, 403/429 skipped |
+| 9 | `actors/rulebook-scraper/tests/test_splitter.py:11, 35`; `services/rules/tests/conftest.py` (`RULES`) | Verbatim ITTF clauses (> 25 words) committed as test fixtures | CLAUDE.md / brief: no real rulebook text in the repo beyond ≤ 25-word quotes | synthetic "Trophy Test Laws" fixtures |
+| 10 | `services/rules/rules/app.py:168-176`, `rules/coach.py:2, 52, 68` | `/moments/index`, `/search_moments`, `/coach` with **template tips** as a fallback | Part 3 scope; the template tip is a keyless fallback path the user ruled out | removed |
+| 11 | `services/rules/rules/llm.py:29-32` | `system=` as a plain string, no `cache_control`; `max_tokens=2048`; no usage/cache logging | Every ask pays the full system prompt; the brief asks for a cached prefix and `cache_read_input_tokens` checks | cached system block, 600 tokens, usage logged |
+| 12 | `services/rules/rules/config.py:45, 53` | Model from `CLAUDE_MODEL`, threshold `RULES_MIN_SCORE`; no `ASK_EFFORT`, `ASK_TOP_K`, `MOSS_INDEX` | The brief's knobs are `ASK_MODEL`, `ASK_EFFORT`, `ASK_MIN_SCORE`, `ASK_TOP_K`, `MOSS_INDEX`, and switching the model is a user decision | the brief's names, in the rulebooks block |
+| 13 | `.github/workflows/ci.yml:37, 45` (PR #6) | Rules and actor steps inside the `python` job | The brief wants a separate `rules:` job so the rebase is clean | separate job |
+| 14 | missing | No `/clauses`, `eval`, `check-pack`, `dataset export`, `index status/refresh`, no `evals/ask/*.jsonl`, no live tests, no `latency` numbers | The brief's acceptance list needs them | all present; numbers await keys |
+| — | `actors/rulebook-scraper/` | Location at the repo root, not `services/rules/actors/` | Fine (planning session, 2026-10-24); recorded as a deviation from the brief | kept |
+
 ## What is built (2026-10-24)
 | Piece | Where | Checked by |
 |---|---|---|
