@@ -116,7 +116,8 @@ export function useDashboard(source: Source | undefined): DashboardView {
     state
       .connect(source.kind === "mock" ? source.script.game_id : source.gameId)
       .then(() => set(() => ({ ready: true, error: undefined, synthetic: state.synthetic, label: state.label })))
-      .catch((e: unknown) => set(() => ({ error: String(e instanceof Error ? e.message : e) })));
+      // a slow confirmation is not an outage: only report it when no row ever arrived
+      .catch((e: unknown) => set((p) => (p.game ? {} : { error: String(e instanceof Error ? e.message : e) })));
     return () => {
       offs.forEach((off) => off());
       state.disconnect();
