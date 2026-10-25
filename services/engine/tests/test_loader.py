@@ -42,10 +42,31 @@ def test_allowlist_rejects(src: str, needle: str) -> None:
 
 def test_allowlist_accepts_the_api() -> None:
     src = (
-        "from __future__ import annotations\nimport math\nfrom collections.abc import Iterable\n"
-        "from trophy_engine.sportmod.api import bounce_event\n\ndef events(o, s):\n    return []\n"
+        "from __future__ import annotations\nimport math\nx = math.sqrt(2)\n"
+        "from trophy_engine.sportmod.api import Iterable, bounce_event\n\ndef events(o, s):\n    return []\n"
     )
     assert check_events_source(src) == []
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "from typing import get_type_hints",  # evaluates string annotations, which the AST walk can't see
+        "import collections",
+        "from dataclasses import dataclass",
+        "import enum",
+        "from operator import attrgetter",  # attrgetter('__class__') reaches dunders by string
+        "import statistics\nx = statistics.sys",  # a module reached through an allowed module
+        "from statistics import sys",
+        "import statistics\ny = statistics",  # aliased away from the attribute check
+        "import trophy_engine.sportmod.api as a",  # a.hashlib ...
+        "from trophy_engine.sportmod.api import hashlib",  # not in __all__
+        "from trophy_engine.sportmod.api import *",
+    ],
+)
+def test_allowlist_refuses_the_escapes_from_review(line: str) -> None:
+    """Review blocker 2."""
+    assert check_events_source(f"{line}\n\ndef events(o, s):\n    return []\n")
 
 
 def test_missing_file_is_a_load_error(tmp_path: Path) -> None:

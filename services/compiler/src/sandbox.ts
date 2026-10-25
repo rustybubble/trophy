@@ -71,14 +71,9 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
   const gate = gateScript(job.kind);
   const { moduleDir, allowlist, samples, gateCmd } =
     job.kind === "calibrate_checks" ? layoutChecks(job, dir, root) : layoutModule(job, dir, root);
-  // the gate: a fixed script so the Droid cannot vary the interpreter, module or samples
-  const script = [
-    "#!/bin/sh",
-    `# The Droid's test gate (${gateCmd.module}). The only command the sandbox allows.`,
-    `cd "$(dirname "$0")" || exit 2`,
-    `exec "${enginePython}" -m ${gateCmd.module} ${gateCmd.args} --json .trophy/results.json --events .trophy/events.json`, // never "$@": arguments are pinned here
-    "",
-  ].join("\n");
+  // the gate: a fixed script so the Droid cannot vary the interpreter, module or samples; it runs the Droid-written
+  // code jailed (review blocker 2): a clean env (no keys), isolated Python, no network, writes only in the sandbox
+  const script = gateScriptText(gateCmd.module, gateCmd.args, enginePython);
   writeFileSync(join(dir, gate), script);
   chmodSync(join(dir, gate), 0o755);
   writeFileSync(join(dir, ".gitignore"), ".trophy/\n__pycache__/\n");
@@ -289,4 +284,37 @@ export function commitSandbox(sb: Sandbox, message: string): string {
     "--allow-empty",
   );
   return git(sb.dir, "rev-parse", "HEAD");
+}
+
+/**
+ * The gate script. Never forwards its own arguments ("$@" was a bypass). The Python it runs gets `env -i` (only PATH,
+ * a HOME and TMPDIR inside the sandbox), `-I -B` (no PYTHON* variables, no user site, no bytecode written outside), and
+ * no network and no writes outside the sandbox: `sandbox-exec` on macOS, `unshare -rn` on Linux where permitted. Where
+ * neither exists it says so on stderr and in .trophy/isolation, rather than failing silently.
+ */
+export function gateScriptText(module: string, args: string, enginePython: string): string {
+  const profile =
+    "(version 1)(allow default)(deny network*)(deny file-write*)" +
+    '(allow file-write* (subpath "$SB") (literal "/dev/null") (literal "/dev/dtracehelper"))';
+  return [
+    "#!/bin/sh",
+    `# The Droid's test gate (${module}). The only command the sandbox allows; it takes no arguments.`,
+    'cd "$(dirname "$0")" || exit 2',
+    'SB="$(pwd -P)"',
+    "mkdir -p .trophy/home .trophy/tmp",
+    `set -- "${enginePython}" -I -B -m ${module} ${args} --json .trophy/results.json --events .trophy/events.json`,
+    'CLEAN="env -i PATH=/usr/bin:/bin HOME=$SB/.trophy/home TMPDIR=$SB/.trophy/tmp LANG=C.UTF-8"',
+    'if [ "$(uname)" = Darwin ] && [ -x /usr/bin/sandbox-exec ]; then',
+    "  echo sandbox-exec > .trophy/isolation",
+    `  exec $CLEAN /usr/bin/sandbox-exec -p "${profile.replace(/"/g, '\\"')}" "$@"`,
+    "elif command -v unshare >/dev/null 2>&1 && unshare -rn true 2>/dev/null; then",
+    "  echo unshare > .trophy/isolation",
+    '  exec $CLEAN unshare -rn "$@"',
+    "else",
+    "  echo none > .trophy/isolation",
+    '  echo "trophy gate: no network isolation on this host (no sandbox-exec; unshare -rn refused): clean env only" >&2',
+    '  exec $CLEAN "$@"',
+    "fi",
+    "",
+  ].join("\n");
 }

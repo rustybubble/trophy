@@ -14,6 +14,13 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+# What module code (events.py) may import from here, and nothing else: this file also imports hashlib, dataclasses
+# and typing, which the import allowlist keeps out of module code (review blocker 2).
+__all__ = [
+    "BallSample", "Camera", "Iterable", "ModuleState", "Observation", "apply_h", "ball_dead_event", "bounce_event",
+    "contact_event", "fuse", "net_event", "phi", "rect_line_distances", "side_of",
+]  # fmt: skip
+
 Side = str  # "A" | "B"
 
 

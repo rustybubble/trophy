@@ -26,7 +26,7 @@ calibrate run from the CLI until Agent 1 adds the `droid_run` and `sport_module`
 
 ## Scoped access: what the Droid can touch
 
-Each run gets a **fresh sandbox** (`data/local/droid_runs/<run_id>/workspace`, its own git repository) containing
+Each run gets a **fresh sandbox** (`~/.trophy/droid_runs/<run_id> (DROID_RUNS_DIR)/workspace`, its own git repository) containing
 only what the job needs, `TASK.md` (the brief from `prompts/`) and one fixed gate script that runs the engine's gate
 with a pinned interpreter, module and samples. No repo, no `.env`, no secrets.
 - **Module jobs:** the module to edit, the golden reference (compile jobs, read-only), the JSON Schemas, the scene
@@ -45,8 +45,17 @@ autonomy *off* offers no Edit tool, autonomy *low* auto-approves edits without a
    the model and recorded as a `blocked` step.
 2. **The git audit:** after each turn the runner diffs the sandbox and **fails the run if any path outside the
    allowlist changed, or if nothing changed** (a gate that passes on an unchanged module proves nothing).
-3. **The runner runs the gate itself** (`replay_test` or `check_test`) and enforces a 90 s wall clock (`DROID_TIMEOUT_S`).
-4. The SDK permission handler ([`src/droidAgent.ts`](src/droidAgent.ts)) still answers any confirmation that does
+3. **The gate runs the Droid-written code jailed** (review blocker 2): the gate script takes no arguments and runs the
+   engine's Python with `env -i` (only `PATH`, plus a `HOME` and `TMPDIR` inside the sandbox: no API keys), `-I -B`, and
+   no network and no writes outside the sandbox (`sandbox-exec` on macOS; `unshare -rn` on Linux where the host allows
+   user namespaces, network only; otherwise it says `none` in `.trophy/isolation` and on stderr). Sandboxes live in
+   `~/.trophy/droid_runs` (`DROID_RUNS_DIR`), outside the repo, so none has the repo or its `.env` as an ancestor.
+   Module and check code may import only `math`, `statistics`, `itertools`, `functools`, `bisect`, `heapq` and the
+   engine's API modules, and from those only names in their `__all__`; a module object reached through an allowed
+   module (`statistics.sys`) is refused. Approved code is never loaded automatically: the engine and `trophy-live` run
+   the handwritten golden module; session checks load only with an explicit `--checks`.
+4. **The runner runs the gate itself** (`replay_test` or `check_test`) and enforces a 90 s wall clock (`DROID_TIMEOUT_S`).
+5. The SDK permission handler ([`src/droidAgent.ts`](src/droidAgent.ts)) still answers any confirmation that does
    arrive with the same allowlist, and refuses script-mode confirmations outright.
 Web fetch, web search, sub-agents, skills and automation tools are disabled. Inside `events.py` the engine's loader
 refuses imports outside a small stdlib allowlist and the usual escape hatches (`exec`, `eval`, `open`,
@@ -99,7 +108,7 @@ draft → gate → repair, at most `DROID_MAX_ATTEMPTS` (3) times. Both gates pr
 ## Visible work
 
 Every change to the run row (`DroidRun`, `droidrun.schema.json`: plan, steps, diff, test table, blocked calls, timings,
-token usage) is pushed to the sinks as it happens: stderr, `data/local/droid_runs/<run_id>/run.jsonl`, and for
+token usage) is pushed to the sinks as it happens: stderr, `~/.trophy/droid_runs/<run_id>/run.jsonl`, and for
 house rules the Spacetime `house_rule` row via `update_house_rule_progress`, which Agent 1's dashboard panel renders.
 
 ## Measured (2026-10-24, this Mac, `claude-sonnet-5`, effort low, single runs)

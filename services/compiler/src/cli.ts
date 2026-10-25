@@ -12,7 +12,7 @@
  *                           # module runs: promote to data/local/modules/<sport>/v<n>
  *                           # calibrate runs: install the checks in data/local/sessions/<session|run_id>/checks
  *
- * Every run streams to stderr and to data/local/droid_runs/<run_id>/run.jsonl (the job as job.json beside it); the
+ * Every run streams to stderr and to ~/.trophy/droid_runs/<run_id> (DROID_RUNS_DIR)/run.jsonl (the job as job.json beside it); the
  * sandbox stays as the artifact.
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";

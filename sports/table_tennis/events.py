@@ -22,12 +22,10 @@ cameras map x well even when the ball is above the plane). ball_dead follows a f
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from dataclasses import dataclass
-
 from trophy_engine.sportmod.api import (
     BallSample,
     Camera,
+    Iterable,
     ModuleState,
     Observation,
     ball_dead_event,
@@ -41,17 +39,25 @@ from trophy_engine.sportmod.api import (
 )
 
 
-@dataclass
 class Candidate:
-    t_s: float
-    cam_id: str
-    x: float
-    y: float
-    sigma: float  # isotropic floor (config bounce.sigma_m, scaled by reprojection error and trust)
-    conf: float
-    surface: str  # the play surface ("table"/"court") | "floor" | "contact" (a racket hit: the ball reversed along x)
-    sigma_x: float = 0.0  # 1-sigma along the table (m): the floor, plus PX_SIGMA through the homography
-    sigma_y: float = 0.0  # 1-sigma across the table: large from a camera near table height (a pixel spans many cm)
+    """A bounce / hit candidate from one camera. A plain class: module code may not import dataclasses (D-35)."""
+
+    def __init__(
+        self,
+        *,
+        t_s: float,
+        cam_id: str,
+        x: float,
+        y: float,
+        sigma: float,  # isotropic floor (config bounce.sigma_m, scaled by reprojection error and trust)
+        conf: float,
+        surface: str,  # the play surface ("table"/"court") | "floor" | "contact" (a racket hit: reversed along x)
+        sigma_x: float = 0.0,  # 1-sigma along the table (m): the floor, plus PX_SIGMA through the homography
+        sigma_y: float = 0.0,  # 1-sigma across the table: large from a camera near table height
+    ) -> None:
+        self.t_s, self.cam_id, self.x, self.y = t_s, cam_id, x, y
+        self.sigma, self.conf, self.surface = sigma, conf, surface
+        self.sigma_x, self.sigma_y = sigma_x, sigma_y
 
 
 def _parabola_vertex(t0: float, y0: float, t1: float, y1: float, t2: float, y2: float) -> tuple[float, float]:
