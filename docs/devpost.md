@@ -81,7 +81,19 @@ The ping-pong footage is unlabelled, so we don't claim an accuracy number. Claud
 - Basketball fouls.
 
 ## Built with
-SpacetimeDB · Factory Droid (droid CLI + SDK) · Cartesia (Sonic, Ink-2) · Claude (Anthropic API) · TypeScript · React · Vite · Python · FastAPI · Redis · PyTorch (BlurBall) · OpenCV · ffmpeg · CEL · Caddy · Cloudflare Tunnel · trophy.photo
+**Devpost tags:** spacetimedb, factory-droid, cartesia, claude, anthropic, typescript, python, react, vite, fastapi, redis, pytorch, opencv, ffmpeg, cel, caddy, cloudflare, websockets, pwa
+
+| Category | What we used |
+|---|---|
+| Languages | TypeScript, Python, SQL (Spacetime subscriptions), CEL (rule conditions), YAML (rule packs) |
+| Frontend | React 19, Vite, a mobile-first PWA (WebAudio, MediaRecorder, WebSockets) |
+| Backend | FastAPI + Uvicorn, Pydantic, Node.js (Droid compiler), uv |
+| Database / state | SpacetimeDB 2.13 (shared world state, TypeScript module), Redis (frame bus, event streams) |
+| AI / ML | Claude (Anthropic API: challenge votes, explanations, ask the ref), Factory Droid (droid CLI + `@factory/droid-sdk`), BlurBall ball detection on PyTorch (Apple GPU / MPS), OpenCV, NumPy |
+| APIs | Cartesia Sonic (text-to-speech), Cartesia Ink-2 (speech-to-text), Anthropic Messages API (structured output), Factory Droid SDK |
+| Platforms | iPhone / Android browsers (no app install), macOS on Apple silicon |
+| Cloud / networking | Cloudflare Tunnel, Let's Encrypt (Caddy, DNS-01), Porkbun DNS, the trophy.photo domain |
+| Media / tools | ffmpeg (VideoToolbox), Caddy, cel-python, GitHub |
 
 ## Credits (Creative Commons footage)
 - **Pickleball:** "Pickleball Doubles Challenge Court in Melbourne, FL 06/09/2023 Game 1" by BT Pickleball, CC BY. https://www.youtube.com/watch?v=QhLECLlXU3c
