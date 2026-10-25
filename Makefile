@@ -44,3 +44,9 @@ gateway-check:
 eval-live-check:
 	uv run --frozen --project packages/py-trophy ruff check tools/eval_live.py tests/test_eval_live.py
 	uv run --frozen --project packages/py-trophy python -m pytest -q tests/test_eval_live.py
+
+.PHONY: recorded-analysis-check recorded-analysis-doctor
+recorded-analysis-check: ## Recorded prototype checks; bootstrap/import private assets first
+	cd spikes/serve-analysis && .venv/bin/python repro/reproduce.py test
+recorded-analysis-doctor:
+	cd spikes/serve-analysis && .venv/bin/python repro/reproduce.py doctor

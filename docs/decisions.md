@@ -1,5 +1,7 @@
 # Decisions
 
+- **D-33: Recorded-analysis reproducibility uses source plus a verified private asset kit.** The experimental app stays isolated in `spikes/serve-analysis`; four Python 3.12 locks and portable run profiles remove hidden dependencies on the original working directory. Private recordings, separately acquired model weights and reference outputs remain outside Git, with a committed checksum manifest and safe importer. Why: another agent/computer needs exact inputs without publishing participant footage or model assets. See `spikes/serve-analysis/REPRODUCE.md`. (2026-10-24)
+
 Record significant architecture changes: `D-n: decision. Why. Date/owner.` These are working defaults that agents may revise with evidence and updated consumers/docs.
 
 - **D-1: Flexible compute, with a cloud deployment baseline.** GCP `g2-standard-8` (L4, us-west1) for live processing and Vultr L40S for post-game work are current defaults. Local development, tests, inference, training and rendering are allowed on capable hardware; providers may change within authorized resources and budget. Historical credit estimates must be checked before spending. Why: hardware and budgets change. (2026-10-23)
