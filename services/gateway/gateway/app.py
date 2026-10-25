@@ -246,7 +246,7 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
             args["params"] = body.params
         await publish(make_ctl("create_game", gid, args))
         jlog("game created", game_id=gid, sport=body.sport)
-        return {"game_id": gid, "join_key": key, "join_url": f"https://{st.domain}/cam/?g={gid}&k={key}", "t0_ms": t0}
+        return {"game_id": gid, "join_key": key, "join_url": f"{st.public_origin()}/cam/?g={gid}&k={key}", "t0_ms": t0}
 
     @app.get("/api/games/{gid}/public")
     async def game_public(gid: str) -> dict[str, Any]:
@@ -256,7 +256,8 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
             "sport": g["sport"],
             "status": g.get("status", "lobby"),
             "t0_ms": float(g["t0_ms"]),
-            "stdb": {"uri": st.stdb_public_uri, "module": st.stdb_module},
+            "stdb": {"uri": st.stdb_uri(), "module": st.stdb_module},
+            "public_origin": st.public_origin(),
         }
 
     @app.post("/api/games/{gid}/join")
@@ -298,7 +299,8 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
             "cam_token": token,
             "exp_ms": exp,
             "t0_ms": float(g["t0_ms"]),
-            "stdb": {"uri": st.stdb_public_uri, "module": st.stdb_module},
+            "stdb": {"uri": st.stdb_uri(), "module": st.stdb_module},
+            "public_origin": st.public_origin(),
             "frame": FRAME_DEFAULTS,
         }
 

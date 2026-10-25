@@ -44,6 +44,20 @@ class Settings:
     engine_dir: Path = ROOT / "services" / "engine"
     engine_python: Path = ROOT / "services" / "engine" / ".venv" / "bin" / "python"
 
+    # A public tunnel (scripts/tunnel.py) writes its https origin here while it runs, for networks that isolate
+    # devices: join links and the phones' Spacetime socket then go through it. Read per request; no restart.
+    def public_origin(self) -> str:
+        f = self.data_dir / "public_origin"
+        try:
+            o = f.read_text("utf8").strip().rstrip("/")
+        except OSError:
+            o = ""
+        return o if o.startswith("https://") else f"https://{self.domain}"
+
+    def stdb_uri(self) -> str:
+        o = self.public_origin()
+        return f"wss://{o.removeprefix('https://')}/stdb" if o != f"https://{self.domain}" else self.stdb_public_uri
+
     @classmethod
     def from_env(cls) -> Settings:
         env = {**_dotenv(), **os.environ}

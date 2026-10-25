@@ -169,10 +169,8 @@ export async function join(gameId: string, joinKey: string, label: string, role:
     expMs: r.exp_ms,
     role,
     t0Ms: r.t0_ms,
-    // on a local dev origin, reach Spacetime through the dev server's /stdb proxy instead of the public domain
-    stdb: /^(127\.0\.0\.1|localhost)$/.test(location.hostname)
-      ? { ...r.stdb, uri: `ws://${location.host}/stdb` }
-      : r.stdb,
+    // Spacetime on the page's own origin: Caddy, a public tunnel and the dev servers all proxy /stdb
+    stdb: { ...r.stdb, uri: `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/stdb` },
     frame: r.frame,
   };
   try {

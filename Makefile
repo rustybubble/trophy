@@ -53,3 +53,7 @@ recorded-analysis-check: ## Recorded prototype checks; bootstrap/import private 
 	cd spikes/serve-analysis && .venv/bin/python repro/reproduce.py test
 recorded-analysis-doctor:
 	cd spikes/serve-analysis && .venv/bin/python repro/reproduce.py doctor
+
+.PHONY: tunnel
+tunnel: ## reach the stack from phones on any network (Cloudflare quick tunnel; stop with ctrl-c)
+	$(PYTHON) scripts/tunnel.py

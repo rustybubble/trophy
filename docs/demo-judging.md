@@ -9,6 +9,9 @@ The demo replays recordings as if live: the Mac streams each angle to the refere
 2. Prepare the media once, so Go live starts instantly: `curl -X POST -H "Authorization: Bearer <judge token>" https://trophy.photo/api/scenarios/<id>/prepare` for each scenario, or just press Go live once per scenario.
 3. Interpreters: each annotated sport needs its Droid-written `sports/<sport>/rules.yaml` (generated and gated in advance; see `docs/status/a3.md`).
 
+### If phones can't reach the Mac (venue Wi-Fi isolates devices)
+Symptom: the QR opens a blank page and the stack logs nothing. Run `make tunnel` (Cloudflare quick tunnel, installed with `brew install cloudflared`). It prints a `https://<words>.trycloudflare.com` address. While it runs, **new** games' join links and QR codes use that address automatically, phones on any network (venue Wi-Fi or cellular) can join, and Spacetime, the ctl socket and video all go through it. Start a new game after the tunnel is up (an older dashboard tab keeps its old QR). Anyone with the address can open the app while the tunnel runs; stop it with ctrl-c. `python3 infra/caddy/point_dns.py [--apply]` instead repoints trophy.photo at the Mac on a network that allows device-to-device traffic.
+
 ## The 3-minute demo
 1. **Dashboard** (laptop, `https://trophy.photo/`): Start a game, which shows the join QR.
 2. **Phones** scan the QR and tap Join. Each takes the next free angle (Side, Diagonal, …).
