@@ -4,6 +4,8 @@ dev:        ## (re)start the whole stack natively from the Procfile (also: npm r
 	$(PYTHON) scripts/dev.py
 e2e-synthetic: ## headless demo check on the SYNTHETIC fixtures: gateway game -> trophy-play -> calls/score in Spacetime -> Droid house rule -> approve
 	$(PYTHON) scripts/e2e_synthetic.py
+e2e:        ## CC BY clip as a phone -> frames -> recorder/replay -> Spacetime observations + calls (C2; stack running)
+	uv run --project services/gateway --frozen python scripts/e2e.py
 contracts:  ## regenerate TS (@trophy/contracts) + Pydantic (py-trophy) from packages/contracts/*.schema.json
 	node scripts/gen-contracts.mjs
 fixtures:   ## rebuild the labelled-synthetic MockState scripts

@@ -1,0 +1,28 @@
+{
+  "name": "@trophy/dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Trophy judges' dashboard at /: game + join QR, scoreboard, call feed, AI votes, Droid panel, ask-the-ref transcript, live world state, camera health, sport wall.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@trophy/contracts": "*",
+    "@trophy/state-client": "*",
+    "qrcode": "1.5.4",
+    "react": "19.2.9",
+    "react-dom": "19.2.9"
+  },
+  "devDependencies": {
+    "@types/qrcode": "1.5.5",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "vite": "7.3.7"
+  }
+}

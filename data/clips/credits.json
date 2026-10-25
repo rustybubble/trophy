@@ -1,1 +1,171 @@
-[]
+[
+  {
+    "sport": "badminton",
+    "url": "https://www.youtube.com/watch?v=ShrdcaZMdS0",
+    "title": "[GAMES] 231027 | Tokyo Badcox International Badminton Club | Friday night Badminton | Raw | Japan",
+    "creator": "HeartFlow Badminton",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "0:00-8:00",
+      "41:30-43:30"
+    ],
+    "use": "wide static corner; landing in/out; a let at 42:22",
+    "credit_line": "\"[GAMES] 231027 | Tokyo Badcox International Badminton Club | Friday night Badminton | Raw | Japan\" by HeartFlow Badminton, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=ShrdcaZMdS0"
+  },
+  {
+    "sport": "basketball",
+    "url": "https://www.youtube.com/watch?v=2NxcgKW7xFM",
+    "title": "Fun Moderate to Intense 10 games Saturday run",
+    "creator": "JaiArtHub",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "0:00-12:00"
+    ],
+    "use": "half court facing one hoop; score overlay = make/miss and 2/3 truth",
+    "credit_line": "\"Fun Moderate to Intense 10 games Saturday run\" by JaiArtHub, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=2NxcgKW7xFM"
+  },
+  {
+    "sport": "pickleball",
+    "url": "https://www.youtube.com/watch?v=QhLECLlXU3c",
+    "title": "Pickleball Doubles Challenge Court in Melbourne, FL 06/09/2023 Game 1",
+    "creator": "BT Pickleball",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "full"
+    ],
+    "use": "both kitchens + feet visible; near-line balls; score overlay",
+    "credit_line": "\"Pickleball Doubles Challenge Court in Melbourne, FL 06/09/2023 Game 1\" by BT Pickleball, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=QhLECLlXU3c"
+  },
+  {
+    "sport": "table_tennis",
+    "url": "https://www.youtube.com/watch?v=7maQFqJ3XQ0",
+    "title": "Ping Pong Footwork & A Controversial Edge Shot \ud83c\udfd3 5-Game Battle vs Leanne in At The Table Tennis Club",
+    "creator": "BenSucksAtPingPong",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "full"
+    ],
+    "use": "club match; disputed edge ball at 8:36; backup demo",
+    "credit_line": "\"Ping Pong Footwork & A Controversial Edge Shot \ud83c\udfd3 5-Game Battle vs Leanne in At The Table Tennis Club\" by BenSucksAtPingPong, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=7maQFqJ3XQ0"
+  },
+  {
+    "sport": "tennis",
+    "url": "https://www.youtube.com/watch?v=JReOUveKesY",
+    "title": "Fall 2026 SGV Mens 3.5 SoCal Doubles 18 & Over Match #2",
+    "creator": "Sammy Chang",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "0:00-10:00"
+    ],
+    "use": "3.5 doubles, behind the baseline corner; close line calls",
+    "credit_line": "\"Fall 2026 SGV Mens 3.5 SoCal Doubles 18 & Over Match #2\" by Sammy Chang, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=JReOUveKesY"
+  },
+  {
+    "sport": "two_hand_touch",
+    "url": "https://www.youtube.com/watch?v=0oy3ZeCtAvo",
+    "title": "False Start",
+    "creator": "Flag Football Coaching",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "full"
+    ],
+    "use": "false start",
+    "credit_line": "\"False Start\" by Flag Football Coaching, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=0oy3ZeCtAvo"
+  },
+  {
+    "sport": "two_hand_touch",
+    "url": "https://www.youtube.com/watch?v=1KHE6Te6JLA",
+    "title": "illegal Forward Pass",
+    "creator": "Flag Football Coaching",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "full"
+    ],
+    "use": "illegal forward pass",
+    "credit_line": "\"illegal Forward Pass\" by Flag Football Coaching, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=1KHE6Te6JLA"
+  },
+  {
+    "sport": "two_hand_touch",
+    "url": "https://www.youtube.com/watch?v=KoEpbHSChIg",
+    "title": "illegal Motion",
+    "creator": "Flag Football Coaching",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "full"
+    ],
+    "use": "illegal motion",
+    "credit_line": "\"illegal Motion\" by Flag Football Coaching, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=KoEpbHSChIg"
+  },
+  {
+    "sport": "two_hand_touch",
+    "url": "https://www.youtube.com/watch?v=Q4Bc-_4Menk",
+    "title": "Flag Guarding",
+    "creator": "Flag Football Coaching",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "full"
+    ],
+    "use": "flag guarding",
+    "credit_line": "\"Flag Guarding\" by Flag Football Coaching, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=Q4Bc-_4Menk"
+  },
+  {
+    "sport": "two_hand_touch",
+    "url": "https://www.youtube.com/watch?v=U5-Zpli85MY",
+    "title": "Pass Interference Defense",
+    "creator": "Flag Football Coaching",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "full"
+    ],
+    "use": "defensive pass interference",
+    "credit_line": "\"Pass Interference Defense\" by Flag Football Coaching, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=U5-Zpli85MY"
+  },
+  {
+    "sport": "two_hand_touch",
+    "url": "https://www.youtube.com/watch?v=V6nJyuKNstQ",
+    "title": "illegal Snap",
+    "creator": "Flag Football Coaching",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "full"
+    ],
+    "use": "flag-football rule clip: illegal snap (pre-labelled)",
+    "credit_line": "\"illegal Snap\" by Flag Football Coaching, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=V6nJyuKNstQ"
+  },
+  {
+    "sport": "two_hand_touch",
+    "url": "https://www.youtube.com/watch?v=cdzbER-7PHI",
+    "title": "Blocking",
+    "creator": "Flag Football Coaching",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "full"
+    ],
+    "use": "blocking",
+    "credit_line": "\"Blocking\" by Flag Football Coaching, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=cdzbER-7PHI"
+  },
+  {
+    "sport": "two_hand_touch",
+    "url": "https://www.youtube.com/watch?v=ia4vDkeKfG8",
+    "title": "Illegal Flag Pull",
+    "creator": "Flag Football Coaching",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "full"
+    ],
+    "use": "illegal flag pull",
+    "credit_line": "\"Illegal Flag Pull\" by Flag Football Coaching, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=ia4vDkeKfG8"
+  },
+  {
+    "sport": "volleyball",
+    "url": "https://www.youtube.com/watch?v=kVpO4ypzPYU",
+    "title": "Handymen vs AZIAN Mixed - Mixed Moscow Volleyball League (1st set)",
+    "creator": "Almost Volleyball",
+    "license": "Creative Commons Attribution license (reuse allowed)",
+    "sections": [
+      "full"
+    ],
+    "use": "full amateur set, static elevated; in/out, net",
+    "credit_line": "\"Handymen vs AZIAN Mixed - Mixed Moscow Volleyball League (1st set)\" by Almost Volleyball, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=kVpO4ypzPYU"
+  }
+]

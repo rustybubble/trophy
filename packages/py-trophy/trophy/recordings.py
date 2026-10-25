@@ -80,6 +80,12 @@ def select_encoder(ffmpeg: str, requested: str = "auto") -> str:
     raise RuntimeError("no working H.264 encoder; install libx264 or configure a tested hardware encoder")
 
 
+def live_snapshot(playlist_text: str) -> str:
+    """A live HLS playlist closed with ENDLIST, so ffmpeg reads the segments written so far and stops."""
+    text = playlist_text.rstrip("\n")
+    return text + "\n" if "#EXT-X-ENDLIST" in text else text + "\n#EXT-X-ENDLIST\n"
+
+
 class RecordingStore:
     def __init__(self, root: Path) -> None:
         self.root = root.resolve()
@@ -175,10 +181,9 @@ class RecordingStore:
             raise FileNotFoundError("HLS segments are not ready yet")
         start = max(t0, meta["t0_game_s"]) - meta["t0_game_s"]
         duration = min(t1, meta["last_t_game_s"] + 1 / meta["fps"]) - meta["t0_game_s"] - start
+        text = playlist.read_text()
         coverage = sum(
-            float(line.split(":", 1)[1].split(",", 1)[0])
-            for line in playlist.read_text().splitlines()
-            if line.startswith("#EXTINF:")
+            float(line.split(":", 1)[1].split(",", 1)[0]) for line in text.splitlines() if line.startswith("#EXTINF:")
         )
         if start + duration > coverage + 0.001:
             raise FileNotFoundError("requested HLS window is not finalized yet")
@@ -189,6 +194,14 @@ class RecordingStore:
         dest.parent.mkdir(exist_ok=True)
         fd, tmp = tempfile.mkstemp(suffix=".mp4", dir=dest.parent)
         os.close(fd)
+        # Mid-game the playlist is still live (no ENDLIST), and ffmpeg would wait for segments that haven't been
+        # written yet. Cut from a snapshot of the finalized segments instead, next to them so relative URIs resolve.
+        source = playlist
+        if "#EXT-X-ENDLIST" not in text:
+            fd, snap = tempfile.mkstemp(suffix=".m3u8", prefix=".snapshot-", dir=base)
+            with os.fdopen(fd, "w", encoding="utf8") as f:
+                f.write(live_snapshot(text))
+            source = Path(snap)
         try:
             subprocess.run(
                 [
@@ -197,7 +210,7 @@ class RecordingStore:
                     "error",
                     "-y",
                     "-i",
-                    str(playlist),
+                    str(source),
                     "-ss",
                     str(start),
                     "-t",
@@ -222,6 +235,8 @@ class RecordingStore:
             os.replace(tmp, dest)
         finally:
             Path(tmp).unlink(missing_ok=True)
+            if source != playlist:
+                source.unlink(missing_ok=True)
         return dest
 
     def tracks(self, game: str, cam: str, kind: str, t0: float, t1: float) -> dict:

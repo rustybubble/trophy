@@ -29,14 +29,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PIDS = ROOT / "data" / "local" / "dev.pids"
 DEFAULTS = {"SPACETIME": "spacetime", "PYTHON": sys.executable}  # this Mac has python3 only; Windows has python
-PORTS = {"redis": 6379, "spacetime": 3000, "gateway": 8000, "referee": 8100, "voice": 8765, "pwa": 5173, "caddy": 443}
+PORTS = {"redis": 6379, "spacetime": 3000, "gateway": 8000, "referee": 8100, "voice": 8765, "pwa": 5173, "dashboard": 5174, "caddy": 443}
 WAITS = {
     "gateway": [6379, 3000],
     "recorder": [6379, 3000],
     "engine": [6379, 3000],
     "referee": [6379],
     "compiler": [3000],
-    "caddy": [8000, 5173],
+    "caddy": [8000, 5173, 5174],
     "flight": [6379, 3000, 8000],
 }
 WIN = os.name == "nt"

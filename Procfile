@@ -14,4 +14,5 @@ referee: uv run --directory services/referee --frozen referee serve
 compiler: npm run cli -w @trophy/compiler -- watch
 voice: $PYTHON spikes/cartesia-voice/serve.py --port 8765
 pwa: npm run dev -w @trophy/pwa -- --logLevel warn
+dashboard: npm run dev -w @trophy/dashboard -- --logLevel warn
 caddy: $PYTHON infra/caddy/run.py
