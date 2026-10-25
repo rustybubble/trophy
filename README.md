@@ -143,16 +143,55 @@ Pickup games are how strangers become regulars: a table in a dorm basement, a co
 **What players said** _[OPEN-8: quotes from real players at Cal Hacks go here, with their permission. None yet; we won't invent any.]_
 
 ## Factory Droid
-_TODO (Agent 3, with #19): where the Droid runs, its trigger (`house_rule` row / `calibrate_checks`), the sandbox and exactly what it may touch, the `replay_test` / `check_test` gate, what the dashboard shows, and measured Droid-rule end-to-end time._
+A Factory Droid (`@factory/droid-sdk`, `services/compiler`) is how a judge changes the rules mid-game. It is never in
+the per-call hot path.
+- **Trigger:** a `house_rule` row with status `pending` in Spacetime (the judge typed or said "first to 7, win by 1").
+  `trophy-droid watch` subscribes and starts a run. A second job, `calibrate_checks`, specialises the geometry check
+  library to a camera setup (D-36).
+- **Sandbox:** a fresh git repository per run in `~/.trophy/droid_runs/<run_id>`, outside the repo, holding only the
+  pack to edit, its schemas, labelled synthetic samples, the brief and one gate script. Three layers enforce it: a
+  PreToolUse hook (`hooks/guard.py`) that allows edits to the job's allowlisted files and exactly one command, the
+  bare `./replay_test` or `./check_test`; a git audit after each turn that fails the run if anything else changed (or
+  nothing did); and the gate itself, which runs the Droid-written code with a clean environment, no network and no
+  writes outside the sandbox (`sandbox-exec` on macOS).
+- **Gate and approval:** `replay_test` replays the labelled fixtures through the candidate module and the rule engine
+  (event counts, timing, the labelled rally winners). On `ready` the dashboard's Droid panel shows the plan, every
+  step, the diff, the gate table and the calls that would change. The judge clicks Approve; the engine loads the pack
+  **from the gated commit** (`git show`), never from the working tree, and hot-loads it.
+- **Measured (this Mac, `claude-sonnet-5`, effort low, single runs):** "a serve that clips the net and lands in is a let"
+  went pending → **ready in 27.5–30.6 s** (first attempt, gate 19/19 in 270 ms), **65.5 s** once under load; approve →
+  hot-load in **0.5–0.8 s**. `calibrate_checks` has only been run with a scripted agent so far.
 
 ## Anthropic
-_TODO (Agent 3, with #19): our community and its problem, how Claude is used (ask-the-ref phrasing grounded in `rules.yaml` + house rules, the challenge voter), **where it could go wrong** and how we contain it._
+Pickup games have no referee, so close calls end in arguments or a replayed point. Trophy measures what sensors can
+measure and lets the players decide the rest, honestly labelled.
+- **How Claude is used:** the referee voice (`services/referee`) routes a spoken question and phrases the answer from a
+  geometry check's numbers; rules questions are answered only from the sport's `rules.yaml` plus approved house rules;
+  Claude is one of three background voters on a challenged BETA call (`decide()`), and writes post-game commentary
+  from the moment's facts. The Factory Droid runs on a Claude model too.
+- **Where it could go wrong, and the containment:**
+  - *A made-up line call.* Claude never makes one: geometry decides, Claude only phrases, and a vote is shown next to
+    the measurement, labelled uncalibrated.
+  - *A wrong number in a spoken answer.* Every digit Claude says must be one it was given; otherwise the deterministic
+    rendering of the same measurement is used, labelled `template`.
+  - *A confident but unsupported rules answer.* Answers are grounded only in the pack the engine enforces; weak
+    grounding says so instead of guessing.
+  - *A house rule that does something else.* The Droid's sandbox, gate and the judge's approval of a visible diff.
+- **Not yet measured:** no `ANTHROPIC_API_KEY` has been available on the demo Mac, so phrasing latency (budget
+  0.5–1.5 s) and live votes have only been tested against recorded API response shapes.
 
 ## Bitdeer AI Model Studio
-_TODO (Agent 3, with #19): its role as a challenge voter, the model and endpoint, and measured vote latency._
+One of the three challenge voters (`trophy_engine/decide`). When a BETA call is challenged, it gets the evidence
+crops and the call's facts through Bitdeer's OpenAI-compatible endpoint (`https://api-inference.bitdeer.ai/v1`, vision
+via `image_url`, model `BITDEER_VISION_MODEL`, default `Qwen/Qwen3.5-397B-A17B`) and votes on shuffled options with a
+4 s timeout that never delays the spoken call. The dashboard's AI panel shows its vote beside Claude's and Gemini's,
+labelled uncalibrated. **Not yet run live:** no `BITDEER_API_KEY` on the demo Mac; tested with recorded response shapes.
 
 ## Gemini
-_TODO (Agent 3, with #19): its role as a challenge voter, the model, and measured vote latency._
+One of the three challenge voters (`trophy_engine/decide`): the same evidence and options as the others, a JSON
+response schema, `GEMINI_MODEL` from the environment, and the same 4 s budget that never delays a call. Its vote is
+shown in the dashboard's AI panel, labelled uncalibrated. **Not yet run live:** no `GEMINI_API_KEY` on the demo Mac;
+tested with recorded response shapes.
 
 ## License
 MIT (see [LICENSE](LICENSE)). Third-party code, models and media keep their own terms: see [docs/licenses.md](docs/licenses.md).
