@@ -351,10 +351,10 @@ def run(argv: list[str] | None = None) -> int:
                             }
                         )
                     )
-        rejected0 = consumer.rejected
+        malformed0 = consumer.malformed
         ctl_last, n = step(engine, consumer, r, ctl_last)
         if a.exit_when_idle > 0:
-            if n or consumer.rejected != rejected0:
+            if n or consumer.malformed != malformed0:
                 idle_since = time.monotonic()
             elif time.monotonic() - idle_since > a.exit_when_idle:
                 return 0
@@ -364,7 +364,7 @@ def step(engine: Engine, consumer: EventConsumer, r: redis.Redis, ctl_last: str,
     """One pass of the live loop: new events into the engine, then new ctl commands. Returns the ctl cursor and how
     many entries (events, commands, rejected entries) it handled. A bad
     event, a malformed entry or a failing command is logged and skipped, never fatal (review blocker 6)."""
-    rejected0 = consumer.rejected
+    malformed0 = consumer.malformed
     try:
         entries = consumer.read(block_ms=block_ms)
     except redis.RedisError:
@@ -403,7 +403,7 @@ def step(engine: Engine, consumer: EventConsumer, r: redis.Redis, ctl_last: str,
             engine.handle_ctl(cmd.model_dump(by_alias=True, exclude_none=True, mode="json"))
         except Exception:  # noqa: BLE001
             log.exception("ctl failed")
-    return ctl_last, len(entries) + len(ctl_entries) + consumer.rejected - rejected0
+    return ctl_last, len(entries) + len(ctl_entries) + consumer.malformed - malformed0
 
 
 def _stream_tail(r: redis.Redis, stream: str) -> str:

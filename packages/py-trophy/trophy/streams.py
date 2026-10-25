@@ -78,7 +78,11 @@ def publish_event(r: redis.Redis, ev: Event, stream: str | None = None) -> str:
 
 
 class EventConsumer:
-    """Consumer-group reader over one or more ev:* streams (the engine uses group ``engine``)."""
+    """Consumer-group reader over one or more ev:* streams (the engine uses group ``engine``).
+
+    ``read()`` never raises on a bad entry: an entry that isn't a valid ``trophy.event.v1`` is acked (so it isn't
+    redelivered), logged and counted in ``malformed``, and the good entries around it are still returned.
+    """
 
     def __init__(
         self,
@@ -90,9 +94,9 @@ class EventConsumer:
     ) -> None:
         self.r = r
         self.streams = list(streams)
-        self.rejected = 0
         self.group = group
         self.consumer = consumer
+        self.malformed = 0
         for s in self.streams:
             try:
                 r.xgroup_create(s, group, id=start, mkstream=True)
@@ -101,23 +105,22 @@ class EventConsumer:
                     raise
 
     def read(self, block_ms: int = 100, count: int = 100) -> list[tuple[str, str, Event]]:
-        """New events. An entry that isn't a valid trophy.event.v1 is acked, logged and skipped (counted in
-        ``rejected``): one bad producer must never stop the consumer."""
         resp = self.r.xreadgroup(self.group, self.consumer, {s: ">" for s in self.streams}, count=count, block=block_ms)
         out: list[tuple[str, str, Event]] = []
         for stream, entries in resp or []:
             for entry_id, fields in entries:
-                raw = fields.get(b"json", fields.get("json"))
+                sname, eid = _s(stream), _s(entry_id)
                 try:
-                    if raw is None:
-                        raise ValueError("no `json` field")
-                    ev = parse_event(raw)
-                except (ValueError, TypeError) as e:  # pydantic's ValidationError and json errors are ValueErrors
-                    self.rejected += 1
-                    log.warning("dropped a malformed entry %s on %s: %s", _s(entry_id), _s(stream), str(e)[:200])
-                    self.ack(_s(stream), _s(entry_id))
+                    ev = parse_event(fields.get(b"json", fields.get("json")))
+                except (ValueError, TypeError) as e:  # bad JSON, a contract violation, or no `json` field
+                    self.malformed += 1
+                    self.ack(sname, eid)
+                    log.warning(
+                        "malformed event acked and skipped: %s",
+                        json.dumps({"stream": sname, "entry_id": eid, "error": f"{type(e).__name__}: {e}"[:300]}),
+                    )
                     continue
-                out.append((_s(stream), _s(entry_id), ev))
+                out.append((sname, eid, ev))
         return out
 
     def ack(self, stream: str, *entry_ids: str) -> None:

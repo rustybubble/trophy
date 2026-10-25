@@ -195,6 +195,33 @@ def test_publish_and_consume(r):
     assert c.read(block_ms=0) == []
 
 
+def test_a_malformed_entry_between_two_good_ones_is_skipped_not_raised(r, caplog):
+    c = EventConsumer(r, streams=[EV_FLIGHT], start="0")
+    first, last = bounce(), bounce()
+    publish_event(r, first)
+    r.xadd(EV_FLIGHT, {"json": "{not json"})
+    r.xadd(EV_FLIGHT, {"json": json.dumps({"schema": "trophy.event.v1", "id": "x"})})  # valid JSON, not an Event
+    r.xadd(EV_FLIGHT, {"other": "no json field"})
+    publish_event(r, last)
+    with caplog.at_level("WARNING", logger="trophy.streams"):
+        got = c.read(block_ms=0)
+    assert [e.id for _, _, e in got] == [first.id, last.id]
+    assert c.malformed == 3 and len([m for m in caplog.messages if "malformed event" in m]) == 3
+
+
+def test_malformed_entries_are_acked_and_good_ones_wait_for_the_caller(r):
+    c = EventConsumer(r, streams=[EV_FLIGHT], start="0")
+    good = bounce()
+    publish_event(r, good)
+    r.xadd(EV_FLIGHT, {"json": "{not json"})
+    got = c.read(block_ms=0)
+    pending = r.xpending(EV_FLIGHT, "engine")
+    assert pending["pending"] == 1  # only the good entry, until the caller acks it
+    c.ack(EV_FLIGHT, got[0][1])
+    assert r.xpending(EV_FLIGHT, "engine")["pending"] == 0
+    assert c.read(block_ms=0) == []  # nothing is redelivered
+
+
 def test_ctl_roundtrip_and_roles(r):
     cmd = make_ctl("challenge", GAME, {"call_id": "01J0000000000000000000000A"}, by_cam_id="c_abcdef")
     publish_ctl(r, cmd)
@@ -235,5 +262,5 @@ def test_consumer_acks_and_skips_malformed_entries_instead_of_raising():
     r.xadd(EV_FLIGHT, {"other": "no json field"})
     r.xadd(EV_FLIGHT, {"json": '{"schema": "trophy.event.v1"}'})
     assert c.read(block_ms=0) == []
-    assert c.rejected == 3
+    assert c.malformed == 3
     assert r.xpending(EV_FLIGHT, "engine")["pending"] == 0  # acked, so never redelivered
