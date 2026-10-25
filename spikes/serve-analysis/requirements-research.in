@@ -1,0 +1,9 @@
+# Optional alternative TrackNet smoke test only; not needed by the replay.
+# Use the existing core OpenCV-headless installation; avoid a second cv2 wheel.
+mmengine==0.10.7
+addict==2.4.0
+termcolor==3.1.0
+yapf==0.43.0
+platformdirs==4.5.0
+rich==14.2.0
+matplotlib==3.10.7

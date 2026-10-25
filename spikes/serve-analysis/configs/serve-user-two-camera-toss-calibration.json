@@ -1,0 +1,152 @@
+{
+  "format": "trophy-toss-calibration-v1",
+  "calibration_id": "phone-room-8s-approximate-v1",
+  "units": "metres",
+  "world_up": [
+    0,
+    0,
+    1
+  ],
+  "cameras": [
+    {
+      "view_id": "Side camera",
+      "K": [
+        [
+          1533.476370281201,
+          0.0,
+          960.0
+        ],
+        [
+          0.0,
+          1533.476370281201,
+          540.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "R": [
+        [
+          0.010876101641434377,
+          -0.9996589512952472,
+          0.023742188365272754
+        ],
+        [
+          -0.04548804273643814,
+          -0.024213634774122084,
+          -0.9986713863223646
+        ],
+        [
+          0.9989056754174007,
+          0.009781665825018215,
+          -0.04573587905129306
+        ]
+      ],
+      "t": [
+        -0.06946409981291994,
+        0.440321413718404,
+        4.423032798816524
+      ],
+      "image_size": [
+        1920,
+        1080
+      ],
+      "distortion": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "source_offset_seconds": 0,
+      "source_identity": {
+        "video": "../../data/local/ttClips/Adobe Express - IMG_4342.mp4",
+        "source_size_bytes": 849255746,
+        "source_mtime_ns": 1792868423125157814
+      }
+    },
+    {
+      "view_id": "Oblique camera",
+      "K": [
+        [
+          2105.270969006824,
+          0.0,
+          960.0
+        ],
+        [
+          0.0,
+          2105.270969006824,
+          540.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "R": [
+        [
+          0.9565574830045745,
+          0.29070695089136844,
+          0.022073749373339224
+        ],
+        [
+          0.019357934420413753,
+          0.012215012272097224,
+          -0.9997379976024556
+        ],
+        [
+          -0.29090041609273865,
+          0.9567341648434198,
+          0.006056875302953756
+        ]
+      ],
+      "t": [
+        -0.16208184113664195,
+        0.6976095016144321,
+        5.129513145481923
+      ],
+      "image_size": [
+        1920,
+        1080
+      ],
+      "distortion": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "source_offset_seconds": 0.04,
+      "source_identity": {
+        "video": "../../data/local/ttClips/IMG_2865 (1).mov",
+        "source_size_bytes": 389451500,
+        "source_mtime_ns": 1792868300650124880
+      }
+    }
+  ],
+  "validation": {
+    "status": "unvalidated",
+    "synchronization_verified": false,
+    "camera_motion_verified": false,
+    "gravity_alignment_verified": false,
+    "valid_session_time_range_seconds": [
+      8,
+      11
+    ],
+    "position_error_bound_m": null,
+    "maximum_toss_speed_mps": null,
+    "maximum_pair_time_delta_seconds": null,
+    "report": null,
+    "vertical_axis_error_degrees": null
+  },
+  "notes": [
+    "Estimated centered square-pixel pinhole cameras from table corners; lens distortion was not measured.",
+    "Geometry was estimated for the 8\u201311 second replay segment. Neither that interval nor other intervals have validated metric error bounds.",
+    "The oblique phone moves; do not treat this calibration as valid for the full recording.",
+    "The 40 ms offset is an audio estimate, not a validated ball synchronization error bound.",
+    "Estimates may be illustrated, but all supported legality decisions must abstain until calibration is validated."
+  ]
+}

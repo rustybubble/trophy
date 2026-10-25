@@ -18,9 +18,10 @@ Point a phone at a ping-pong table and Trophy referees the game:
 | `apps/pwa` | Phone app: camera, calls, voice, challenge, replay |
 | `apps/dashboard` | Judges' screen: score, calls, AI votes, Droid panel, ask-the-ref, live world state |
 | `apps/watch` | Trophy Watch: post-game recap, highlights, moments, replay, stats |
-| `services/gateway`, `services/recorder` | Phone API and replay recording |
-| `services/flight` | The ping-pong vision module (arriving with #19) |
-| `services/engine`, `services/compiler`, `services/referee` | Rule engine + AI votes, Factory Droid house rules, the referee voice (arriving with #19) |
+| `services/gateway`, `services/recorder` | Phone API, replay recording, the demo's clip upload + "stream as a phone" |
+| `services/flight` | The ping-pong vision module: BlurBall live on every camera stream, N-camera 3D fusion |
+| `services/engine`, `services/compiler`, `services/referee` | Rule engine + AI votes + 3D checks, Factory Droid house rules, the referee voice |
+| `spikes/serve-analysis` | BlurBall adapter (vendored upstream + official weights), recorded-video serve spotting and toss evidence ([setup](spikes/serve-analysis/CHECKOUT.md)) |
 | `spacetime/` | SpacetimeDB module: the shared world state (metadata only, no video) |
 | `packages/` | Contracts (JSON Schema), generated types, shared Python lib, state client |
 | `infra/` | Caddy + Porkbun DNS for `https://trophy.photo` |

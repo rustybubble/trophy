@@ -1,0 +1,13 @@
+{
+  "session_id": "user-two-camera",
+  "views": [
+    {
+      "id": "Side camera",
+      "video": "../../data/local/ttClips/Adobe Express - IMG_4342.mp4"
+    },
+    {
+      "id": "Oblique camera",
+      "video": "../../data/local/ttClips/IMG_2865 (1).mov"
+    }
+  ]
+}
