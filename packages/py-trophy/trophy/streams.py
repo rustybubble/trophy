@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -12,6 +13,8 @@ from .contracts import CtlCommand, Event
 from .events import event_json, parse_event
 from .ids import new_ulid
 from .timebase import now_ms
+
+log = logging.getLogger("trophy.streams")
 
 # ---- keys ----
 EV_FLIGHT = "ev:flight"
@@ -75,7 +78,11 @@ def publish_event(r: redis.Redis, ev: Event, stream: str | None = None) -> str:
 
 
 class EventConsumer:
-    """Consumer-group reader over one or more ev:* streams (the engine uses group ``engine``)."""
+    """Consumer-group reader over one or more ev:* streams (the engine uses group ``engine``).
+
+    ``read()`` never raises on a bad entry: an entry that isn't a valid ``trophy.event.v1`` is acked (so it isn't
+    redelivered), logged and counted in ``malformed``, and the good entries around it are still returned.
+    """
 
     def __init__(
         self,
@@ -89,6 +96,7 @@ class EventConsumer:
         self.streams = list(streams)
         self.group = group
         self.consumer = consumer
+        self.malformed = 0
         for s in self.streams:
             try:
                 r.xgroup_create(s, group, id=start, mkstream=True)
@@ -101,8 +109,18 @@ class EventConsumer:
         out: list[tuple[str, str, Event]] = []
         for stream, entries in resp or []:
             for entry_id, fields in entries:
-                raw = fields.get(b"json", fields.get("json"))
-                out.append((_s(stream), _s(entry_id), parse_event(raw)))
+                sname, eid = _s(stream), _s(entry_id)
+                try:
+                    ev = parse_event(fields.get(b"json", fields.get("json")))
+                except (ValueError, TypeError) as e:  # bad JSON, a contract violation, or no `json` field
+                    self.malformed += 1
+                    self.ack(sname, eid)
+                    log.warning(
+                        "malformed event acked and skipped: %s",
+                        json.dumps({"stream": sname, "entry_id": eid, "error": f"{type(e).__name__}: {e}"[:300]}),
+                    )
+                    continue
+                out.append((sname, eid, ev))
         return out
 
     def ack(self, stream: str, *entry_ids: str) -> None:
