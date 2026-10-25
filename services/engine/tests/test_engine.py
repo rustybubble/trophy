@@ -410,26 +410,28 @@ def test_serve_toss_rules_from_d22() -> None:
     assert legal == []
 
 
-def test_droid_net_let_house_rule_replays_the_point(tmp_path: Path) -> None:
-    """The rule the live Droid wrote on 2026-10-24 (run 01M5QYE04446M2RC8A2K1JFJ1V): a net-clipping serve is a let."""
+def _net_touch(t: float, side: str) -> dict:
+    return {
+        "schema": "trophy.event.v1",
+        "id": f"nt{t}",
+        "game_id": GAME,
+        "t_game_s": t,
+        "sport": "table_tennis",
+        "type": "net",
+        "source": "synthetic",
+        "cams": ["c_syn001"],
+        "conf": 0.8,
+        "side": side,
+        "payload": {"kind": "touch", "from_side": side},
+    }
+
+
+def _engine_with(tmp_path: Path, **params) -> tuple[Engine, MemoryState]:
+    """The golden module with some params changed, as a house rule would leave it."""
     import yaml
 
     pack = yaml.safe_load((TT / "rules.yaml").read_text())
-    rule = {
-        "id": "serve_net_let",
-        "name": "Serve clips the net and lands in",
-        "tier": "AUTO",
-        "kind": "edge_call",
-        "when": "params.net_let_on_serve && ev.type == 'net' && ev.payload.kind == 'touch' && rally.phase == 'serve'",
-        "check": "code",
-        "outcome": "let",
-        "text": "Let: serve clipped the net",
-        "speech": "Let. Replay the point.",
-        "requires": ["net"],
-        "house_rule": True,
-    }
-    idx = next(i for i, r in enumerate(pack["rules"]) if r["id"] == "net_into_own_side")
-    pack["rules"].insert(idx, rule)
+    pack["params"].update(params)
     mod = tmp_path / "table_tennis"
     shutil.copytree(TT, mod)
     (mod / "rules.yaml").write_text(yaml.safe_dump(pack))
@@ -437,34 +439,43 @@ def test_droid_net_let_house_rule_replays_the_point(tmp_path: Path) -> None:
     eng = Engine(st, now_ms=lambda: 1.0)
     eng.create_game(GAME, "table_tennis", t0_ms=0, module_dir=mod)
     eng.start_game(GAME, "A")
-    eng.feed(point_call(1.0, "A"))  # serve bounces on the server's side
-    touch = {
-        "schema": "trophy.event.v1",
-        "id": "nt",
-        "game_id": GAME,
-        "t_game_s": 1.2,
-        "sport": "table_tennis",
-        "type": "net",
-        "source": "synthetic",
-        "cams": ["c_syn001"],
-        "conf": 0.8,
-        "side": "A",
-        "payload": {"kind": "touch", "from_side": "A"},
-    }
-    calls = eng.feed(touch)
-    assert (
-        calls
-        and calls[-1]["outcome"] == "let"
-        and calls[-1]["speech"] == "Let. Replay the point."
-        and "points" not in calls[-1]
-    )
+    return eng, st
+
+
+def test_serve_that_clips_the_net_and_lands_in_is_a_let() -> None:
+    """ITTF 2.9.1.1, in the golden pack: the let is called on the receiver-side bounce, so the serve was good."""
+    eng, st = new_engine()
+    eng.feed(point_call(1.0, "A"))  # the serve bounces on the server's side
+    assert eng.feed(_net_touch(1.2, "A")) == []
+    calls = eng.feed(point_call(1.4, "B"))
+    assert calls and calls[-1]["rule_id"] == "serve_net_let" and calls[-1]["outcome"] == "let"
+    assert calls[-1]["speech"] == "Let. Replay the point." and "points" not in calls[-1]
     assert eng.games[GAME].rally is None  # the rally ended; the point is replayed
     assert {r["team_id"]: r["points"] for r in st.rows("score")} == {"A": 0, "B": 0}
     assert st.rows("rally")[-1]["summary"]["let"] is True
-    # the same touch in a rally (not a serve) is not a let under this rule
+    # a net touch in a rally (not a serve) is played on
     eng.feed(point_call(5.0, "A"))
     eng.feed(point_call(5.4, "B"))
-    assert eng.feed({**touch, "id": "nt2", "t_game_s": 5.6}) == []
+    eng.feed(point_call(5.8, "A"))
+    eng.feed(_net_touch(6.0, "A"))
+    assert [c["rule_id"] for c in eng.feed(point_call(6.2, "B"))] == []
+
+
+def test_serve_that_clips_the_net_and_misses_is_not_a_let() -> None:
+    eng, st = new_engine()
+    eng.feed(point_call(1.0, "A"))
+    eng.feed(_net_touch(1.2, "A"))
+    calls = eng.feed(floor(1.4, "B"))
+    assert calls and calls[-1]["rule_id"] == "off_table" and calls[-1]["team_id"] == "B"
+
+
+def test_no_lets_house_rule_plays_the_serve_on(tmp_path: Path) -> None:
+    """The demo house rule "no lets" is one param: net_let_on_serve false."""
+    eng, st = _engine_with(tmp_path, net_let_on_serve=False)
+    eng.feed(point_call(1.0, "A"))
+    eng.feed(_net_touch(1.2, "A"))
+    assert eng.feed(point_call(1.4, "B")) == []
+    assert eng.games[GAME].rally is not None  # the rally goes on
 
 
 def _bounce(t: float, side: str, surface: str = "table") -> dict:

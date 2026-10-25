@@ -84,13 +84,13 @@ BETA call list live through `ws://127.0.0.1:5173/stdb`. A bug found here and fix
 ## 4. A house rule, compiled by the Factory Droid, live
 ```bash
 uv run --directory services/engine --frozen trophy-ctl submit_house_rule <game_id> --by judge \
-  --args '{"text": "a serve that clips the net and lands in is a let: replay the point"}'
+  --args '{"text": "no lets: a serve that clips the net is played on"}'
 # the compiler (`trophy-droid watch`) sees the pending house_rule row in Spacetime, runs the Droid in a fresh sandbox
 # (allowlist: sports/table_tennis/rules.yaml only; PreToolUse hook; git audit; replay_test gate; 90 s cap),
 # streams plan/steps/diff/results into the row; when status = ready:
 uv run --directory services/engine --frozen trophy-ctl approve_house_rule <game_id> --by judge \
   --args '{"rule_version": "<rule_version from the house_rule row>"}'
-# -> the engine hot-loads the new pack (status approved); a serve net-let now replays the point.
+# -> the engine hot-loads the new pack (status approved); a serve that clips the net and lands in is now played on (no let).
 ```
 The judge view of the PWA does the same from its House rules panel (typed or spoken).
 
