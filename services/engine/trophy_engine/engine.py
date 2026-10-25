@@ -696,9 +696,14 @@ class Engine:
         if call.get("source") == "annotated":
             facts.append("From the marked events on the recording.")
         if claude:
-            facts.append(f"Claude: {str(claude['rationale']).rstrip('.')}.")
+            first = re.split(r"(?<=[.!?])\s", str(claude["rationale"]).strip(), maxsplit=1)[0].rstrip(".")
+            facts.append(f"Claude agrees: {first}." if claude.get("choice") == call["outcome"] else f"Claude: {first}.")
         facts.append(f"Confidence {round(p_orig * 100)}% (uncalibrated).")
-        explanation = " ".join(f for f in [head, *facts] if f)[:240]
+        explanation = ""
+        for part in (f for f in [head, *facts] if f):  # whole sentences only, 240 chars at most
+            if len(explanation) + len(part) + 1 > 240:
+                break
+            explanation = f"{explanation} {part}".strip()
         return {
             "cmd": "resolve_challenge",
             "game_id": g.game["game_id"],
