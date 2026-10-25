@@ -1,0 +1,164 @@
+# Sport module: table tennis rule pack (handwritten golden reference). Validated by rulepack.schema.json.
+# CEL conditions run over ev (the current layer-2 event), rally (rally.phase, bounces, last_bounce_side,
+# last_bounce_surface, at_fault_side, server_side, receiver, last_hitter, shots), game (points, server_side,
+# game_point_for) and params; functions opponent(side) and phi(x). Rules are checked in order; the first scoring
+# rule (kind point/violation/basket with points, or outcome let) ends the rally. Agent 2 owns field:.
+sport: table_tennis
+family: flight
+version: 1
+name: Table tennis (pickup)
+teams:
+  - {team_id: A, name: Team A, color: "#e4572e"}
+  - {team_id: B, name: Team B, color: "#2e86ab"}
+params:
+  edge_band_m: 0.03
+  serve_min_toss_m: 0.1524      # D-22: the toss must rise more than 6 in (STRETCH: needs serve_toss observations)
+  serve_max_angle_rad: 0.5236   # D-22: within 30 degrees of vertical
+  net_let_on_serve: true        # a serve that clips the net and lands in is replayed (ITTF 2.9.1)
+variants:
+  ittf_strict: {serve_min_toss_m: 0.16, serve_max_angle_rad: 0.0873}
+field:
+  units: m
+  frame: "Origin at the centre of the table top; +x toward end B; +y left when facing from A to B; z up. Net plane x = 0."
+  dims: {length: 2.74, width: 1.525, net_height: 0.1525}
+  landmarks:
+    - {name: A_left, pos_m: [-1.37, 0.7625], prompt: "Team A's end, left corner"}
+    - {name: A_right, pos_m: [-1.37, -0.7625], prompt: "Team A's end, right corner"}
+    - {name: B_right, pos_m: [1.37, -0.7625], prompt: "Team B's end, right corner"}
+    - {name: B_left, pos_m: [1.37, 0.7625], prompt: "Team B's end, left corner"}
+  lines:
+    end_A: [[-1.37, -0.7625], [-1.37, 0.7625]]
+    end_B: [[1.37, -0.7625], [1.37, 0.7625]]
+    side_left: [[-1.37, 0.7625], [1.37, 0.7625]]
+    side_right: [[-1.37, -0.7625], [1.37, -0.7625]]
+    net: [[0.0, -0.7625], [0.0, 0.7625]]
+  zones:
+    side_A: [[-1.37, -0.7625], [0.0, -0.7625], [0.0, 0.7625], [-1.37, 0.7625]]
+    side_B: [[0.0, -0.7625], [1.37, -0.7625], [1.37, 0.7625], [0.0, 0.7625]]
+scoring:
+  template: rally
+  params:
+    points_to_win: 11
+    win_by: 2
+    serves_per_turn: 2
+    deuce_serves_per_turn: 1    # alternate every point from 10-10
+    games_to_win: 1
+rules:
+  # Rally state (stage-2 engine): a serve bounces server-side then receiver-side; a return lands on the opponent's
+  # side; two bounces on one side, a net into own side, or off the table end the rally.
+  - id: serve_own_side_miss
+    name: Serve misses the server's side
+    tier: AUTO
+    kind: point
+    when: "ev.type == 'bounce' && rally.phase == 'serve' && rally.bounces == 0 && ev.side != rally.server_side"
+    check: code
+    outcome: fault
+    team: "rally.receiver"
+    points: 1
+    text: "Fault: serve must bounce on the server's side first"
+    speech: "Fault. Serve."
+    requires: [bounce]
+    rule_ref: "ITTF 2.6.2"
+  - id: double_bounce
+    name: Two bounces on one side
+    tier: AUTO
+    kind: point
+    when: "ev.type == 'bounce' && ev.payload.surface == 'table' && rally.last_bounce_side == ev.side"
+    check: code
+    outcome: point
+    team: "opponent(ev.side)"
+    points: 1
+    text: "Point: two bounces on side {ev.side}"
+    speech: "Point, {team}."
+    requires: [bounce]
+    rule_ref: "ITTF 2.10.1.4"
+  - id: off_table
+    name: Ball misses the table
+    tier: AUTO
+    kind: point
+    when: "ev.type == 'bounce' && ev.payload.surface == 'floor'"
+    check: code
+    p: "1.0 - ev.payload.p_in"
+    outcome: out
+    team: "opponent(rally.at_fault_side)"
+    points: 1
+    text: "Out. Point {team}"
+    speech: "Out. Point, {team}."
+    requires: [bounce]
+    rule_ref: "ITTF 2.10.1.3"
+  - id: edge_ball
+    name: Edge ball (top edge good, side face fault)
+    tier: BETA
+    kind: edge_call
+    when: "ev.type == 'bounce' && has(ev.payload.edge) && ev.payload.edge.side_face > 0.15"
+    check: ensemble
+    ensemble:
+      type: choice
+      question: "Did the ball hit the top edge of the table (good) or the side face (fault)?"
+      options: [top_edge, side_face]
+    p: "ev.payload.edge.top_edge + ev.payload.edge.surface"
+    outcome: edge_good
+    team: "opponent(ev.side)"
+    text: "Edge ball: good ({p}%)"
+    speech: "Edge ball. Good."
+    requires: [bounce]
+    rule_ref: "ITTF 2.1.2"
+  - id: net_into_own_side
+    name: Net into own side
+    tier: AUTO
+    kind: point
+    when: "ev.type == 'net' && ev.payload.kind == 'into'"
+    check: code
+    outcome: net
+    team: "opponent(ev.payload.from_side)"
+    points: 1
+    text: "Net. Point {team}"
+    speech: "Net. Point, {team}."
+    requires: [net]
+    rule_ref: "ITTF 2.10.1.2"
+  - id: ball_dead_after_last_bounce
+    name: Rally ends after the last bounce
+    tier: BETA
+    kind: point
+    when: "ev.type == 'ball_dead' && rally.bounces > 0 && rally.last_bounce_surface == 'table'"
+    check: code
+    p: "0.8"
+    outcome: point
+    team: "opponent(rally.at_fault_side)"
+    points: 1
+    text: "Point {team}: no return"
+    speech: "Point, {team}."
+    requires: [ball_dead]
+    rule_ref: "ITTF 2.10.1.1"
+  - id: serve_toss_too_low
+    name: Serve toss too low
+    tier: AUTO
+    kind: violation
+    when: "ev.type == 'serve_toss' && ev.payload.height_m <= params.serve_min_toss_m"
+    check: ensemble
+    ensemble: {type: yes_no, question: "Did the toss rise more than 6 inches (15 cm) off the palm?", options: [legal, too_low]}
+    p: "phi((params.serve_min_toss_m - ev.payload.height_m) / ev.payload.sigma_height_m)"
+    outcome: illegal_toss_height
+    team: "rally.receiver"
+    points: 1
+    text: "Fault: toss too low ({ev.payload.height_m} m)"
+    speech: "Fault. Toss too low."
+    requires: [serve_toss]
+    rule_ref: "ITTF 2.6.2"
+  - id: serve_toss_angle
+    name: Serve toss not vertical
+    tier: AUTO
+    kind: violation
+    when: "ev.type == 'serve_toss' && ev.payload.angle_from_vertical_rad > params.serve_max_angle_rad"
+    check: ensemble
+    ensemble: {type: yes_no, question: "Was the toss within 30 degrees of vertical from the hand to the hit?", options: [legal, angled]}
+    p: "phi((ev.payload.angle_from_vertical_rad - params.serve_max_angle_rad) / ev.payload.sigma_angle_rad)"
+    outcome: illegal_toss_angle
+    team: "rally.receiver"
+    points: 1
+    text: "Fault: toss not vertical"
+    speech: "Fault. Toss not vertical."
+    requires: [serve_toss]
+    rule_ref: "ITTF 2.6.2"
+calibration:
+  T: 1.0

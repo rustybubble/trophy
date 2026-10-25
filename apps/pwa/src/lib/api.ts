@@ -27,6 +27,20 @@ export interface AskAnswer {
   citations: { rule_id: string; title: string; url: string; quote: string }[];
   latency_ms: number;
   moss_ms?: number;
+  // referee service (interfaces-v1 §20): how it answered
+  kind?: "check" | "rule" | "score" | "explain" | "pending" | "none";
+  check?: string;
+  verdict?: string;
+  p?: number;
+  calibrated?: boolean;
+  evidence?: Record<string, unknown>;
+  phrased_by?: "claude" | "template";
+  route_source?: "regex" | "claude";
+  route_ms?: number;
+  check_ms?: number;
+  phrase_ms?: number;
+  reply_to?: string;
+  error?: string;
 }
 
 export interface ClipMeta {
@@ -142,8 +156,8 @@ export class Api {
   ctl(cmd: string, args: Record<string, unknown> = {}): Promise<{ req_id: string }> {
     return req("/ctl", { method: "POST", body: JSON.stringify({ cmd, args }) }, this.s.token);
   }
-  ask(question: string): Promise<AskAnswer> {
-    return req("/ask", { method: "POST", body: JSON.stringify({ question }) }, this.s.token);
+  ask(question: string, context: object = {}): Promise<AskAnswer> {
+    return req("/ask", { method: "POST", body: JSON.stringify({ question, context }) }, this.s.token);
   }
   voiceToken(): Promise<VoiceToken> {
     return req("/voice/token", {}, this.s.token);
