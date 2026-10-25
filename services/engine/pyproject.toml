@@ -25,6 +25,7 @@ trophy-engine = "trophy_engine.loop:main"
 trophy-ctl = "trophy_engine.ctl_cli:main"
 trophy-play = "trophy_engine.play:main"
 trophy-live = "trophy_engine.live:main"
+new-check-test = "trophy_engine.check_test.newcheck:main"
 
 [dependency-groups]
 dev = [

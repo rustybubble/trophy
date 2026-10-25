@@ -103,6 +103,8 @@ class Engine:
         # XADD a reply to the referee's stream (interfaces-v1 section 20)
         self.check_runner = None
         self.reply = None
+        # set by the live loop with a 3D track: start a Droid new_check job (game_id, question, hint, query, reply)
+        self.new_check = None
         self.server_from_first_hit = server_from_first_hit
         self.modules_dir = modules_dir or ROOT / "sports"
         self.decider = decider
@@ -836,12 +838,24 @@ class Engine:
         self._reply(a.get("reply_to"), reply)
 
     def _ctl_request_check(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
-        """No session check answers the question. Writing a new check (a Droid new_check job) is not built yet, so
-        say so at once: the referee tells the players to decide instead of waiting out its 95 s timeout."""
-        self._reply(
-            a.get("reply_to"),
-            {"check": str(a.get("check_hint") or "new"), "calibrated": False,
-             "error": "failed:new_check jobs are not built yet", "latency_ms": 0.0},
+        """No session check answers the question: a Droid writes one (a new_check job, in its jailed sandbox, gated on
+        the session's own track) and the answer goes to reply_to when it is ready. Without a fused 3D track there is
+        nothing to write a check over, so the referee hears that at once instead of waiting 95 s."""
+        reply_to = a.get("reply_to")
+        if self.new_check is None:
+            self._reply(reply_to, {"check": "new", "calibrated": False, "error": "no_data", "latency_ms": 0.0})
+            return
+        args = a.get("args") or {}
+        t, window = self._check_time(g, args)
+        if window and window.get("t0") is not None:
+            query = {"t0": float(window["t0"]), "t1": float(window.get("t1") or window["t0"] + 3.0)}
+        elif t is not None:
+            query = {"t0": t - 1.5, "t1": t + 1.5, "t_s": t}
+        else:
+            query = {}
+        self.new_check(
+            g.game["game_id"], str(a.get("question") or ""), str(a.get("check_hint") or ""), query,
+            lambda payload: self._reply(reply_to, payload),
         )  # fmt: skip
 
     def _reply(self, stream: Any, payload: dict[str, Any]) -> None:

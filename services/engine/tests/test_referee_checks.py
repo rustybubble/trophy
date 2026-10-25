@@ -63,7 +63,52 @@ def test_run_check_errors_are_honest():
         "request_check",
         {"question": "how fast was that", "check_hint": "ball_speed(rally)", "reply_to": "reply:r5"},
     )
-    assert replies[-1][1]["error"].startswith("failed:")
+    assert replies[-1][1]["error"] == "no_data"  # no 3D track to write a check over
+
+
+def test_request_check_starts_a_new_check_run_and_replies_with_its_gated_answer(tmp_path, monkeypatch):
+    import subprocess
+    import threading
+
+    from trophy_engine import loop
+
+    eng, _, replies = engine_with_track()
+    lib_store = eng.check_runner.store
+    ws = tmp_path / "ws"
+    (ws / ".trophy").mkdir(parents=True)
+    (ws / ".trophy" / "answer.json").write_text(
+        json.dumps({"check": "ball_speed", "verdict": "measured", "p": 1.0, "evidence": {"max_speed_m_s": 8.5},
+                    "inputs": {"t0": 1.0, "t1": 4.0}, "calibrated": False})
+    )  # fmt: skip
+    seen: dict = {}
+
+    def fake_run(cmd, **kw):
+        seen["cmd"] = cmd
+        out = json.dumps({"run_id": "01RUN", "status": "ready", "workspace": str(ws)}, indent=1)
+        return subprocess.CompletedProcess(cmd, 0, stdout=f"progress...\n{out}\n", stderr="")
+
+    monkeypatch.setattr(loop.subprocess, "run", fake_run)
+    monkeypatch.setattr(loop, "ROOT", tmp_path)  # session snapshots go under the tmp dir
+    done = threading.Event()
+    eng.reply = lambda stream, payload: (replies.append((stream, payload)), done.set())
+    eng.new_check = loop.make_new_check_starter(lib_store, FIX / "field.json", "table_tennis")
+    ctl(eng, "request_check", {"question": "how fast was that rally", "check_hint": "ball_speed(rally) -> m/s",
+                               "args": {"t_game_s": 2.5}, "reply_to": "reply:r6"})  # fmt: skip
+    assert done.wait(10)
+    stream, rep = replies[-1]
+    assert stream == "reply:r6" and rep["check"] == "ball_speed" and rep["verdict"] == "measured", rep
+    assert rep["evidence"]["max_speed_m_s"] == 8.5 and rep["inputs"]["droid_run"] == "01RUN"
+    assert "--name" in seen["cmd"] and seen["cmd"][seen["cmd"].index("--name") + 1] == "ball_speed"
+    assert json.loads(seen["cmd"][seen["cmd"].index("--query") + 1]) == {"t0": 1.0, "t1": 4.0, "t_s": 2.5}
+
+
+def test_check_name_from_the_hint_or_the_question():
+    from trophy_engine.loop import check_name
+
+    assert check_name("ball_speed(rally) -> max speed", []) == "ball_speed"
+    assert check_name("ball_speed(rally)", ["ball_speed"]) == "ball_speed_2"
+    assert check_name("How high was that toss?", []) == "how_high_was"
+    assert check_name("", []) == "new_check"
 
 
 def test_ask_logged_keeps_the_referees_fields():

@@ -49,6 +49,18 @@ export interface Job {
   sessionId?: string;
   gameId?: string;
   ruleVersion?: string;
+  /** new_check: the referee's question that no session check answers (interfaces-v1 section 20) */
+  newCheck?: {
+    /** the new check's name: checks/<name>.py, [a-z][a-z0-9_]* */
+    name: string;
+    question: string;
+    hint?: string;
+    /** the session's fused 3D track (a snapshot) and its field.json */
+    sessionTrack: string;
+    sessionField: string;
+    /** the arguments the referee asked with (t_s, or t0/t1) */
+    query: Record<string, unknown>;
+  };
 }
 
 export interface Sandbox {
@@ -70,7 +82,11 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
   if (readdirSync(dir).length) throw new Error(`sandbox dir is not empty: ${dir}`);
   const gate = gateScript(job.kind);
   const { moduleDir, allowlist, samples, gateCmd } =
-    job.kind === "calibrate_checks" ? layoutChecks(job, dir, root) : layoutModule(job, dir, root);
+    job.kind === "new_check"
+      ? layoutNewCheck(job, dir, root)
+      : job.kind === "calibrate_checks"
+        ? layoutChecks(job, dir, root)
+        : layoutModule(job, dir, root);
   // the gate: a fixed script so the Droid cannot vary the interpreter, module or samples; it runs the Droid-written
   // code jailed (review blocker 2): a clean env (no keys), isolated Python, no network, writes only in the sandbox
   const script = gateScriptText(gateCmd.module, gateCmd.args, enginePython);
@@ -176,6 +192,8 @@ function layoutChecks(job: Job, dir: string, root: string): Layout {
   const moduleDir = join(dir, "checks");
   cpSync(src, moduleDir, { recursive: true, filter: noPycache });
   cpSync(src, join(dir, "reference", "checks"), { recursive: true, filter: noPycache });
+  // the API the checks import, to read instead of searching the disk (reads outside the sandbox are refused)
+  cpSync(join(root, "services/engine/trophy_engine/checks/api.py"), join(dir, "reference", "checks_api.py"));
   const checkFiles = readdirSync(moduleDir)
     .filter((f) => f.endsWith(".py") && !f.startsWith("_"))
     .sort();
@@ -221,7 +239,7 @@ export function installGuard(dir: string, allowlist: string[], commands: string[
     hooksDisabled: false,
     PreToolUse: [
       {
-        matcher: "Edit|Create|ApplyPatch|MultiEdit|Write|Execute",
+        matcher: "Edit|Create|ApplyPatch|MultiEdit|Write|Execute|Read|Grep|Glob|LS",
         hooks: [{ type: "command", command: cmd, timeout: 10 }],
       },
     ],
@@ -229,6 +247,35 @@ export function installGuard(dir: string, allowlist: string[], commands: string[
   const hooksPath = join(dir, ".factory", "hooks.json");
   writeFileSync(hooksPath, JSON.stringify(hooks, null, 1));
   chmodSync(hooksPath, 0o444); // the guard also refuses writes to it; the git audit catches any change
+}
+
+/**
+ * new_check: the session library (read-only by the allowlist), the labelled samples for check-test, the session's own
+ * track and the question's arguments. The gate is new-check-test: the library must still pass and the new check must
+ * load, run deterministically on the session track and answer (.trophy/answer.json).
+ */
+function layoutNewCheck(job: Job, dir: string, root: string): Layout {
+  const nc = job.newCheck;
+  if (!nc) throw new Error("new_check job without newCheck");
+  if (!/^[a-z][a-z0-9_]{0,39}$/.test(nc.name)) throw new Error(`bad check name ${JSON.stringify(nc.name)}`);
+  const base = layoutChecks(job, dir, root);
+  if (existsSync(join(dir, "checks", `${nc.name}.py`))) throw new Error(`checks/${nc.name}.py already exists`);
+  const sessionDir = join(dir, "session");
+  mkdirSync(sessionDir);
+  cpSync(nc.sessionTrack, join(sessionDir, "track3d.jsonl"));
+  cpSync(nc.sessionField, join(sessionDir, "field.json"));
+  writeFileSync(join(sessionDir, "query.json"), JSON.stringify(nc.query, null, 1));
+  return {
+    ...base,
+    allowlist: editableFiles("new_check", job.sport, [nc.name]),
+    gateCmd: {
+      module: "trophy_engine.check_test.newcheck",
+      args:
+        `--checks checks --samples samples --field samples/field.json --rules "rules/${job.sport}" --new ${nc.name} ` +
+        "--session session/track3d.jsonl --session-field session/field.json --query session/query.json " +
+        "--answer .trophy/answer.json",
+    },
+  };
 }
 
 export function renderTask(job: Job, allowlist: string[], samples: string[]): string {
@@ -245,6 +292,10 @@ export function renderTask(job: Job, allowlist: string[], samples: string[]): st
     allowlist: allowlist.map((f) => `- \`${f}\``).join("\n"),
     samples: samples.map((f) => `- \`samples/${f}\` (labels: \`samples/${labelOf(f)}\`)`).join("\n"),
     scene: job.scene ? "`scene/scene.json`" : "(none)",
+    name: job.newCheck?.name ?? "",
+    question: job.newCheck?.question ?? "",
+    hint: job.newCheck?.hint ?? "(none)",
+    query: JSON.stringify(job.newCheck?.query ?? {}),
   };
   return tpl.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => vars[k] ?? `{{${k}}}`);
 }

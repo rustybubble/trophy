@@ -12,8 +12,12 @@ import argparse
 import json
 import logging
 import os
+import re
+import subprocess
 import sys
+import threading
 import time
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -188,7 +192,80 @@ def make_check_runner(store: TrackStore):
             "calibrated": bool(res.get("calibrated", False)),
         }
 
+    run_check.store = store  # type: ignore[attr-defined]  # new_check snapshots read the same track
     return run_check
+
+
+def check_name(text: str, taken: Iterable[str]) -> str:
+    """A new check's file name from the router's hint ('ball_speed(rally) -> ...') or the question's words."""
+    m = re.match(r"\s*([a-z][a-z0-9_]{1,39})\s*\(", text.lower())
+    base = m.group(1) if m else "_".join(re.findall(r"[a-z]+", text.lower())[:3]) or "new_check"
+    base = re.sub(r"[^a-z0-9_]", "_", base)[:36].strip("_") or "new_check"
+    base = base if base[0].isalpha() else f"q_{base}"
+    taken = set(taken)
+    name, n = base, 2
+    while name in taken:
+        name, n = f"{base}_{n}", n + 1
+    return name
+
+
+def make_new_check_starter(store: TrackStore, field_path: Path, sport: str, timeout_s: float = 95.0):
+    """request_check -> a Droid new_check run (services/compiler `new-check`) in a background thread; the reply is
+    the gated check's answer on the session's own track, or why there is none. The Droid-written check runs only
+    inside the jailed gate, never in this process; it is kept under the session for the judge to approve later."""
+    tsx = ROOT / "node_modules" / ".bin" / ("tsx.cmd" if os.name == "nt" else "tsx")
+    cli = ROOT / "services" / "compiler" / "src" / "cli.ts"
+
+    def start(game_id: str, question: str, hint: str, query: dict[str, Any], reply) -> None:
+        name = check_name(hint or question, store.library.names())
+        out_dir = ROOT / "data" / "local" / "sessions" / game_id / "new_checks" / f"{int(time.time() * 1000)}_{name}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        rows = store.rows()
+        (out_dir / "track3d.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), "utf8")
+        cmd = [str(tsx), str(cli), "new-check", "--sport", sport, "--name", name, "--question", question,
+               "--hint", hint, "--session-track", str(out_dir / "track3d.jsonl"), "--session-field", str(field_path),
+               "--query", json.dumps(query), "--game-id", game_id]  # fmt: skip
+
+        def work() -> None:
+            t0 = time.perf_counter()
+            payload: dict[str, Any] = {"check": name, "calibrated": False}
+            try:
+                if not rows:
+                    raise RuntimeError("no_data")
+                p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout_s)
+                i = p.stdout.rfind('{\n "run_id"')
+                run = json.loads(p.stdout[i:]) if i >= 0 else {}
+                (out_dir / "run.json").write_text(json.dumps(run, indent=1), "utf8")
+                if run.get("status") == "ready":
+                    answer = json.loads((Path(run["workspace"]) / ".trophy" / "answer.json").read_text("utf8"))
+                    payload = {
+                        "check": name,
+                        "verdict": answer.get("verdict") if isinstance(answer.get("verdict"), str) else None,
+                        "p": answer.get("p"),
+                        "evidence": {
+                            **(answer.get("evidence") or {}),
+                            **({"verdict": answer["verdict"]} if isinstance(answer.get("verdict"), dict) else {}),
+                            **({"text": answer["text"]} if answer.get("text") else {}),
+                        },
+                        "inputs": {**(answer.get("inputs") or {}), "droid_run": run.get("run_id")},
+                        "calibrated": bool(answer.get("calibrated", False)),
+                    }
+                else:
+                    payload["error"] = (
+                        f"failed:{run.get('status') or 'no run'}: {(run.get('error') or p.stderr[-200:])}"[:300]
+                    )
+            except subprocess.TimeoutExpired:
+                payload["error"] = "timeout"
+            except Exception as e:  # noqa: BLE001 - the referee gets an honest error
+                payload["error"] = "no_data" if str(e) == "no_data" else f"failed:{type(e).__name__}: {e}"[:300]
+            payload["latency_ms"] = round((time.perf_counter() - t0) * 1000, 1)
+            log.info(json.dumps({"svc": "engine", "msg": "new_check", "check": name, "error": payload.get("error"),
+                                 "ms": payload["latency_ms"]}))  # fmt: skip
+            reply(payload)
+
+        threading.Thread(target=work, name=f"new_check:{name}", daemon=True).start()
+
+    return start
 
 
 def run(argv: list[str] | None = None) -> int:
@@ -306,6 +383,7 @@ def run(argv: list[str] | None = None) -> int:
     if a.field is not None:  # the session's 3D track: the referee's run_check and (with --ask) POST /ask read it
         ask_store = TrackStore(load_library(a.checks or ROOT / "sports" / a.sport / "checks"), sport=a.sport)
         engine.check_runner = make_check_runner(ask_store)
+        engine.new_check = make_new_check_starter(ask_store, a.field, a.sport)
         if a.ask:
             start_ask(env, ask_store, a.session_dir or ROOT / "data" / "local" / "sessions" / "live")
 

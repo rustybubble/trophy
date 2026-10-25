@@ -83,8 +83,16 @@ describe("guard.py", () => {
     expect(run({ tool_name: "Create", tool_input: { file_path: `${sbc}/checks/new_check.py` } }, sbc).code).toBe(2);
   });
 
-  it("lets read-only tools through and fails closed without an allowlist", () => {
-    expect(run({ tool_name: "Read", tool_input: { file_path: "/etc/passwd" } }).code).toBe(0);
+  it("confines reads to the sandbox (a live new_check run grepped / for the API) and fails closed", () => {
+    expect(run({ tool_name: "Read", tool_input: { file_path: join(sb, "TASK.md") } }).code).toBe(0);
+    expect(run({ tool_name: "Read", tool_input: { file_path: "TASK.md" } }).code).toBe(0);
+    expect(run({ tool_name: "Grep", tool_input: { pattern: "def result" } }).code).toBe(0); // the sandbox by default
+    expect(run({ tool_name: "Read", tool_input: { file_path: "/etc/passwd" } }).code).toBe(2);
+    expect(run({ tool_name: "Read", tool_input: { file_path: "../../.env" } }).code).toBe(2);
+    expect(run({ tool_name: "Read", tool_input: { file_path: "~/.ssh/id_rsa" } }).code).toBe(2);
+    expect(run({ tool_name: "Grep", tool_input: { pattern: "KEY", path: "/" } }).code).toBe(2);
+    expect(run({ tool_name: "Glob", tool_input: { pattern: "/Users/**/.env" } }).code).toBe(2);
+    expect(run({ tool_name: "LS", tool_input: { path: ".." } }).code).toBe(2);
     const r = spawnSync("python3", [GUARD, "/nonexistent"], {
       input: JSON.stringify({ tool_name: "Edit", tool_input: { file_path: "x" } }),
       encoding: "utf8",

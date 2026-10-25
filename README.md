@@ -150,8 +150,8 @@ the per-call hot path.
   library to a camera setup (D-36).
 - **Sandbox:** a fresh git repository per run in `~/.trophy/droid_runs/<run_id>`, outside the repo, holding only the
   pack to edit, its schemas, labelled synthetic samples, the brief and one gate script. Three layers enforce it: a
-  PreToolUse hook (`hooks/guard.py`) that allows edits to the job's allowlisted files and exactly one command, the
-  bare `./replay_test` or `./check_test`; a git audit after each turn that fails the run if anything else changed (or
+  PreToolUse hook (`hooks/guard.py`) that allows edits to the job's allowlisted files, reads only inside the sandbox,
+  and exactly one command, the bare `./replay_test` or `./check_test`; a git audit after each turn that fails the run if anything else changed (or
   nothing did); and the gate itself, which runs the Droid-written code with a clean environment, no network and no
   writes outside the sandbox (`sandbox-exec` on macOS).
 - **Gate and approval:** `replay_test` replays the labelled fixtures through the candidate module and the rule engine
@@ -160,7 +160,7 @@ the per-call hot path.
   **from the gated commit** (`git show`), never from the working tree, and hot-loads it.
 - **Measured (this Mac, `claude-sonnet-5`, effort low, single runs):** "a serve that clips the net and lands in is a let"
   went pending → **ready in 27.5–30.6 s** (first attempt, gate 19/19 in 270 ms), **65.5 s** once under load; approve →
-  hot-load in **0.5–0.8 s**. `calibrate_checks` has only been run with a scripted agent so far.
+  hot-load in **0.5–0.8 s**. On the synthetic 3D fixtures, `calibrate_checks` was **ready in 86.9 s** (inside the 90 s cap, over the 60 s target), and a referee `new_check` ("how fast was the ball in that rally") was **ready in 37.2 s** with its answer gated on the session's own track.
 
 ## Anthropic
 Pickup games have no referee, so close calls end in arguments or a replayed point. Trophy measures what sensors can

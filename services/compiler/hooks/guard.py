@@ -20,6 +20,7 @@ EXEC_TOOLS = {"Execute"}
 TEST_CMD = re.compile(r"(\./)?(replay_test|check_test)( --quiet)?")
 PRINTABLE = re.compile(r"[\x20-\x7e]*")
 DEFAULT_COMMANDS = ["./replay_test"]  # sandboxes written before `commands` existed in allowlist.json
+READ_TOOLS = frozenset({"Read", "Grep", "Glob", "LS"})
 SHELL_META = ("&&", "||", ";", "|", "`", "$", "<", ">")
 
 
@@ -93,7 +94,22 @@ def main() -> None:
         if not allowed_command(cmd, sandbox, commands):
             block(f"command refused: only {' or '.join(commands)} may run (got: {cmd[:120]!r})")
         return
-    # read-only tools pass
+    if tool in READ_TOOLS:
+        # reads stay inside the sandbox too: the repo's .env, ~/.ssh or other runs are none of the Droid's business
+        root = norm(sandbox)
+        for k in ("file_path", "filePath", "path", "directory", "directory_path", "dir"):
+            v = inp.get(k)
+            if isinstance(v, str) and v:
+                ev = os.path.expanduser(v)
+                ab = norm(ev if os.path.isabs(ev) else os.path.join(sandbox, ev))
+                if ab != root and not ab.startswith(root + os.sep):
+                    block(f"{tool} refused: {v} is outside the sandbox")
+        pat = inp.get("pattern") or inp.get("glob")
+        if tool in ("Glob", "LS") and isinstance(pat, str) and (os.path.isabs(os.path.expanduser(pat)) or ".." in pat):
+            ab = norm(os.path.expanduser(pat).split("*")[0] or "/")
+            if ab != root and not ab.startswith(root + os.sep):
+                block(f"{tool} refused: {pat} reaches outside the sandbox")
+        return
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ directly (the budget is 90 s): read the three files in `sports/{{sport}}/` and `
 identical to your starting copy).
 
 The three files:
+
 - `config.yaml`: detector parameters. Change the court (`template`, `length_m`, `width_m`, `net_height_m`,
   `surface: court` for a ground court, `floor_z_m: 0.0` when the play surface is the ground), the ball (`colour`,
   `diameter_m`, `radius_px` from the scene's `ball.radius_px_mean`), and the bounce thresholds: longer flights mean a
@@ -32,7 +33,7 @@ The three files:
 
 - Scene descriptor: {{scene}} (cameras with homographies, the best-matching court template and its size, ball blob, people count).
 - Sample layer-1 logs with labels (what a correct module must find):
-{{samples}}
+  {{samples}}
 - `./replay_test`: the test gate. It loads the module (schemas + import allowlist), runs `events()` on every sample,
   validates every event, checks determinism, compares the bounce count and timing with the labels, checks that
   bounces alternate sides, then replays the events through the rule engine with your `rules.yaml` and checks the
