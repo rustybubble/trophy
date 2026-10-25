@@ -21,6 +21,7 @@ Point a phone at a ping-pong table and Trophy referees the game:
 | `services/courtcam-adapter`, `services/flight` | Calibration and the ping-pong vision module |
 | `services/engine`, `services/compiler`, `services/rules` | Rule engine + AI votes, Factory Droid house rules, ask the ref (Apify → Moss → Claude) |
 | `services/players`, `services/possession` | Basketball (if time allows) |
+| `spikes/serve-analysis` | Recorded-video serve spotting, toss evidence overlays and actual-footage demo renderer ([setup](spikes/serve-analysis/CHECKOUT.md)) |
 | `spacetime/` | SpacetimeDB module: the shared world state (metadata only, no video) |
 | `packages/` | Contracts (JSON Schema), generated types, shared Python lib, state client |
 | `rulepacks/` | One YAML per sport |

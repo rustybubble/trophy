@@ -1,0 +1,8 @@
+{
+  "title": "TT3D · Game 00 / Rally 010",
+  "max_reprojection_error_px": 8,
+  "views": [
+    {"video":"samples/tt3d/game_00/side-010.mp4", "calibration":"samples/tt3d/game_00/side.yaml", "detections":"artifacts/multiview/gray-side/detections.json", "poses":"artifacts/multiview/poses-side.json"},
+    {"video":"samples/tt3d/game_00/oblique-010.mp4", "calibration":"samples/tt3d/game_00/oblique.yaml", "detections":"artifacts/multiview/gray-oblique/detections.json", "poses":"artifacts/multiview/poses-oblique.json"}
+  ]
+}

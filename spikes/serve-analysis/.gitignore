@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+weights
+artifacts/
+samples
+.streamlit/secrets.toml
+.venv-pose/
+.venv-hmr2/
+.venv-serves/
