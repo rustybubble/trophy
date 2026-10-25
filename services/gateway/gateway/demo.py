@@ -6,6 +6,9 @@
     POST /api/demo/live {clips: [{upload_id, corners_norm[4][2], offset_s?}], mode: auto|simultaneous|sequential,
                          speed?}
     GET  /api/demo/live/{live_id}              status, per-camera schedule and progress
+    GET  /api/demo/library                     preloaded multi-camera games (data/local/clips/library/<id>/preset.json)
+    GET  /api/demo/library/{id}/{label}/frame0.jpg   a preset camera's first streamed frame (?token= for media)
+    POST /api/demo/library/{id}/live {speed?, first_server?}   stream a preset's cameras into this game, no upload
 
 Going live starts the game (start_game) and runs `scripts/stream_clips.py`: every clip joins the game as a camera
 phone, syncs its clock, saves its calibration (the four corners) and streams 1280x720 JPEG at 30 fps over the same
@@ -17,12 +20,18 @@ mode auto: clips whose recordings overlap in time (from the files' own creation 
 moment and stream together, aligned by those timestamps (plus offset_s); clips that don't overlap are takes from one
 camera position and stream back to back as one phone. Tapped corners are never auto-checked, so calibration is
 untrusted and every call is BETA at most. Uploads stay in data/local/uploads/<game>/ (gitignored).
+
+A library preset is a folder with the camera files and a preset.json ({preset_id, title, sport, source, license,
+notes, mode, cameras: [{label, video, corners_norm[4][2], offset_s}]}, built by scripts/build_library.py). Playing one
+streams the same way as uploads do, so BlurBall, the sport module and the engine recompute every call on each run;
+nothing is cached but the files themselves.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import re
 import secrets
 import sys
 import time
@@ -61,6 +70,42 @@ class LiveBody(BaseModel):
     mode: Literal["auto", "simultaneous", "sequential"] = "auto"
     speed: float = Field(1.0, ge=0.25, le=4)
     first_server: str = "A"
+
+
+class LibraryLiveBody(BaseModel):
+    speed: float = Field(1.0, ge=0.25, le=4)
+    first_server: str = "A"
+
+
+LABEL_RE = r"^[a-z0-9_-]{1,24}$"
+
+
+def load_presets(library: Path) -> list[dict[str, Any]]:
+    """Every valid preset.json under the library dir (sorted by id); invalid ones are listed with an `error`."""
+    out: list[dict[str, Any]] = []
+    if not library.is_dir():
+        return out
+    for d in sorted(p for p in library.iterdir() if p.is_dir()):
+        pj = d / "preset.json"
+        if not pj.exists():
+            continue
+        try:
+            m = json.loads(pj.read_text("utf8"))
+            cams = m["cameras"]
+            if not cams or len(cams) > 6:
+                raise ValueError("1-6 cameras")
+            for cam in cams:
+                if not re.match(LABEL_RE, str(cam.get("label", ""))):
+                    raise ValueError(f"bad camera label {cam.get('label')!r}")
+                if not (d / cam["video"]).is_file():
+                    raise ValueError(f"{cam['video']} is missing")
+                corners = cam["corners_norm"]
+                if len(corners) != 4 or any(len(xy) != 2 for xy in corners):
+                    raise ValueError(f"{cam['label']}: corners_norm needs 4 [x, y] pairs")
+            out.append({**m, "preset_id": d.name, "dir": str(d)})
+        except (KeyError, ValueError, TypeError) as e:
+            out.append({"preset_id": d.name, "title": d.name, "cameras": [], "error": str(e), "dir": str(d)})
+    return out
 
 
 async def run(*cmd: str, timeout: float = 600, cwd: Path | None = None) -> tuple[int, str, str]:
@@ -159,6 +204,8 @@ def demo_router(st: Settings) -> APIRouter:
 
     def updir(game_id: str, upload_id: str) -> Path:
         return st.data_dir / "uploads" / game_id / upload_id
+
+    library = st.data_dir / "clips" / "library"
 
     def meta_of(game_id: str, upload_id: str) -> dict[str, Any]:
         p = updir(game_id, upload_id) / "upload.json"
@@ -309,35 +356,32 @@ def demo_router(st: Settings) -> APIRouter:
             live["error"] = "; ".join(live["log"][-3:]) or f"streamer exited with {code}"
         live["finished_at_ms"] = time.time() * 1000
 
-    @router.post("/live", status_code=202)
-    async def go_live(request: Request, body: LiveBody, authorization: str | None = Header(None)) -> dict[str, Any]:
-        c = judge(authorization)
+    async def launch(
+        c: Claims,
+        r: Any,
+        mode: str,
+        speed: float,
+        first_server: str,
+        cams: list[dict[str, Any]],
+        **extra: Any,
+    ) -> dict[str, Any]:
+        """Start the game and stream `cams` ([{video: Path, label, corners_norm, offset_s, name, ...}]) into it."""
         if any(v["status"] in ("starting", "streaming") for v in lives.values() if v["game_id"] == c.game_id):
             raise HTTPException(409, "this game is already streaming clips")
-        r = request.app.state.r
         key = await r.hget(f"game:{c.game_id}", "join_key")
         if not key:
             raise HTTPException(404, "no such game")
-        metas = []
-        for cl in body.clips:
-            m = meta_of(c.game_id, cl.upload_id)
-            metas.append({**m, "corners_norm": cl.corners_norm, "offset_s": cl.offset_s})
-        mode, ordered, reason = plan(metas, body.mode)
-        labels = []
-        args = ["--game", c.game_id, "--join-key", key.decode(), "--mode", mode, "--speed", str(body.speed)]
-        for i, m in enumerate(ordered):
-            label = f"cam{i + 1}" if mode == "simultaneous" else f"take{i + 1}"
-            labels.append(label)
+        args = ["--game", c.game_id, "--join-key", key.decode(), "--mode", mode, "--speed", str(speed)]
+        args += ["--gateway", f"http://127.0.0.1:{st.port}"]  # this gateway, whatever PORT_OFFSET is
+        for m in cams:
             corners = ",".join(f"{v:.6f}" for xy in m["corners_norm"] for v in xy[:2])
-            video = updir(c.game_id, m["upload_id"]) / m["video"]
-            args += ["--clip", f"{video}:{label}:{corners}"]
-            off = m.get("auto_offset_s", 0.0) + m.get("offset_s", 0.0)
-            if mode == "simultaneous" and off:
-                args += ["--offset", f"{label}={off}"]
+            args += ["--clip", f"{m['video']}:{m['label']}:{corners}"]
+            if mode == "simultaneous" and m.get("offset_s"):
+                args += ["--offset", f"{m['label']}={m['offset_s']}"]
         if mode == "sequential":
             args += ["--label", "camera (recorded takes)"]
         # the game goes live: the engine opens rallies as events arrive
-        cmd = make_ctl("start_game", c.game_id, {"first_server": body.first_server}, by_cam_id=c.cam_id)
+        cmd = make_ctl("start_game", c.game_id, {"first_server": first_server}, by_cam_id=c.cam_id)
         await r.xadd(
             CTL_ENGINE, {"json": cmd.model_dump_json(by_alias=True)}, maxlen=CTL_STREAM_MAXLEN, approximate=True
         )
@@ -346,20 +390,114 @@ def demo_router(st: Settings) -> APIRouter:
             "game_id": c.game_id,
             "status": "starting",
             "mode": mode,
-            "mode_reason": reason,
-            "speed": body.speed,
+            "speed": speed,
             "clips": [
-                {"upload_id": m["upload_id"], "label": lab, "name": m["name"], "video_url": m.get("video_url"),
-                 "duration_s": m.get("duration_s"), "offset_s": m.get("auto_offset_s", 0.0) + m.get("offset_s", 0.0)}
-                for m, lab in zip(ordered, labels, strict=True)
+                {k: m.get(k) for k in ("upload_id", "label", "name", "video_url", "duration_s", "offset_s")}
+                for m in cams
             ],
             "cameras": {},
             "log": [],
             "started_at_ms": time.time() * 1000,
-        }  # fmt: skip
+            **extra,
+        }
         lives[live["live_id"]] = live
         asyncio.get_running_loop().create_task(stream(live, args))
         return live
+
+    @router.post("/live", status_code=202)
+    async def go_live(request: Request, body: LiveBody, authorization: str | None = Header(None)) -> dict[str, Any]:
+        c = judge(authorization)
+        metas = []
+        for cl in body.clips:
+            m = meta_of(c.game_id, cl.upload_id)
+            metas.append({**m, "corners_norm": cl.corners_norm, "offset_s": cl.offset_s})
+        mode, ordered, reason = plan(metas, body.mode)
+        cams = []
+        for i, m in enumerate(ordered):
+            label = f"cam{i + 1}" if mode == "simultaneous" else f"take{i + 1}"
+            cams.append(
+                {
+                    **m,
+                    "label": label,
+                    "video": updir(c.game_id, m["upload_id"]) / m["video"],
+                    "offset_s": m.get("auto_offset_s", 0.0) + m.get("offset_s", 0.0),
+                }
+            )
+        return await launch(c, request.app.state.r, mode, body.speed, body.first_server, cams, mode_reason=reason)
+
+    def preset_of(preset_id: str) -> dict[str, Any]:
+        p = next((p for p in load_presets(library) if p["preset_id"] == preset_id), None)
+        if p is None:
+            raise HTTPException(404, f"no such preset {preset_id}")
+        if p.get("error"):
+            raise HTTPException(422, f"preset {preset_id}: {p['error']}")
+        return p
+
+    def public(p: dict[str, Any]) -> dict[str, Any]:
+        base = f"/api/demo/library/{p['preset_id']}"
+        return {
+            k: v
+            for k, v in {
+                **p,
+                "cameras": [
+                    {**cam, "frame_url": f"{base}/{cam['label']}/frame0.jpg", "video": None} for cam in p["cameras"]
+                ],
+            }.items()
+            if k != "dir"
+        }
+
+    @router.get("/library")
+    async def library_list(authorization: str | None = Header(None)) -> dict[str, Any]:
+        """Preloaded multi-camera games: pick one and play it, no upload. Footage stays local."""
+        judge(authorization)
+        return {"library_dir": str(library), "presets": [public(p) for p in load_presets(library)]}
+
+    @router.get("/library/{preset_id}/{label}/frame0.jpg")
+    async def library_frame(
+        preset_id: str, label: str, token: str | None = None, authorization: str | None = Header(None)
+    ) -> FileResponse:
+        claims(token, authorization)
+        p = preset_of(preset_id)
+        cam = next((x for x in p["cameras"] if x["label"] == label), None)
+        if cam is None:
+            raise HTTPException(404, "no such camera")
+        d = Path(p["dir"])
+        out = d / f"frame0_{label}.jpg"
+        if not out.exists():  # the first frame scaled exactly as the stream will be (built once, kept)
+            code, _, err = await run(
+                "ffmpeg", "-v", "error", "-y", "-i", str(d / cam["video"]), "-frames:v", "1", "-vf", VF, str(out),
+                timeout=60,
+            )  # fmt: skip
+            if code:
+                raise HTTPException(500, f"could not read {cam['video']}: {err.strip()[-200:]}")
+        return FileResponse(out, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=3600"})
+
+    @router.post("/library/{preset_id}/live", status_code=202)
+    async def library_live(
+        preset_id: str, request: Request, body: LibraryLiveBody, authorization: str | None = Header(None)
+    ) -> dict[str, Any]:
+        """Stream a preset's cameras into this game as phones. Nothing is precomputed: the tracker, the sport module
+        and the engine run on the frames as they arrive, every time."""
+        c = judge(authorization)
+        p = preset_of(preset_id)
+        d = Path(p["dir"])
+        mode = p.get("mode", "simultaneous")
+        cams = [
+            {
+                "label": cam["label"],
+                "name": f"{p.get('title', preset_id)} · {cam['label']}",
+                "video": d / cam["video"],
+                "corners_norm": cam["corners_norm"],
+                "offset_s": float(cam.get("offset_s", 0.0)),
+                "duration_s": cam.get("duration_s"),
+            }
+            for cam in p["cameras"]
+        ]
+        return await launch(
+            c, request.app.state.r, mode, body.speed, body.first_server, cams,
+            mode_reason=f"preloaded game: {p.get('title', preset_id)}", preset_id=preset_id,
+            source=p.get("source"), license=p.get("license"),
+        )  # fmt: skip
 
     @router.get("/cams/{cam_id}/live")
     async def cam_live(cam_id: str, request: Request, authorization: str | None = Header(None)) -> Response:

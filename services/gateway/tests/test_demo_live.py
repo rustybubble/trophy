@@ -53,3 +53,24 @@ def test_streamer_homography_maps_the_tapped_corners_to_the_table():
     hm = np.array(h9).reshape(3, 3)
     px = np.array([[x * sc.W, y * sc.H] for x, y in corners])
     assert np.allclose(sc.apply(hm, px), sc.CORNERS_M, atol=1e-6)
+
+
+def test_library_presets_are_validated_and_bad_ones_are_listed_with_an_error(tmp_path: Path):
+    from gateway.demo import load_presets
+
+    good = tmp_path / "good"
+    good.mkdir()
+    (good / "side.mp4").write_bytes(b"x")
+    (good / "preset.json").write_text(
+        '{"title": "t", "mode": "simultaneous", "cameras": [{"label": "side", "video": "side.mp4", '
+        '"corners_norm": [[0.1, 0.9], [0.9, 0.9], [0.8, 0.5], [0.2, 0.5]], "offset_s": 0}]}'
+    )
+    missing = tmp_path / "missing"
+    missing.mkdir()
+    (missing / "preset.json").write_text('{"cameras": [{"label": "a", "video": "nope.mp4", "corners_norm": []}]}')
+    (tmp_path / "not-a-preset").mkdir()  # no preset.json: ignored
+    out = {p["preset_id"]: p for p in load_presets(tmp_path)}
+    assert set(out) == {"good", "missing"}
+    assert "error" not in out["good"] and out["good"]["cameras"][0]["label"] == "side"
+    assert "nope.mp4 is missing" in out["missing"]["error"]
+    assert load_presets(tmp_path / "absent") == []

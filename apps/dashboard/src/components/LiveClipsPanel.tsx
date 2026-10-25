@@ -34,8 +34,32 @@ interface LiveCam {
   seconds?: number;
 }
 
+interface PresetCam {
+  label: string;
+  corners_norm: [number, number][];
+  offset_s?: number;
+  duration_s?: number;
+  frame_url: string;
+}
+
+/** A preloaded multi-camera game in data/local/clips/library (built by scripts/build_library.py). */
+interface Preset {
+  preset_id: string;
+  title: string;
+  sport?: string;
+  source?: string;
+  license?: string;
+  notes?: string;
+  mode?: "simultaneous" | "sequential";
+  cameras: PresetCam[];
+  error?: string;
+}
+
 interface Live {
   live_id: string;
+  preset_id?: string;
+  source?: string;
+  license?: string;
   status: "starting" | "streaming" | "done" | "failed";
   mode: "simultaneous" | "sequential";
   mode_reason: string;
@@ -147,8 +171,32 @@ export function LiveClipsPanel({ session }: { session: Session }) {
   const [live, setLive] = useState<Live>();
   const [busy, setBusy] = useState<string>();
   const [err, setErr] = useState<string>();
+  const [presets, setPresets] = useState<Preset[]>([]);
   const img = useRef<HTMLImageElement>(null);
   const tokenQ = `?token=${encodeURIComponent(session.token)}`;
+
+  useEffect(() => {
+    api<{ presets: Preset[] }>("/demo/library", session)
+      .then((r) => setPresets(r.presets))
+      .catch(() => setPresets([]));
+  }, [session]);
+
+  async function play(p: Preset) {
+    setErr(undefined);
+    setBusy(`Starting ${p.title}…`);
+    try {
+      const l = await api<Live>(`/demo/library/${encodeURIComponent(p.preset_id)}/live`, session, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ speed }),
+      });
+      setLive(l);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(undefined);
+    }
+  }
 
   async function add(files: FileList | null) {
     if (!files?.length) return;
@@ -231,6 +279,50 @@ export function LiveClipsPanel({ session }: { session: Session }) {
         points. Clips recorded at the same time are angles of one moment; clips recorded one after another are takes
         from one camera and play back to back.
       </p>
+      {!live && presets.length > 0 && (
+        <div className="presets">
+          <h3>Preloaded games</h3>
+          <p className="muted small">
+            Multi-camera recordings already on this Mac. Play one and every angle streams into this game as a phone; the
+            tracker, the sport module and the engine recompute every call each time. Nothing to upload.
+          </p>
+          <ul className="presetlist">
+            {presets.map((p) => (
+              <li key={p.preset_id}>
+                <div className="thumbs">
+                  {p.cameras.map((cam) => (
+                    <img
+                      key={cam.label}
+                      className="thumb"
+                      src={cam.frame_url + tokenQ}
+                      alt={cam.label}
+                      title={cam.label}
+                    />
+                  ))}
+                </div>
+                <div>
+                  <strong>{p.title}</strong>
+                  <div className="muted small">
+                    {p.cameras.length} camera{p.cameras.length === 1 ? "" : "s"}:{" "}
+                    {p.cameras.map((c) => c.label).join(", ")}
+                    {p.cameras[0]?.duration_s ? ` · ${(p.cameras[0].duration_s / 60).toFixed(0)} min` : ""}
+                    {p.license ? ` · ${p.license}` : ""}
+                  </div>
+                  {p.notes && <div className="muted small">{p.notes}</div>}
+                  {p.error ? (
+                    <div className="bad small">{p.error}</div>
+                  ) : (
+                    <button className="primary" disabled={!!busy} onClick={() => void play(p)}>
+                      Play
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <h3>Or upload clips</h3>
+        </div>
+      )}
       {!live && (
         <>
           <div className="row">

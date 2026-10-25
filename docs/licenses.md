@@ -16,6 +16,8 @@ This lists **candidates and adopted components**. When you adopt one, add its re
 | Cartesia, Anthropic | Each provider's API terms | Voice; the Claude voter and answers | candidate |
 | Rulebook text (ITTF, USA Pickleball, FIBA/NFHS, BWF, FIVB) | Each publisher's terms | Scraped only from public pages, quoted briefly with links and attribution | candidate |
 | CC BY clips (`docs/plan/clip-library.md`) | CC BY (credits in `data/clips/credits.json`) | Development, the backup demo and labels | candidate |
+| TT3D raw dataset (Gossard & Ziegler, Uni Tübingen; Nextcloud share `SCKq85JZEmKoC6J`) | Code MIT; **dataset license unstated** | Preloaded two-view game (`data/local/clips/library/tt3d_game_00`, gitignored) for local evaluation and the demo on this Mac; 200 Hz 3D ground truth for accuracy checks. Never redistributed; ask the authors before any publication | adopted locally |
+| 2015 Edmonton Open final, YouTube `D-FHYCRTdEc` + `YSzOgrITjJI` (Edmonton Table Tennis Club uploader) | **Standard YouTube license** | Preloaded two-angle game (`data/local/clips/library/edmonton2015`, gitignored), local demo only. Not for the public video or any publication without the uploader's permission | adopted locally |
 | OpenTTGames | CC BY-NC | Evaluation only | optional |
 | Pillow 13.0.0 | HPND/PIL license (see installed Pillow distribution notices) | Local source-frame crops and storyboard sprites | adopted in py-trophy; no third-party source copied |
 | FFmpeg (locally installed executable; tested 7.1 via existing imageio-ffmpeg package) | Build-dependent LGPL/GPL; tested libx264 build is GPL | Recorder HLS and private replay clip encoding | executable is not vendored or redistributed; install an appropriately licensed build on each demo machine |
