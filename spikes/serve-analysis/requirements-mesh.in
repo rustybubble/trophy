@@ -1,0 +1,4 @@
+# Optional procedural mesh generation only. Runtime uses checked-in JSON assets.
+scikit-image==0.25.2
+numpy==1.26.4
+scipy==1.13.1

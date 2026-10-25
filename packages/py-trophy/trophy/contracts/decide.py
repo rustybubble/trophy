@@ -38,7 +38,7 @@ class Vote(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    backend: Literal["claude", "gemini", "bitdeer", "geometry"] = Field(..., title="Backend")
+    backend: Literal["claude", "geometry"] = Field(..., title="Backend")
     model: str
     choice: str | None = None
     probs: dict[str, float]

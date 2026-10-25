@@ -10,7 +10,7 @@ Fix it by editing `sports/{{sport}}/config.yaml` (schema: `schema/sportmodule.sc
 
 - Scene descriptor: {{scene}}.
 - Sample layer-1 logs with labels (the logs that showed the problem, when available):
-{{samples}}
+  {{samples}}
 - `./replay_test`: the test gate. Run it after every change; `.trophy/events.json` shows what the module produced.
 
 ## Allowlist (the runner refuses anything else)

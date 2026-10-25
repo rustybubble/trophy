@@ -1,6 +1,16 @@
 import type { Ask } from "@trophy/state-client";
 
-/** Ask-the-ref transcript (interfaces §17): answers drawn from the official rulebooks, with citations. */
+/** How the ref answered (Ask.kind); "" or missing on rows from older referees. */
+const KIND_LABEL: Record<string, string> = {
+  check: "geometry check",
+  rule: "rulebook",
+  score: "score",
+  explain: "explained",
+  pending: "pending",
+  none: "no answer",
+};
+
+/** Ask-the-ref transcript (D-37): judge questions answered by a geometry check, rules questions from the rule pack. */
 export function AskPanel({ asks }: { asks: Ask[] }) {
   return (
     <div className="panel">
@@ -10,9 +20,18 @@ export function AskPanel({ asks }: { asks: Ask[] }) {
       )}
       {asks.slice(0, 5).map((a) => (
         <div key={a.ask_id} className="ask">
-          <div className="q">“{a.question}”</div>
+          <div className="q">
+            “{a.question}”{a.kind && KIND_LABEL[a.kind] && <span className="badge">{KIND_LABEL[a.kind]}</span>}
+          </div>
           <div>{a.answer}</div>
           <div className="small">
+            {a.check && (
+              <span className="check">
+                {a.check}
+                {typeof a.p === "number" && <> · p {a.p.toFixed(2)}</>}
+                {a.calibrated !== true && <span className="badge">uncalibrated</span>}
+              </span>
+            )}
             {a.citations.map((c) => (
               <a key={c.rule_id} href={c.url} target="_blank" rel="noreferrer" title={c.quote}>
                 {c.rule_id} {c.title}

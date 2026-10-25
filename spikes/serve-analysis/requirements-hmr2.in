@@ -1,0 +1,12 @@
+# Isolated .venv-hmr2, reusing the existing torch==2.9.0 core installation.
+torchvision==0.24.0
+timm==1.0.22
+einops==0.8.1
+yacs==0.1.8
+pytorch-lightning==2.5.6
+smplx==0.1.28
+pyrender==0.1.45
+dill==0.4.0
+gdown==5.2.0
+webdataset==1.0.2
+omegaconf==2.3.0

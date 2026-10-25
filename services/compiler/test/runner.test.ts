@@ -11,11 +11,11 @@ import type { DroidRun } from "@trophy/contracts";
 
 import type { Agent, AgentEvent, AgentFactory } from "../src/agent.ts";
 import type { CompilerConfig } from "../src/config.ts";
-import { REPO_ROOT } from "../src/config.ts";
+import { defaultEnginePython, REPO_ROOT } from "../src/config.ts";
 import { runJob } from "../src/runner.ts";
 import type { RunSink } from "../src/sink.ts";
 
-const ENGINE_PY = join(REPO_ROOT, "services/engine/.venv/bin/python");
+const ENGINE_PY = defaultEnginePython();
 const SAMPLES = join(REPO_ROOT, "evals/fixtures/synthetic/table_tennis");
 const dirs: string[] = [];
 afterEach(() => {
@@ -70,6 +70,10 @@ class Collect implements RunSink {
 
 const rulesPath = (dir: string) => join(dir, "sports/table_tennis/rules.yaml");
 
+if (!existsSync(ENGINE_PY))
+  console.warn(
+    `skipping the real-gate tests: no engine venv python at ${ENGINE_PY} (run \`uv sync\` in services/engine; on Windows the /bin/sh gate also needs Git Bash)`,
+  );
 describe.skipIf(!existsSync(ENGINE_PY))("runJob (real sandbox + real gate, scripted agent)", () => {
   it("drafts, fails the gate, repairs, passes, and records diff/results/commit", async () => {
     const sink = new Collect();

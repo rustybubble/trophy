@@ -9,7 +9,6 @@ dependencies = [
     "jsonschema>=4.23",
     "cel-python==0.5.0",
     "anthropic>=2.3,<3",
-    "openai>=3.37,<4",
     "httpx>=0.28",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
@@ -24,6 +23,8 @@ check-test = "trophy_engine.check_test.cli:main"
 trophy-engine = "trophy_engine.loop:main"
 trophy-ctl = "trophy_engine.ctl_cli:main"
 trophy-play = "trophy_engine.play:main"
+trophy-live = "trophy_engine.live:main"
+new-check-test = "trophy_engine.check_test.newcheck:main"
 
 [dependency-groups]
 dev = [

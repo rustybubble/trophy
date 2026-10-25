@@ -17,12 +17,12 @@ import type { DroidRun } from "@trophy/contracts";
 import type { Agent, AgentEvent, AgentFactory } from "../src/agent.ts";
 import { approveChecks } from "../src/approve.ts";
 import type { CompilerConfig } from "../src/config.ts";
-import { REPO_ROOT } from "../src/config.ts";
+import { defaultEnginePython, REPO_ROOT } from "../src/config.ts";
 import { runJob } from "../src/runner.ts";
 import type { Job } from "../src/sandbox.ts";
 import type { RunSink } from "../src/sink.ts";
 
-const ENGINE_PY = join(REPO_ROOT, "services/engine/.venv/bin/python");
+const ENGINE_PY = defaultEnginePython();
 const SAMPLES = join(REPO_ROOT, "evals/fixtures/synthetic/table_tennis_3d");
 const GOLDEN = join(REPO_ROOT, "sports/table_tennis/checks");
 const HAVE_ENGINE = existsSync(ENGINE_PY) && existsSync(SAMPLES) && existsSync(GOLDEN);
@@ -117,6 +117,10 @@ function harmless(dir: string, emit: (e: AgentEvent) => void): void {
   emit({ kind: "edit", path: phases(dir), text: "Edit checks/phases.py" });
 }
 
+if (!HAVE_ENGINE)
+  console.warn(
+    `skipping the real-gate tests: no engine venv python at ${ENGINE_PY} (run \`uv sync\` in services/engine; on Windows the /bin/sh gate also needs Git Bash)`,
+  );
 describe.skipIf(!HAVE_ENGINE)("calibrate_checks (real sandbox + real check_test, scripted agent)", () => {
   it.skipIf(RED !== null)(
     `edits the library, passes the gate on the synthetic 3D samples, records diff/results/commit; approve installs it${RED ? ` [skipped: ${RED}]` : ""}`,

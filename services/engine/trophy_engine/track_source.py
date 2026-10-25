@@ -1,4 +1,4 @@
-"""Where fused 3D ball samples come from at run time (D-31): a Redis stream from perception, or a recorded
+"""Where fused 3D ball samples come from at run time (D-36): a Redis stream from perception, or a recorded
 ``*.track3d.jsonl`` replayed on the clock. Each source yields ``(row, now_s)`` where ``now_s`` is game time.
 
 Stream contract (provisional, track3d.schema.json): ``XADD trk:ball3d * json <Track3DSample>``; the engine reads it

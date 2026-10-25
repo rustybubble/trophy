@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -52,6 +53,12 @@ describe("sandbox", () => {
     expect(task).not.toContain("{{");
     expect(existsSync(join(sb.dir, ".env"))).toBe(false);
     expect(changedFiles(sb)).toEqual([]);
+    // the gate pins its own arguments and never forwards the caller's ("$@" was a bypass)
+    const gate = readFileSync(join(sb.dir, "replay_test"), "utf8");
+    // "$@" appears only after `set --` has replaced the caller's arguments with the pinned ones
+    expect(gate.indexOf("set -- ")).toBeGreaterThan(-1);
+    expect(gate.indexOf('"$@"')).toBeGreaterThan(gate.indexOf("set -- "));
+    expect(gate).not.toContain("$*");
   });
 
   it("gives a compile job the reference module read-only and a seeded target", () => {
@@ -150,5 +157,55 @@ describe("sandbox", () => {
     const diff = sandboxDiff(sb);
     expect(diff).toContain("+# edited");
     expect(diff).toContain("schema/evil.json");
+  });
+});
+
+describe("gate jail (review blocker 2)", () => {
+  it("runs the gate's Python with a clean env, no network and no writes outside the sandbox", () => {
+    const base = mkdtempSync(join(tmpdir(), "trophy-jail-"));
+    dirs.push(base);
+    const outside = join(base, "outside.txt");
+    // a stand-in for the engine interpreter: it ignores its arguments and probes what the jail allows
+    const fake = join(base, "fakepy");
+    writeFileSync(
+      fake,
+      [
+        "#!/bin/sh",
+        "exec /usr/bin/python3 - <<'PY'",
+        "import json, os, socket",
+        "r = {'env': sorted(os.environ)}",
+        "try:",
+        "    socket.create_connection(('1.1.1.1', 53), timeout=3).close(); r['net'] = 'open'",
+        "except OSError as e:",
+        "    r['net'] = 'blocked'",
+        "try:",
+        `    open(${JSON.stringify(outside)}, 'w').write('x'); r['outside'] = 'written'`,
+        "except OSError:",
+        "    r['outside'] = 'blocked'",
+        "open('.trophy/probe.json', 'w').write(json.dumps(r))",
+        "PY",
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+    const sb = createSandbox(
+      { kind: "house_rule", sport: "table_tennis", text: "x", samplesDir: SAMPLES },
+      join(base, "ws"),
+      fake,
+    );
+    execFileSync(join(sb.dir, "replay_test"), [], { cwd: sb.dir, env: { ...process.env, TROPHY_SECRET: "sk-test" } });
+    const isolation = readFileSync(join(sb.dir, ".trophy/isolation"), "utf8").trim();
+    const probe = JSON.parse(readFileSync(join(sb.dir, ".trophy/probe.json"), "utf8")) as Record<string, unknown>;
+    expect(probe.env).not.toContain("TROPHY_SECRET"); // env -i on every host
+    expect((probe.env as string[]).filter((k) => /KEY|TOKEN|SECRET|PASS/i.test(k))).toEqual([]);
+    if (isolation === "none") {
+      console.warn("gate jail: no network isolation on this host (CI without user namespaces); env check only");
+      return;
+    }
+    expect(probe.net).toBe("blocked");
+    if (isolation === "sandbox-exec") {
+      expect(probe.outside).toBe("blocked");
+      expect(existsSync(outside)).toBe(false);
+    }
   });
 });

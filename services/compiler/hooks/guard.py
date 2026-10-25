@@ -16,9 +16,12 @@ import sys
 
 EDIT_TOOLS = {"Edit", "Create", "ApplyPatch", "MultiEdit", "Write"}
 EXEC_TOOLS = {"Execute"}
-TEST_CMD = re.compile(r"^(\./)?(replay_test|check_test)(\s+--?[a-z-]+(=\S+|\s+\S+)?)*\s*$")
+# the job's gate, bare or with --quiet; single literal spaces only (see allowlist.ts). fullmatch: no trailing newline
+TEST_CMD = re.compile(r"(\./)?(replay_test|check_test)( --quiet)?")
+PRINTABLE = re.compile(r"[\x20-\x7e]*")
 DEFAULT_COMMANDS = ["./replay_test"]  # sandboxes written before `commands` existed in allowlist.json
-SHELL_META = ("&&", "||", ";", "|", "`", "$(")
+READ_TOOLS = frozenset({"Read", "Grep", "Glob", "LS"})
+SHELL_META = ("&&", "||", ";", "|", "`", "$", "<", ">")
 
 
 def block(msg: str) -> None:
@@ -32,6 +35,8 @@ def norm(p: str) -> str:
 
 def allowed_command(cmd: str, sandbox: str, commands: list[str]) -> bool:
     """The job's gate script (`./replay_test` or `./check_test`, per `commands`), optionally with flags."""
+    if not PRINTABLE.fullmatch(cmd):
+        return False  # a newline or other control character could smuggle a second command
     c = cmd.strip()
     d = sandbox.rstrip("/")
     for q in ('"', "'", ""):
@@ -46,7 +51,7 @@ def allowed_command(cmd: str, sandbox: str, commands: list[str]) -> bool:
             break
     if any(m in c for m in SHELL_META):
         return False
-    m = TEST_CMD.match(c)
+    m = TEST_CMD.fullmatch(c)
     return bool(m) and m.group(2) in {str(x).removeprefix("./") for x in commands}
 
 
@@ -89,7 +94,22 @@ def main() -> None:
         if not allowed_command(cmd, sandbox, commands):
             block(f"command refused: only {' or '.join(commands)} may run (got: {cmd[:120]!r})")
         return
-    # read-only tools pass
+    if tool in READ_TOOLS:
+        # reads stay inside the sandbox too: the repo's .env, ~/.ssh or other runs are none of the Droid's business
+        root = norm(sandbox)
+        for k in ("file_path", "filePath", "path", "directory", "directory_path", "dir"):
+            v = inp.get(k)
+            if isinstance(v, str) and v:
+                ev = os.path.expanduser(v)
+                ab = norm(ev if os.path.isabs(ev) else os.path.join(sandbox, ev))
+                if ab != root and not ab.startswith(root + os.sep):
+                    block(f"{tool} refused: {v} is outside the sandbox")
+        pat = inp.get("pattern") or inp.get("glob")
+        if tool in ("Glob", "LS") and isinstance(pat, str) and (os.path.isabs(os.path.expanduser(pat)) or ".." in pat):
+            ab = norm(os.path.expanduser(pat).split("*")[0] or "/")
+            if ab != root and not ab.startswith(root + os.sep):
+                block(f"{tool} refused: {pat} reaches outside the sandbox")
+        return
 
 
 if __name__ == "__main__":

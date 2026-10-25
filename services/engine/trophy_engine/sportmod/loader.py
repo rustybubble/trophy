@@ -25,24 +25,31 @@ from referencing import Registry, Resource
 
 from .api import ModuleState, Observation
 
+# typing, collections, dataclasses and enum are out (review blocker 2: e.g. typing.get_type_hints evaluates a string
+# annotation, which the AST walk can't see); operator too (attrgetter("__class__") reaches dunders by string).
 ALLOWED_IMPORTS: frozenset[str] = frozenset(
     {
         "__future__",
         "math",
         "statistics",
-        "collections",
-        "collections.abc",
-        "dataclasses",
-        "typing",
         "itertools",
         "functools",
         "bisect",
         "heapq",
-        "enum",
-        "operator",
         "trophy_engine.sportmod.api",
     }
 )
+
+API_MODULES = ("trophy_engine.sportmod.api",)
+
+
+def _api_names() -> dict[str, frozenset[str]]:
+    import importlib
+
+    return {m: frozenset(importlib.import_module(m).__all__) for m in API_MODULES}
+
+
+API_NAMES = _api_names()  # names module code may import from the engine's API modules
 FORBIDDEN_CALLS: frozenset[str] = frozenset(
     {"exec", "eval", "compile", "__import__", "open", "input", "globals", "locals", "vars"}
     | {"getattr", "setattr", "delattr", "breakpoint", "exit", "quit"}
@@ -132,6 +139,10 @@ def check_events_source(src: str, filename: str = "events.py") -> list[str]:
                     errors.append(f"{filename}:{node.lineno}: import {a.name!r} is not allowed")
         elif isinstance(node, ast.ImportFrom):
             mod = node.module or ""
+            if not node.level and mod in API_NAMES:
+                bad = [a.name for a in node.names if a.name == "*" or a.name not in API_NAMES[mod]]
+                if bad:
+                    errors.append(f"{filename}:{node.lineno}: {', '.join(bad)} not in {mod}.__all__")
             if node.level or mod not in ALLOWED_IMPORTS:
                 errors.append(f"{filename}:{node.lineno}: from {mod!r} import is not allowed")
         elif isinstance(node, ast.Call):
@@ -143,9 +154,48 @@ def check_events_source(src: str, filename: str = "events.py") -> list[str]:
             errors.append(f"{filename}:{node.lineno}: dunder attribute {node.attr!r} is not allowed")
         elif isinstance(node, ast.Name) and node.id in {"__builtins__", "__loader__", "__spec__"}:
             errors.append(f"{filename}:{node.lineno}: {node.id} is not allowed")
+    errors += module_reach_errors(tree, filename, ALLOWED_IMPORTS)
     has_events = any(isinstance(n, ast.FunctionDef) and n.name == "events" for n in tree.body)
     if not has_events:
         errors.append(f"{filename}: no top-level `def events(observations, state)`")
+    return errors
+
+
+def module_reach_errors(tree: ast.AST, filename: str, allowed: frozenset[str]) -> list[str]:
+    """What the import allowlist can't see by name alone (review blocker 2): allowed stdlib modules hold other modules
+    (``statistics.sys``), and the engine's API modules import hashlib, dataclasses and typing. So: API modules only
+    through ``from ... import`` of their ``__all__``; never a module object reached through an allowed module, by
+    attribute or by from-import; and an imported module name may only be used as ``name.attr`` (no aliasing it away
+    from that check)."""
+    import contextlib
+    import importlib
+    import types
+
+    errors: list[str] = []
+    bound: dict[str, types.ModuleType] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for a in node.names:
+                if a.name in API_MODULES or a.name.startswith("trophy_engine"):
+                    errors.append(f"{filename}:{node.lineno}: use `from {a.name} import ...` (names in its __all__)")
+                elif a.name in allowed:
+                    with contextlib.suppress(ImportError):
+                        bound[(a.asname or a.name).split(".")[0]] = importlib.import_module(a.name.split(".")[0])
+        elif isinstance(node, ast.ImportFrom) and not node.level and node.module in allowed:
+            if node.module in API_MODULES or node.module == "__future__":
+                continue
+            mod = importlib.import_module(node.module)
+            for a in node.names:
+                if isinstance(getattr(mod, a.name, None), types.ModuleType):
+                    errors.append(f"{filename}:{node.lineno}: {node.module}.{a.name} is a module")
+    parents = {id(c): n for n in ast.walk(tree) for c in ast.iter_child_nodes(n)}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id in bound and isinstance(node.ctx, ast.Load):
+            parent = parents.get(id(node))
+            if not (isinstance(parent, ast.Attribute) and parent.value is node):
+                errors.append(f"{filename}:{node.lineno}: module {node.id!r} may only be used as {node.id}.<name>")
+            elif isinstance(getattr(bound[node.id], parent.attr, None), types.ModuleType):
+                errors.append(f"{filename}:{node.lineno}: {node.id}.{parent.attr} is a module")
     return errors
 
 

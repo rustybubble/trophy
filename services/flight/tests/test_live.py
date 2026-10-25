@@ -15,7 +15,7 @@ from flight.synth import DEFAULT_CAMERAS, sample_frames, simulate
 
 
 def args(**kw):
-    base = dict(module=REPO / "sports" / "table_tennis", fps=30.0, settle=0.2, toss_hold=1.5)
+    base = dict(module=REPO / "sports" / "table_tennis", fps=30.0, settle=0.2, toss_hold=1.5, fill_gaps=0.25)
     return SimpleNamespace(**{**base, **kw})
 
 
@@ -37,7 +37,7 @@ def run():
     rng = np.random.default_rng(0)
     for seq, f in enumerate(frames):
         if f["xy_px"] is None:
-            an.tick("c_side", f["t_s"])
+            an.tick("c_side", f["t_s"], seq)
         else:
             u, v = np.asarray(f["xy_px"]) + rng.normal(0, 1.0, 2)
             an.add("c_side", f["t_s"], seq, float(u), float(v), 0.9)

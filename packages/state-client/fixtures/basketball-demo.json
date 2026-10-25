@@ -78,7 +78,7 @@
    "table": "observation",
    "row": {
     "schema": "trophy.event.v1",
-    "id": "01JDEMOBS00000000000000018",
+    "id": "01JDEMOBS00000000000000023",
     "game_id": "g_dembb001",
     "t_game_s": 3,
     "sport": "basketball",
@@ -108,7 +108,7 @@
    "table": "call",
    "row": {
     "schema": "trophy.call.v1",
-    "id": "01JDEMCAL00000000000000019",
+    "id": "01JDEMCAL00000000000000024",
     "game_id": "g_dembb001",
     "t_game_s": 3,
     "rule_id": "basket",
@@ -128,7 +128,7 @@
      "flash": "home"
     },
     "event_ids": [
-     "01JDEMOBS00000000000000018"
+     "01JDEMOBS00000000000000023"
     ],
     "evidence": [
      {
@@ -168,7 +168,7 @@
    "table": "observation",
    "row": {
     "schema": "trophy.event.v1",
-    "id": "01JDEMOBS00000000000000020",
+    "id": "01JDEMOBS00000000000000025",
     "game_id": "g_dembb001",
     "t_game_s": 9,
     "sport": "basketball",
@@ -198,7 +198,7 @@
    "table": "call",
    "row": {
     "schema": "trophy.call.v1",
-    "id": "01JDEMCAL00000000000000021",
+    "id": "01JDEMCAL00000000000000026",
     "game_id": "g_dembb001",
     "t_game_s": 9,
     "rule_id": "basket",
@@ -218,7 +218,7 @@
      "flash": "away"
     },
     "event_ids": [
-     "01JDEMOBS00000000000000020"
+     "01JDEMOBS00000000000000025"
     ],
     "evidence": [
      {
@@ -258,7 +258,7 @@
    "table": "observation",
    "row": {
     "schema": "trophy.event.v1",
-    "id": "01JDEMOBS00000000000000022",
+    "id": "01JDEMOBS00000000000000027",
     "game_id": "g_dembb001",
     "t_game_s": 15,
     "sport": "basketball",
@@ -288,7 +288,7 @@
    "table": "call",
    "row": {
     "schema": "trophy.call.v1",
-    "id": "01JDEMCAL00000000000000023",
+    "id": "01JDEMCAL00000000000000028",
     "game_id": "g_dembb001",
     "t_game_s": 15,
     "rule_id": "basket",
@@ -308,7 +308,7 @@
      "flash": "home"
     },
     "event_ids": [
-     "01JDEMOBS00000000000000022"
+     "01JDEMOBS00000000000000027"
     ],
     "evidence": [
      {

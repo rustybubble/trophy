@@ -227,10 +227,9 @@ def test_double_bounce_and_net_and_ball_dead() -> None:
     }
     calls = eng.feed(net)
     assert calls[-1]["outcome"] == "net" and calls[-1]["team_id"] == "B"
-    # next rally: silence after a bounce on A's side -> A loses
-    eng.feed(point_call(9.0, "A"))
-    eng.feed(point_call(9.4, "B"))
-    eng.feed(point_call(9.9, "A"))
+    # next rally (two points played, so B serves): silence after a bounce on A's side -> A loses
+    eng.feed(point_call(9.0, "B"))
+    eng.feed(point_call(9.4, "A"))
     dead = {
         "schema": "trophy.event.v1",
         "id": "d1",
@@ -325,18 +324,17 @@ def test_house_rule_submit_and_approve_hot_loads_the_pack(tmp_path: Path) -> Non
 
     pack = yaml.safe_load((TT / "rules.yaml").read_text())
     pack["scoring"]["params"].update({"points_to_win": 7, "win_by": 1})
-    p = tmp_path / "rules.yaml"
-    p.write_text(yaml.safe_dump(pack))
-    st.set_house_rule_status({"rule_version": hr["rule_version"], "status": "ready", "pack_path": f"{p}@abc123"})
+    commit, p = _gated_sandbox(tmp_path, pack)
+    st.set_house_rule_status({"rule_version": hr["rule_version"], "status": "ready", "pack_path": f"{p}@{commit}"})
     eng.handle_ctl({"cmd": "approve_house_rule", "game_id": GAME, "args": {"rule_version": hr["rule_version"]}})
     assert st.tables["house_rule"][hr["rule_version"]]["status"] == "approved"
     g = eng.games[GAME]
     assert g.scoring.points_to_win == 7 and g.rule_version == hr["rule_version"]
     assert any("House rule added" in c["text"] for c in st.rows("call"))
-    for i in range(7):
-        eng.feed(point_call(10 + i * 2, "A"))
-        eng.feed(point_call(10.5 + i * 2, "B"))
-        eng.feed(floor(11 + i * 2, "A"))
+    for i in range(7):  # 4 s apart: a point's trailing ball is dead for DEAD_AFTER_POINT_S (blocker 4)
+        eng.feed(point_call(10 + i * 4, "A"))
+        eng.feed(point_call(10.5 + i * 4, "B"))
+        eng.feed(floor(11 + i * 4, "A"))
     assert g.score().game_over and g.score().winner == "A"
     assert st.rows("call")[-1]["rule_version"] == hr["rule_version"]
     assert g.game["status"] == "ended"
@@ -467,3 +465,124 @@ def test_droid_net_let_house_rule_replays_the_point(tmp_path: Path) -> None:
     eng.feed(point_call(5.0, "A"))
     eng.feed(point_call(5.4, "B"))
     assert eng.feed({**touch, "id": "nt2", "t_game_s": 5.6}) == []
+
+
+def _bounce(t: float, side: str, surface: str = "table") -> dict:
+    return {
+        "schema": "trophy.event.v1",
+        "id": f"tb{t}",
+        "game_id": GAME,
+        "t_game_s": t,
+        "sport": "table_tennis",
+        "type": "bounce",
+        "source": "synthetic",
+        "cams": ["c_syn001"],
+        "conf": 0.95,
+        "side": side,
+        "payload": {"surface": surface, "side": side},
+    }
+
+
+def _fresh() -> Engine:
+    eng = Engine(MemoryState(), modules_dir=ROOT / "sports")
+    eng.create_game(GAME, "table_tennis", t0_ms=0)
+    eng.start_game(GAME, "A")
+    return eng
+
+
+def test_trailing_floor_bounces_after_a_point_score_nothing():
+    """Review blocker 4: serve, B bounce, three floor bounces -> 1-0, not 2-1."""
+    eng = _fresh()
+    for ev in [_bounce(1.0, "A"), _bounce(1.4, "B"), _bounce(2.0, "B", "floor"), _bounce(2.3, "A", "floor"),
+               _bounce(2.6, "B", "floor")]:  # fmt: skip
+        eng.feed(ev)
+    assert dict(eng.games[GAME].score().points) == {"A": 1, "B": 0}
+
+
+def test_a_bounce_after_a_double_bounce_does_not_start_a_rally():
+    """Review blocker 4: a double bounce plus a third bounce -> 1-0, not 1-1."""
+    eng = _fresh()
+    for ev in [_bounce(1.0, "A"), _bounce(1.4, "B"), _bounce(1.8, "B"), _bounce(2.1, "B")]:
+        eng.feed(ev)
+    assert dict(eng.games[GAME].score().points) == {"A": 1, "B": 0}
+    # the ball is live again after a ball_dead (or the dead window): the next rally scores normally
+    eng.feed({**_bounce(2.5, "B"), "id": "dead", "type": "ball_dead", "payload": {"reason": "lost", "last_side": "B"}})
+    for ev in [_bounce(4.0, "B"), _bounce(4.4, "A"), _bounce(4.8, "A")]:  # B serves (2 points each), A double bounce
+        eng.feed(ev)
+    assert dict(eng.games[GAME].score().points) == {"A": 1, "B": 1}
+
+
+def test_floor_bounces_before_the_serve_are_ignored():
+    eng = _fresh()
+    assert eng.feed(_bounce(0.5, "A", "floor")) == [] and eng.feed(_bounce(0.8, "A", "floor")) == []
+    assert eng.games[GAME].rally is None
+
+
+def _gated_sandbox(tmp_path: Path, pack: dict) -> tuple[str, Path]:
+    """A Droid-like sandbox: its own git repo with the gated rules.yaml committed (as the compiler records it)."""
+    import subprocess
+
+    import yaml
+
+    repo = tmp_path / "workspace"
+    (repo / "sports" / "table_tennis").mkdir(parents=True)
+    p = repo / "sports" / "table_tennis" / "rules.yaml"
+    p.write_text(yaml.safe_dump(pack))
+    git = ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run([*git, "init", "-q"], check=True)
+    subprocess.run([*git, "add", "-A"], check=True)
+    subprocess.run([*git, "commit", "-qm", "gated"], check=True)
+    commit = subprocess.run([*git, "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
+    return commit, p
+
+
+def test_approval_loads_the_gated_commit_and_ignores_args_and_unready_rows(tmp_path: Path) -> None:
+    """Review blocker 7."""
+    import yaml
+
+    eng, st = new_engine()
+    eng.handle_ctl({"cmd": "submit_house_rule", "game_id": GAME, "args": {"text": "first to 7"}, "by_cam_id": "c_j"})
+    rv = st.rows("house_rule")[0]["rule_version"]
+    pack = yaml.safe_load((TT / "rules.yaml").read_text())
+    pack["scoring"]["params"].update({"points_to_win": 7, "win_by": 1})
+    commit, p = _gated_sandbox(tmp_path, pack)
+    # 1. a pack_path in the command's args is ignored: the row is still pending, so nothing is approved
+    evil = tmp_path / "evil.yaml"
+    evil.write_text(yaml.safe_dump({**pack, "scoring": {**pack["scoring"], "params": {"points_to_win": 1}}}))
+    eng.handle_ctl(
+        {"cmd": "approve_house_rule", "game_id": GAME, "args": {"rule_version": rv, "pack_path": f"{evil}@{commit}"}}
+    )
+    assert st.tables["house_rule"][rv]["status"] == "failed" and eng.games[GAME].scoring.points_to_win == 11
+    # 2. no commit -> refused, even when ready
+    st.set_house_rule_status({"rule_version": rv, "status": "ready", "pack_path": str(p)})
+    eng.handle_ctl({"cmd": "approve_house_rule", "game_id": GAME, "args": {"rule_version": rv}})
+    assert st.tables["house_rule"][rv]["status"] == "failed"
+    # 3. ready + gated commit -> the COMMITTED pack loads, not the working tree edited after the gate
+    p.write_text(yaml.safe_dump({**pack, "scoring": {**pack["scoring"], "params": {"points_to_win": 1}}}))
+    st.set_house_rule_status({"rule_version": rv, "status": "ready", "pack_path": f"{p}@{commit}"})
+    eng.handle_ctl({"cmd": "approve_house_rule", "game_id": GAME, "args": {"rule_version": rv}})
+    assert st.tables["house_rule"][rv]["status"] == "approved"
+    assert eng.games[GAME].scoring.points_to_win == 7
+
+
+def test_a_failing_moment_write_never_leaves_a_rally_open() -> None:
+    """Review blocker 3: Spacetime refusing upsert_moment / set_best_play must not wedge scoring."""
+
+    class Flaky(MemoryState):
+        def upsert_moment(self, m):  # noqa: ANN001
+            raise RuntimeError("Spacetime HTTP 530")
+
+        def set_best_play(self, *a):  # noqa: ANN002
+            raise RuntimeError("Spacetime HTTP 530")
+
+    st = Flaky()
+    eng = Engine(st, modules_dir=ROOT / "sports", dead_after_point_s=0)
+    eng.create_game(GAME, "table_tennis", t0_ms=0)
+    eng.start_game(GAME, "A")
+    for t, side in [(1.0, "A"), (1.4, "B"), (1.9, "B")]:  # B double bounce -> point A
+        eng.feed(point_call(t, side))
+    assert eng.games[GAME].rally is None
+    for t, side in [(5.0, "A"), (5.4, "B"), (5.9, "B")]:  # the next rally scores too
+        eng.feed(point_call(t, side))
+    assert dict(eng.games[GAME].score().points) == {"A": 2, "B": 0}
+    eng.handle_ctl({"cmd": "end_game", "game_id": GAME, "args": {}})  # best play write fails quietly

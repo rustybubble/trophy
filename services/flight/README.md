@@ -53,7 +53,7 @@ uv run --extra blurball python -m flight.live --game g_x --corners c_side=x,y,x,
 - Reads every frame of each `role=cam` phone (`FrameReader`, crop-aware, D-29) → BlurBall on MPS (`flight/blurball.py`:
   BGR→RGB, dedupe by `seq`, no silent CPU fallback, weights pinned by SHA-256) or `--detector classical` → #19's gated
   tracker → `trk:ball:{cam}` every frame + 10 Hz `track_sample`.
-- **Seam (D-38):** the golden `sports/table_tennis/events.py` runs live on those layer-1 samples, over the open rally
+- **Seam (D-40, the one live loop):** the golden `sports/table_tennis/events.py` runs live on those layer-1 samples, over the open rally
   segment, every 100 ms; events go to `ev:flight` + Spacetime `observation` once they are 0.2 s old, deduplicated by id.
   `serve_toss` comes from `flight/serve.py` (one camera, the toss plane lift, launch-direction angle, the strike from
   the horizontal-velocity impulse, σ and `evidence_missing`).

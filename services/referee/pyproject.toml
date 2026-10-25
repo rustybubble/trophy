@@ -1,7 +1,7 @@
 [project]
 name = "trophy-referee"
 version = "0.1.0"
-description = "Trophy referee voice: judge question -> route -> session check (engine) -> Claude phrases -> Cartesia speaks; transcript via ask_logged (D-31 §5, D-32)."
+description = "Trophy referee voice: judge question -> route -> session check (engine) -> Claude phrases -> Cartesia speaks; transcript via ask_logged (D-36 §5, D-37)."
 requires-python = ">=3.11"
 dependencies = [
     "trophy",

@@ -238,7 +238,7 @@ class CamWorker(threading.Thread):
     def _write(self, balls: BallTrackWriter, seq: int, t_s: float, s: dict | None) -> None:
         if s is None:
             balls.write({"t_game_s": t_s, "seq": seq, "px": None, "conf": 0.0})
-            self.sink.tick(self.cam_id, t_s)
+            self.sink.tick(self.cam_id, t_s, seq)
             return
         xy = [round(s["xy_px"][0], 1), round(s["xy_px"][1], 1)]
         rec: dict[str, Any] = {"t_game_s": t_s, "seq": seq, "px": xy, "conf": round(s["conf"], 3)}
@@ -266,7 +266,12 @@ class Analyzer:
         self.gap_s = float(self.mod.config["dead"]["gap_s"])
         self.min_conf = float(self.mod.config["capture"]["min_conf"])
         self.lock = threading.Lock()
-        self.samples: dict[str, list[tuple[float, int, float, float, float]]] = {}  # cam -> (t, seq, u, v, conf)
+        # cam -> seq -> (t, seq, u, v, conf); a processed frame without a ball has u = v = None (the module and the
+        # short-gap completion both need the misses); a tracker back-fill replaces the miss on its seq
+        self.samples: dict[str, dict[int, tuple[float, int, float | None, float | None, float]]] = {}
+        self.last_meas: dict[str, tuple[float, float, float]] = {}  # cam -> (t, u, v) of the newest detection
+        self.fill_gaps_s = float(getattr(args, "fill_gaps", 0.0))
+        self.n_filled = 0
         self.t_now: dict[str, float] = {}
         self.wall_last = time.monotonic()
         self.calib: dict[str, CamCalib] = {}
@@ -294,28 +299,40 @@ class Analyzer:
             f_px=round(float(c.pose.K[0, 0])) if c.pose else None,
         )
 
-    def tick(self, cam_id: str, t_s: float) -> None:
+    def tick(self, cam_id: str, t_s: float, seq: int | None = None) -> None:
+        """A processed frame with no ball."""
         with self.lock:
             self.wall_last = time.monotonic()
             self.t_now[cam_id] = max(t_s, self.t_now.get(cam_id, t_s))
+            if seq is not None:
+                self.samples.setdefault(cam_id, {}).setdefault(seq, (t_s, seq, None, None, 0.0))
+                self._prune(cam_id, t_s)
+
+    def _prune(self, cam_id: str, t_s: float) -> None:
+        buf = self.samples[cam_id]
+        if len(buf) > 2400:  # ~80 s at 30 fps: keep the last 60 s
+            self.samples[cam_id] = {k: x for k, x in buf.items() if x[0] >= t_s - 60.0}
+
+    def series(self, cam_id: str, t_lo: float, t_hi: float) -> list[tuple]:
+        """One camera's processed frames in [t_lo, t_hi], in time order (call with the lock held)."""
+        return sorted((x for x in self.samples.get(cam_id, {}).values() if t_lo <= x[0] <= t_hi), key=lambda x: x[0])
 
     def add(self, cam_id: str, t_s: float, seq: int, u: float, v: float, conf: float) -> None:
         with self.lock:
             self.wall_last = time.monotonic()
-            buf = self.samples.setdefault(cam_id, [])
-            prev = buf[-1] if buf else None
-            buf.append((t_s, seq, u, v, conf))
+            self.samples.setdefault(cam_id, {})[seq] = (t_s, seq, u, v, conf)
+            prev = self.last_meas.get(cam_id)
+            if prev is None or t_s > prev[0]:
+                self.last_meas[cam_id] = (t_s, u, v)
             self.t_now[cam_id] = max(t_s, self.t_now.get(cam_id, t_s))
-            moving = prev is not None and 0 < t_s - prev[0] < 0.2 and math.hypot(u - prev[2], v - prev[3]) > 4.0
+            moving = prev is not None and 0 < t_s - prev[0] < 0.2 and math.hypot(u - prev[1], v - prev[2]) > 4.0
             if moving:
                 if self.seg_start is None:
                     self.seg_start = prev[0]
                     self.toss_done = False
                     self.toss_cut = None
-                self.last_move = t_s
-            horizon = t_s - 60.0
-            if buf[0][0] < horizon:
-                self.samples[cam_id] = [s for s in buf if s[0] >= horizon]
+                self.last_move = max(t_s, self.last_move or t_s)
+            self._prune(cam_id, t_s)
 
     # -- analysis
     def step(self) -> None:
@@ -328,7 +345,7 @@ class Analyzer:
                 closing = True  # every camera stopped streaming: close on the wall clock
             t_lo = self.seg_start - 0.1
             t_hi = self.last_move + 0.05 if closing else now
-            seg = {c: [s for s in ss if t_lo <= s[0] <= t_hi] for c, ss in self.samples.items() if c in self.calib}
+            seg = {c: self.series(c, t_lo, t_hi) for c in self.samples if c in self.calib}
             calib = dict(self.calib)
             seg_start = self.seg_start
             if closing:
@@ -357,12 +374,20 @@ class Analyzer:
 
     def _run_module(self, seg: dict, calib: dict[str, CamCalib]) -> list[dict]:
         from trophy_engine.sportmod.api import BallSample
+        from trophy_engine.sportmod.completion import fill_short_gaps
 
+        # one events() call over every camera of the game, so the module's multi-camera merge fuses the angles
         obs: list[Any] = []
         for c in calib.values():
             obs.append(c.module_camera(self.args.fps))
+        n_filled = 0
         for cam_id, ss in seg.items():
-            obs += [BallSample(cam_id, t, seq, (u, v), conf) for t, seq, u, v, conf in ss if conf >= self.min_conf]
+            cam = [BallSample(cam_id, t, seq, None if u is None else (u, v), conf) for t, seq, u, v, conf in ss]
+            if self.fill_gaps_s > 0:  # D-39: complete short dropouts (PCHIP), estimates only, counted
+                cam, n = fill_short_gaps(cam, max_gap_s=self.fill_gaps_s)
+                n_filled += n
+            obs += cam
+        self.n_filled = n_filled
         trusted = all(c.trusted for c in calib.values())
         try:
             return list(self.mod.events(obs, self.mod.state(self.game_id, calib_trusted=trusted)))
@@ -377,7 +402,7 @@ class Analyzer:
             if c.pose is None:
                 continue
             with self.lock:
-                ss = [s for s in self.samples.get(cam_id, []) if seg_start - 2.0 <= s[0] <= seg_start + 3.0]
+                ss = [s for s in self.series(cam_id, seg_start - 2.0, seg_start + 3.0) if s[2] is not None]
             if len(ss) > (len(best[1]) if best else 0):
                 best = (c, ss)
         if best is None:
@@ -526,6 +551,9 @@ def parse_args(argv=None):
     ap.add_argument("--every", type=float, default=0.1, help="seconds between module runs")
     ap.add_argument("--settle", type=float, default=0.2, help="publish events once they are this old (game s)")
     ap.add_argument("--toss-hold", type=float, default=1.5, help="hold module events this long for a serve toss")
+    ap.add_argument(
+        "--fill-gaps", type=float, default=0.25, help="fill dropouts up to this long before the module (D-39); 0: off"
+    )
     ap.add_argument("--fps", type=float, default=30.0)
     ap.add_argument("--no-spacetime", action="store_true", help="Redis only (tests, or without a vision token)")
     return ap.parse_args(argv)

@@ -5,6 +5,7 @@
  * backend; a Droid run either talks to Factory or does not happen.
  */
 import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -55,7 +56,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, root = REPO_ROO
     );
   }
   const off = Number(e.PORT_OFFSET || 0);
-  const enginePython = e.ENGINE_PYTHON || join(root, "services/engine/.venv/bin/python");
+  const enginePython = e.ENGINE_PYTHON || defaultEnginePython(root);
   return {
     factoryApiKey: key,
     droidExecPath: e.DROID_EXEC_PATH || undefined,
@@ -64,10 +65,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, root = REPO_ROO
     timeoutMs: Number(e.DROID_TIMEOUT_S || 90) * 1000,
     maxAttempts: Number(e.DROID_MAX_ATTEMPTS || 3),
     enginePython,
-    runsDir: e.DROID_RUNS_DIR || join(root, "data/local/droid_runs"),
+    // outside the repo, so no sandbox has the repo (or its .env) as an ancestor directory (review blocker 2)
+    runsDir: e.DROID_RUNS_DIR || join(homedir(), ".trophy", "droid_runs"),
     spacetimeUri: (e.SPACETIME_URI || "http://127.0.0.1:3000").replace(/\/$/, ""),
     spacetimeModule: e.SPACETIME_MODULE || "trophy",
     spacetimeCompilerToken: e.SPACETIME_COMPILER_TOKEN || "",
     port: 8200 + off,
   };
+}
+
+/** The engine venv's interpreter, as uv lays it out: bin/python on macOS/Linux, Scripts\\python.exe on Windows. */
+export function defaultEnginePython(root = REPO_ROOT): string {
+  return join(root, "services/engine/.venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
 }

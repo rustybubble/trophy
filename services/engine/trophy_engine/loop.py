@@ -1,5 +1,5 @@
 """``trophy-engine run``: the live loop. Redis ``ev:*`` (consumer group ``engine``) and ``ctl:engine`` in, Spacetime
-out. With ``--field`` the engine also consumes fused 3D ball samples (D-31): from the Redis stream ``trk:ball3d``, or
+out. With ``--field`` the engine also consumes fused 3D ball samples (D-36): from the Redis stream ``trk:ball3d``, or
 ``--track3d <file.track3d.jsonl>`` replayed on the clock; the session's check library (``--checks``, default the
 golden ``sports/<sport>/checks``) turns them into events through ``TrackEventer``. Events after a scored point are
 dropped until the next rally starts (the ball is dead whatever the track says). Background AI votes run only when
@@ -12,8 +12,12 @@ import argparse
 import json
 import logging
 import os
+import re
+import subprocess
 import sys
+import threading
 import time
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +27,7 @@ from trophy.streams import CTL_ENGINE, EVENT_STREAMS, EventConsumer, parse_ctl
 from .ask import AskConfigError, Phraser, TrackStore, make_app, serve
 from .checks.events import TrackEventer
 from .checks.library import load_field, load_library
-from .decide import BackgroundDecider, BitdeerVoter, ClaudeVoter, GeminiVoter, VoterConfigError
+from .decide import BackgroundDecider, ClaudeVoter, VoterConfigError
 from .engine import Engine
 from .state import MemoryState, SpacetimeState, StateWriter
 from .track_source import RedisTrackSource, replay_file
@@ -44,8 +48,8 @@ def _dotenv(root: Path = ROOT) -> dict[str, str]:
 
 
 def build_decider(env: dict[str, str], state: StateWriter, engine: Engine) -> BackgroundDecider:
-    """All three voters, each requiring its own key. A missing key is a configuration error, not a silent skip."""
-    voters = [ClaudeVoter.from_env(env), GeminiVoter.from_env(env), BitdeerVoter.from_env(env)]
+    """Claude, the one model voter (D-41). A missing key is a configuration error, not a silent skip."""
+    voters = [ClaudeVoter.from_env(env)]
 
     def on_result(req: dict[str, Any], res: dict[str, Any]) -> None:
         g = engine.games.get(req["game_id"])
@@ -129,7 +133,7 @@ def make_feeder(
 
 
 def start_ask(env: dict[str, str], store: TrackStore, session_dir: Path) -> Any:
-    """Ask the ref over the live checks (D-31 §5). Needs ANTHROPIC_API_KEY: without it the service answers 503
+    """Ask the ref over the live checks (D-36 §5). Needs ANTHROPIC_API_KEY: without it the service answers 503
     not_configured, never a made-up answer."""
     phraser = None
     err = None
@@ -144,15 +148,149 @@ def start_ask(env: dict[str, str], store: TrackStore, session_dir: Path) -> Any:
     return server
 
 
+CHECK_ALIASES = {"bounce_side": "in_out", "edge_hit": "in_out", "double_bounce": "bounces"}  # the referee's catalog
+
+
+def make_check_runner(store: TrackStore):
+    """run_check over the session's fused 3D track (interfaces-v1 section 20): the referee's check names, a moment or
+    a rally window -> the check's own CheckResult fields plus the inputs it ran with. KeyError = no such check."""
+
+    def run_check(game_id: str, name: str, t: float | None, window: dict[str, Any] | None, args: dict[str, Any]):
+        lib = CHECK_ALIASES.get(name, name)
+        if lib not in store.library.checks:
+            raise KeyError(name)
+        snap = store.snapshot()
+        track, fld = snap["track"], store.field
+        if fld is None or not len(track.samples):
+            return {"error": "no_data"}
+        seg = store.rally(int(window["rally_no"])) if window and window.get("rally_no") else store.last_rally()
+        if window and window.get("t0") is not None:
+            t0, t1 = float(window["t0"]), float(window.get("t1") or track.t1)
+        elif t is not None and seg is None:
+            t0, t1 = t - 1.5, t + 1.5
+        elif seg is not None:
+            t0 = float(seg["t_start_s"])
+            t1 = float(seg["t_end_s"]) if seg.get("t_end_s") is not None else track.t1
+        else:
+            t0, t1 = track.t0, track.t1
+        if lib == "in_out":
+            q = {"t_s": t if t is not None else t1}
+        elif lib == "serve_toss":
+            q = {"t_start": t0}
+        else:
+            q = {"t0": t0, "t1": t1}
+        res = store.library.run(lib, track, fld, None, **q)
+        return {
+            "check": name,
+            "verdict": res.get("verdict") if isinstance(res.get("verdict"), str) else None,
+            "p": res.get("p"),
+            "evidence": {
+                **(res.get("evidence") or {}),
+                **({"result": res["verdict"]} if not isinstance(res.get("verdict"), str) else {}),
+            },
+            "inputs": {"check": lib, **q, "game_id": game_id},
+            "calibrated": bool(res.get("calibrated", False)),
+        }
+
+    run_check.store = store  # type: ignore[attr-defined]  # new_check snapshots read the same track
+    return run_check
+
+
+def check_name(text: str, taken: Iterable[str]) -> str:
+    """A new check's file name from the router's hint ('ball_speed(rally) -> ...') or the question's words."""
+    m = re.match(r"\s*([a-z][a-z0-9_]{1,39})\s*\(", text.lower())
+    base = m.group(1) if m else "_".join(re.findall(r"[a-z]+", text.lower())[:3]) or "new_check"
+    base = re.sub(r"[^a-z0-9_]", "_", base)[:36].strip("_") or "new_check"
+    base = base if base[0].isalpha() else f"q_{base}"
+    taken = set(taken)
+    name, n = base, 2
+    while name in taken:
+        name, n = f"{base}_{n}", n + 1
+    return name
+
+
+def make_new_check_starter(store: TrackStore, field_path: Path, sport: str, timeout_s: float = 95.0):
+    """request_check -> a Droid new_check run (services/compiler `new-check`) in a background thread; the reply is
+    the gated check's answer on the session's own track, or why there is none. The Droid-written check runs only
+    inside the jailed gate, never in this process; it is kept under the session for the judge to approve later."""
+    tsx = ROOT / "node_modules" / ".bin" / ("tsx.cmd" if os.name == "nt" else "tsx")
+    cli = ROOT / "services" / "compiler" / "src" / "cli.ts"
+
+    def start(game_id: str, question: str, hint: str, query: dict[str, Any], reply) -> None:
+        name = check_name(hint or question, store.library.names())
+        out_dir = ROOT / "data" / "local" / "sessions" / game_id / "new_checks" / f"{int(time.time() * 1000)}_{name}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        rows = store.rows()
+        (out_dir / "track3d.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), "utf8")
+        cmd = [str(tsx), str(cli), "new-check", "--sport", sport, "--name", name, "--question", question,
+               "--hint", hint, "--session-track", str(out_dir / "track3d.jsonl"), "--session-field", str(field_path),
+               "--query", json.dumps(query), "--game-id", game_id]  # fmt: skip
+
+        def work() -> None:
+            t0 = time.perf_counter()
+            payload: dict[str, Any] = {"check": name, "calibrated": False}
+            try:
+                if not rows:
+                    raise RuntimeError("no_data")
+                p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout_s)
+                i = p.stdout.rfind('{\n "run_id"')
+                run = json.loads(p.stdout[i:]) if i >= 0 else {}
+                (out_dir / "run.json").write_text(json.dumps(run, indent=1), "utf8")
+                if run.get("status") == "ready":
+                    answer = json.loads((Path(run["workspace"]) / ".trophy" / "answer.json").read_text("utf8"))
+                    payload = {
+                        "check": name,
+                        "verdict": answer.get("verdict") if isinstance(answer.get("verdict"), str) else None,
+                        "p": answer.get("p"),
+                        "evidence": {
+                            **(answer.get("evidence") or {}),
+                            **({"verdict": answer["verdict"]} if isinstance(answer.get("verdict"), dict) else {}),
+                            **({"text": answer["text"]} if answer.get("text") else {}),
+                        },
+                        "inputs": {**(answer.get("inputs") or {}), "droid_run": run.get("run_id")},
+                        "calibrated": bool(answer.get("calibrated", False)),
+                    }
+                else:
+                    payload["error"] = (
+                        f"failed:{run.get('status') or 'no run'}: {(run.get('error') or p.stderr[-200:])}"[:300]
+                    )
+            except subprocess.TimeoutExpired:
+                payload["error"] = "timeout"
+            except Exception as e:  # noqa: BLE001 - the referee gets an honest error
+                payload["error"] = "no_data" if str(e) == "no_data" else f"failed:{type(e).__name__}: {e}"[:300]
+            payload["latency_ms"] = round((time.perf_counter() - t0) * 1000, 1)
+            log.info(json.dumps({"svc": "engine", "msg": "new_check", "check": name, "error": payload.get("error"),
+                                 "ms": payload["latency_ms"]}))  # fmt: skip
+            reply(payload)
+
+        threading.Thread(target=work, name=f"new_check:{name}", daemon=True).start()
+
+    return start
+
+
 def run(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="trophy-engine", description="Trophy rule engine: events + ctl in, calls out")
     ap.add_argument("--redis", default=None, help="REDIS_URL (default from env/.env)")
     ap.add_argument("--state", choices=["spacetime", "memory"], default="spacetime")
-    ap.add_argument("--votes", action="store_true", help="run decide() voters (needs ANTHROPIC/GEMINI/BITDEER keys)")
+    ap.add_argument("--votes", action="store_true", help="run decide() with the Claude voter (needs ANTHROPIC_API_KEY)")
     ap.add_argument("--modules", type=Path, default=ROOT / "sports")
     ap.add_argument("--log-json", action="store_true")
     ap.add_argument(
-        "--field", type=Path, default=None, help="field.json: consume fused 3D samples through the checks (D-31)"
+        "--exit-when-idle", type=float, default=0.0, help="stop after this many seconds without events (tests, replays)"
+    )
+    ap.add_argument(
+        "--dead-after-point",
+        type=float,
+        default=2.0,
+        help="after a point called on a bounce, ignore events until ball_dead or this many seconds (0 = off)",
+    )
+    ap.add_argument(
+        "--server-from-first-hit",
+        action="store_true",
+        help="real play: the first racket hit of a rally names the server",
+    )
+    ap.add_argument(
+        "--field", type=Path, default=None, help="field.json: consume fused 3D samples through the checks (D-36)"
     )
     ap.add_argument(
         "--checks", type=Path, default=None, help="the session's checks/ (default sports/<sport>/checks, uncalibrated)"
@@ -171,7 +309,12 @@ def run(argv: list[str] | None = None) -> int:
     env = {**_dotenv(), **os.environ}
     logging.basicConfig(level=logging.INFO, format="%(message)s" if a.log_json else "%(asctime)s %(name)s %(message)s")
     state: StateWriter = SpacetimeState() if a.state == "spacetime" else MemoryState()
-    engine = Engine(state, modules_dir=a.modules)
+    engine = Engine(
+        state,
+        modules_dir=a.modules,
+        dead_after_point_s=a.dead_after_point,
+        server_from_first_hit=a.server_from_first_hit,
+    )
     if a.votes:
         try:
             engine.decider = build_decider(env, state, engine)
@@ -237,14 +380,24 @@ def run(argv: list[str] | None = None) -> int:
     track_src = RedisTrackSource(r) if a.field is not None else None
     feeders: dict[str, TrackFeeder] = {}  # game_id -> feeder, created when the game goes live
     ask_store: TrackStore | None = None
-    if a.ask and a.field is not None:
+    if a.field is not None:  # the session's 3D track: the referee's run_check and (with --ask) POST /ask read it
         ask_store = TrackStore(load_library(a.checks or ROOT / "sports" / a.sport / "checks"), sport=a.sport)
-        start_ask(env, ask_store, a.session_dir or ROOT / "data" / "local" / "sessions" / "live")
+        engine.check_runner = make_check_runner(ask_store)
+        engine.new_check = make_new_check_starter(ask_store, a.field, a.sport)
+        if a.ask:
+            start_ask(env, ask_store, a.session_dir or ROOT / "data" / "local" / "sessions" / "live")
+
+    def reply(stream: str, payload: dict[str, Any]) -> None:
+        r.xadd(stream, {"json": json.dumps(payload)}, maxlen=10, approximate=True)
+        r.expire(stream, 300)
+
+    engine.reply = reply
     log.info(
         json.dumps(
             {"svc": "engine", "msg": "started", "state": a.state, "votes": a.votes, "track3d": a.field is not None}
         )
     )
+    idle_since = time.monotonic()
     while True:
         if track_src is not None:
             for row, _now_s in track_src.poll(block_ms=10):
@@ -276,34 +429,59 @@ def run(argv: list[str] | None = None) -> int:
                             }
                         )
                     )
-        for stream, entry_id, ev in consumer.read(block_ms=50):
-            t0 = time.perf_counter()
-            try:
-                calls = engine.feed(ev.model_dump(by_alias=True, exclude_none=True, mode="json"))
-            except Exception:  # noqa: BLE001 - one bad event must not stop the referee
-                log.exception("event failed")
-                calls = []
-            consumer.ack(stream, entry_id)
-            for c in calls:
-                log.info(
-                    json.dumps(
-                        {
-                            "svc": "engine",
-                            "game_id": c["game_id"],
-                            "msg": "call",
-                            "rule": c["rule_id"],
-                            "text": c["text"],
-                            "ms": round((time.perf_counter() - t0) * 1000, 1),
-                        }
-                    )
+        malformed0 = consumer.malformed
+        ctl_last, n = step(engine, consumer, r, ctl_last)
+        if a.exit_when_idle > 0:
+            if n or consumer.malformed != malformed0:
+                idle_since = time.monotonic()
+            elif time.monotonic() - idle_since > a.exit_when_idle:
+                return 0
+
+
+def step(engine: Engine, consumer: EventConsumer, r: redis.Redis, ctl_last: str, block_ms: int = 50) -> tuple[str, int]:
+    """One pass of the live loop: new events into the engine, then new ctl commands. Returns the ctl cursor and how
+    many entries (events, commands, rejected entries) it handled. A bad
+    event, a malformed entry or a failing command is logged and skipped, never fatal (review blocker 6)."""
+    malformed0 = consumer.malformed
+    try:
+        entries = consumer.read(block_ms=block_ms)
+    except redis.RedisError:
+        log.exception("event read failed")
+        entries = []
+    for stream, entry_id, ev in entries:
+        t0 = time.perf_counter()
+        try:
+            calls = engine.feed(ev.model_dump(by_alias=True, exclude_none=True, mode="json"))
+        except Exception:  # noqa: BLE001 - one bad event must not stop the referee
+            log.exception("event failed")
+            calls = []
+        consumer.ack(stream, entry_id)
+        for c in calls:
+            log.info(
+                json.dumps(
+                    {
+                        "svc": "engine",
+                        "game_id": c["game_id"],
+                        "msg": "call",
+                        "rule": c["rule_id"],
+                        "text": c["text"],
+                        "ms": round((time.perf_counter() - t0) * 1000, 1),
+                    }
                 )
-        for entry_id, fields in _read_ctl(r, ctl_last):
-            ctl_last = entry_id
-            try:
-                cmd = parse_ctl(fields[b"json"])
-                engine.handle_ctl(cmd.model_dump(by_alias=True, exclude_none=True, mode="json"))
-            except Exception:  # noqa: BLE001
-                log.exception("ctl failed")
+            )
+    try:
+        ctl_entries = _read_ctl(r, ctl_last)
+    except redis.RedisError:
+        log.exception("ctl read failed")
+        ctl_entries = []
+    for entry_id, fields in ctl_entries:
+        ctl_last = entry_id
+        try:
+            cmd = parse_ctl(fields[b"json"])
+            engine.handle_ctl(cmd.model_dump(by_alias=True, exclude_none=True, mode="json"))
+        except Exception:  # noqa: BLE001
+            log.exception("ctl failed")
+    return ctl_last, len(entries) + len(ctl_entries) + consumer.malformed - malformed0
 
 
 def _stream_tail(r: redis.Redis, stream: str) -> str:

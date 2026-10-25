@@ -14,6 +14,13 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+# What check code may import from here (review blocker 2; see sportmod.api)
+__all__ = [
+    "G", "Field", "Sample", "Track", "angle_from_vertical", "edge_probs", "fuse", "interp_crossing", "leg_angle",
+    "line_fit", "line_fit_angle", "merge_params", "motion_sigma", "parabola_vertex", "phi", "quad_fit",
+    "rect_line_distances", "refine_bounce", "refine_extremum", "result", "rnd", "sample_from_row", "side_of",
+]  # fmt: skip
+
 from trophy_engine.sportmod.api import fuse, phi, rect_line_distances, side_of  # noqa: F401  (re-exported)
 
 Side = str  # "A" | "B"

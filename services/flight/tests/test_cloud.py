@@ -16,7 +16,7 @@ def test_cli_run_and_eval(tmp_path: Path):
     for cid in cams:
         blurball_like_json(per[cid], tmp_path / f"{cid}.json", noise_px=1.5, miss_p=0.05, false_p=0.03, seed=2)
     fj = field_json([solve_pose(cid, per[cid]["corners_px"], 1280, 720).to_json() for cid in cams])
-    (tmp_path / "field.json").write_text(json.dumps(fj))
+    (tmp_path / "field.json").write_text(json.dumps(fj), encoding="utf8")
     truth = {
         "synthetic": True,
         "track": sim["track"][::6],
@@ -24,7 +24,7 @@ def test_cli_run_and_eval(tmp_path: Path):
         "hits": sim["hits"],
         "serve": sim["serve"],
     }
-    (tmp_path / "truth.json").write_text(json.dumps(truth))
+    (tmp_path / "truth.json").write_text(json.dumps(truth), encoding="utf8")
     out = tmp_path / "out"
     cloud.main(
         [
@@ -40,11 +40,11 @@ def test_cli_run_and_eval(tmp_path: Path):
         ]
     )
     assert (out / "track3d.jsonl").exists() and (out / "viewer.html").exists()
-    rows = [json.loads(line) for line in (out / "track3d.jsonl").read_text().splitlines()]
+    rows = [json.loads(line) for line in (out / "track3d.jsonl").read_text(encoding="utf8").splitlines()]
     assert rows and all({"t_s", "xyz_m", "cov_m2", "conf", "n_views", "sigma_m"} <= set(r) for r in rows)
-    assert "const DATA = " in (out / "viewer.html").read_text()
+    assert "const DATA = " in (out / "viewer.html").read_text(encoding="utf8")
     cloud.main(["eval", "--out", str(out), "--truth", str(tmp_path / "truth.json")])
-    rep = json.loads((out / "eval.json").read_text())
+    rep = json.loads((out / "eval.json").read_text(encoding="utf8"))
     assert rep["synthetic"] is True
     assert rep["track3d_err_m"]["median"] < 0.05
     assert rep["bounces"]["matched_within_80ms"] >= rep["bounces"]["truth"] - 1

@@ -4,7 +4,7 @@
  */
 import { isAbsolute, normalize, relative, sep } from "node:path";
 
-export type JobKind = "compile" | "house_rule" | "retune" | "calibrate_checks";
+export type JobKind = "compile" | "house_rule" | "retune" | "calibrate_checks" | "new_check";
 
 export const MODULE_FILES = ["config.yaml", "events.py", "rules.yaml"] as const;
 
@@ -13,7 +13,7 @@ export const GATE_SCRIPTS = ["replay_test", "check_test"] as const;
 export type GateScript = (typeof GATE_SCRIPTS)[number];
 
 export function gateScript(kind: JobKind): GateScript {
-  return kind === "calibrate_checks" ? "check_test" : "replay_test";
+  return kind === "calibrate_checks" || kind === "new_check" ? "check_test" : "replay_test";
 }
 
 /**
@@ -31,6 +31,9 @@ export function editableFiles(kind: JobKind, sport: string, checkFiles: readonly
       return [`${dir}/config.yaml`, `${dir}/events.py`];
     case "calibrate_checks":
       return checkFiles.filter((f) => f.endsWith(".py") && !f.startsWith("_")).map((f) => `checks/${f}`);
+    case "new_check":
+      // exactly one new file: checkFiles is [the new check's name]; the existing library stays untouched
+      return checkFiles.map((f) => `checks/${f.endsWith(".py") ? f : `${f}.py`}`);
   }
 }
 
@@ -47,8 +50,14 @@ export function isAllowedEdit(sandboxRoot: string, filePath: string, allowed: re
   return rel !== null && allowed.includes(rel);
 }
 
-/** The one command the Droid may run: a test gate, optionally with flags. Group 2 is the script name. */
-const TEST_CMD = /^(\.\/)?(replay_test|check_test)(\s+--?[a-z-]+(=\S+|\s+\S+)?)*\s*$/;
+/**
+ * The one command the Droid may run: the job's gate, bare, or with `--quiet` (agents add it). The gate script pins
+ * every argument itself and ignores any it is given, so nothing else is needed. Single literal spaces only: no
+ * newlines, tabs, redirections (`<`, `>`), globs or other arguments. Group 2 is the script name.
+ */
+const TEST_CMD = /^(\.\/)?(replay_test|check_test)( --quiet)?$/;
+/** Printable ASCII only: a newline or other control character could smuggle a second command past a line check. */
+const PRINTABLE = /^[\x20-\x7e]*$/;
 
 /** `scripts` narrows the gate to the job's own (`["check_test"]`); by default either gate name passes. */
 export function isAllowedCommand(
@@ -56,6 +65,7 @@ export function isAllowedCommand(
   sandboxRoot?: string,
   scripts: readonly string[] = GATE_SCRIPTS,
 ): boolean {
+  if (!PRINTABLE.test(command)) return false;
   let c = command.trim();
   if (sandboxRoot) {
     // Agents like to prefix `cd <sandbox> && ./replay_test`; allow exactly that directory, quoted or not.
@@ -74,7 +84,9 @@ export function isAllowedCommand(
     c.includes(";") ||
     c.includes("|") ||
     c.includes("`") ||
-    c.includes("$(")
+    c.includes("$") ||
+    c.includes("<") ||
+    c.includes(">")
   ) {
     return false;
   }

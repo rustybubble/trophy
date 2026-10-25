@@ -1772,25 +1772,6 @@
    }
   },
   {
-   "at_ms": 15800,
-   "table": "ai_vote",
-   "row": {
-    "call_id": "01JDEMCAL00000000000000013",
-    "game_id": "g_demtt001",
-    "created_at_ms": 1792000015800,
-    "backend": "gemini",
-    "model": "gemini (synthetic)",
-    "challenge_id": null,
-    "choice": "EDGE_GOOD",
-    "probs": {
-     "EDGE_GOOD": 0.66,
-     "SIDE_FAULT": 0.34
-    },
-    "latency_ms": 2400,
-    "rationale": "Trajectory after contact suggests top edge (synthetic)."
-   }
-  },
-  {
    "at_ms": 16000,
    "table": "challenge",
    "row": {
@@ -1859,25 +1840,6 @@
      ]
     },
     "why": "Bounce 8 mm inside end A, within the edge band."
-   }
-  },
-  {
-   "at_ms": 16500,
-   "table": "ai_vote",
-   "row": {
-    "call_id": "01JDEMCAL00000000000000013",
-    "game_id": "g_demtt001",
-    "created_at_ms": 1792000016500,
-    "backend": "bitdeer",
-    "model": "Qwen/Qwen3.5-397B-A17B",
-    "challenge_id": "01JDEMCHL00000000000000014",
-    "choice": "SIDE_FAULT",
-    "probs": {
-     "EDGE_GOOD": 0.45,
-     "SIDE_FAULT": 0.55
-    },
-    "latency_ms": 3100,
-    "rationale": "Blurred crop; slight lean to side face (synthetic)."
    }
   },
   {
@@ -2137,10 +2099,152 @@
    }
   },
   {
+   "at_ms": 4900,
+   "table": "moment",
+   "row": {
+    "game_id": "g_demtt001",
+    "moment_id": "01JDEMMOM00000000000000017",
+    "kind": "point",
+    "t_game_s": 4.6,
+    "t_start_s": 1,
+    "t_end_s": 4.6,
+    "label": "Point B: return long",
+    "team_id": "B",
+    "call_id": "01JDEMCAL00000000000000006",
+    "rally_no": 1,
+    "score_after": "0–1",
+    "tags": [
+     "point",
+     "rally"
+    ],
+    "highlight_score": 0.35,
+    "reasons": [
+     "3-shot rally"
+    ],
+    "is_best_play": false,
+    "thumb_t_s": 3.4
+   }
+  },
+  {
+   "at_ms": 8100,
+   "table": "moment",
+   "row": {
+    "game_id": "g_demtt001",
+    "moment_id": "01JDEMMOM00000000000000018",
+    "kind": "serve_fault",
+    "t_game_s": 7.6,
+    "t_start_s": 7,
+    "t_end_s": 7.8,
+    "label": "Serve fault A: toss 9 cm",
+    "team_id": "B",
+    "call_id": "01JDEMCAL00000000000000008",
+    "rally_no": 2,
+    "score_after": "0–2",
+    "tags": [
+     "serve_fault",
+     "toss_low"
+    ],
+    "highlight_score": 0.42,
+    "reasons": [
+     "clear serve fault (toss 7 cm under the 16 cm minimum)"
+    ],
+    "is_best_play": false,
+    "thumb_t_s": 7.3
+   }
+  },
+  {
+   "at_ms": 20100,
+   "table": "moment",
+   "row": {
+    "game_id": "g_demtt001",
+    "moment_id": "01JDEMMOM00000000000000019",
+    "kind": "edge",
+    "t_game_s": 12.4,
+    "t_start_s": 10,
+    "t_end_s": 13.2,
+    "label": "Edge ball B, upheld on challenge",
+    "team_id": "B",
+    "call_id": "01JDEMCAL00000000000000013",
+    "rally_no": 3,
+    "score_after": "0–3",
+    "tags": [
+     "edge",
+     "challenge",
+     "rally"
+    ],
+    "highlight_score": 0.86,
+    "reasons": [
+     "close call (p = 0.71)",
+     "challenge upheld",
+     "longest rally (4 shots)"
+    ],
+    "is_best_play": true,
+    "thumb_t_s": 12.4
+   }
+  },
+  {
+   "at_ms": 29300,
+   "table": "moment",
+   "row": {
+    "game_id": "g_demtt001",
+    "moment_id": "01JDEMMOM00000000000000020",
+    "kind": "house_rule",
+    "t_game_s": 29.2,
+    "t_start_s": 29.2,
+    "t_end_s": 29.2,
+    "label": "House rule: first to 7, win by 1",
+    "call_id": "01JDEMCAL00000000000000016",
+    "score_after": "0–3",
+    "tags": [
+     "house_rule"
+    ],
+    "highlight_score": 0.1,
+    "reasons": [
+     "approved house rule"
+    ],
+    "is_best_play": false,
+    "thumb_t_s": 29.2
+   }
+  },
+  {
+   "at_ms": 20400,
+   "table": "commentary",
+   "row": {
+    "game_id": "g_demtt001",
+    "moment_id": "01JDEMMOM00000000000000019",
+    "created_at_ms": 1792000020400,
+    "voice": "pbp",
+    "text": "[Synthetic] B clips the top edge at end A, challenged, and the call stands.",
+    "facts": {
+     "p": 0.71,
+     "result": "upheld",
+     "score_after": "0–3"
+    },
+    "validated": true,
+    "source": "template"
+   }
+  },
+  {
+   "at_ms": 20500,
+   "table": "commentary",
+   "row": {
+    "game_id": "g_demtt001",
+    "moment_id": "01JDEMMOM00000000000000019",
+    "created_at_ms": 1792000020500,
+    "voice": "colour",
+    "text": "[Synthetic] Eight millimetres inside the line: as close as it gets.",
+    "facts": {
+     "d_mm": 8
+    },
+    "validated": true,
+    "source": "template"
+   }
+  },
+  {
    "at_ms": 32000,
    "table": "ask",
    "row": {
-    "ask_id": "01JDEMASK00000000000000017",
+    "ask_id": "01JDEMASK00000000000000021",
     "game_id": "g_demtt001",
     "sport": "table_tennis",
     "question": "Can the serve clip the net?",
@@ -2155,7 +2259,27 @@
     ],
     "moss_ms": 42,
     "latency_ms": 2100,
-    "created_at_ms": 1792000032000
+    "created_at_ms": 1792000032000,
+    "kind": "rule"
+   }
+  },
+  {
+   "at_ms": 34000,
+   "table": "ask",
+   "row": {
+    "ask_id": "01JDEMASK00000000000000022",
+    "game_id": "g_demtt001",
+    "sport": "table_tennis",
+    "question": "Did that last one catch the edge?",
+    "answer": "[Synthetic] Yes, the edge, but it's close: BETA.",
+    "speech": "[Synthetic] Yes, the edge, but it's close. Beta.",
+    "citations": [],
+    "latency_ms": 1400,
+    "created_at_ms": 1792000034000,
+    "kind": "check",
+    "check": "edge",
+    "p": 0.71,
+    "calibrated": false
    }
   }
  ]

@@ -9,7 +9,7 @@ replaying the call log, so undo and overturn are exact.
 | Sport modules: API, loader with the import allowlist | `trophy_engine/sportmod/` |
 | CEL rules (`opponent()`, `phi()`), rally state, scoring (rally template: 11, win by 2, serve every 2, alternate at deuce; params per game), the gate (tier ceiling, foul_flag ≤ BETA, untrusted calibration ≤ BETA), call building (text/speech templates, cue, evidence, overlay, emotion on game point) | `rules/`, `rally.py`, `scoring.py`, `gate.py`, `calls.py` |
 | The engine: events, commands (`challenge`, `resolve_challenge`, `undo_last_call`, `adjust_score`, `set_server`, `submit/approve/reject_house_rule` with hot-load, `ask_logged`, `bookmark`, `clip_that`, `review_call`, `end_game`), moments + ★ best play | `engine.py`, `moments.py` |
-| `decide()`: Claude ‖ Gemini ‖ Bitdeer in parallel, 4 s each, blended with geometry (uncalibrated), one `ai_vote` per voter, never on the live path | `decide/` |
+| `decide()`: Claude (the only model voter, D-41), 4 s, blended with geometry (uncalibrated), one `ai_vote`, never on the live path | `decide/` |
 | Grounded commentary (pbp + colour) with the template fallback the spec requires | `commentary.py` |
 | State writers: Spacetime (needs `SPACETIME_ENGINE_TOKEN`) and memory (tests, replay_test) | `state.py` |
 | `replay-test` (the Droid's gate: events vs labels, then calls through the engine, `calls_changed` vs a baseline), `trophy-synth`, `trophy-engine run`, `trophy-ctl` | `replay_test/`, `synth/`, `loop.py`, `ctl_cli.py` |
@@ -22,13 +22,12 @@ uv run trophy-engine run --state spacetime            # Redis + Spacetime; add -
 uv run trophy-ctl create_game g_demo0001 --sport table_tennis && uv run trophy-ctl start_game g_demo0001
 ```
 
-**Keys.** `--votes` needs `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` + `GEMINI_MODEL`, and `BITDEER_API_KEY`; a missing one
-is a startup error, not a skipped voter. Commentary through Claude needs `ANTHROPIC_API_KEY`. No test makes a live call:
-the voters are exercised through recorded response shapes on an injected HTTP transport.
+**Keys.** `--votes` needs `ANTHROPIC_API_KEY`; without it `--votes` is a startup error, not a skipped voter. Commentary through Claude needs `ANTHROPIC_API_KEY`. No test makes a live call:
+the voter is exercised through recorded response shapes on an injected HTTP transport.
 
 Contracts: `docs/plan/interfaces-v1.md` §9–§11, §15, §19; `packages/contracts/{call,ctl,decide,state,sportmodule,scene,droidrun}.schema.json`.
 
-## 3D checks, the gate and ask the ref (D-31)
+## 3D checks, the gate and ask the ref (D-36)
 
 - `trophy_engine/checks/`: `api.py` (the `Field`/`Track` adapter over provisional `track3d` rows, free-flight maths),
   `library.py` (loads a `checks/` directory under an import allowlist; `library.json` → `calibrated`), `events.py`

@@ -1,6 +1,6 @@
 # Trophy interfaces v1: the contracts the three agents build against
 
-*Planning lead, 2026-10-23; revised 2026-10-24 for the **Cal Hacks demo weekend**. Status: **v1 agreed**. Companion to [three-agent-plan.md](three-agent-plan.md). The weekend additions are §15 (`decide()` voters: Claude, Gemini, Bitdeer), §16 (Cartesia voice), §17 (ask the ref: Apify → Moss → Claude) and §18 (the Factory Droid compiler). SubQ, Firecrawl and Deepgram are not used.*
+*Planning lead, 2026-10-23; revised 2026-10-24 for the **Cal Hacks demo weekend**. Status: **v1 agreed**. Companion to [three-agent-plan.md](three-agent-plan.md). The weekend additions are §15 (`decide()`: the Claude voter; Gemini and Bitdeer dropped, D-41), §16 (Cartesia voice), §17 (ask the ref: Apify → Moss → Claude) and §18 (the Factory Droid compiler). SubQ, Firecrawl and Deepgram are not used.*
 
 This file is the source of truth for wire formats **until Agent 1 lands checkpoint C0**. After that, the JSON Schemas in `packages/contracts/` and the generated types win, and this file is the narrative. If they disagree, whoever notices fixes this file. **[OPEN]** marks unresolved items.
 
@@ -10,7 +10,7 @@ This file is the source of truth for wire formats **until Agent 1 lands checkpoi
 > - **Event (§7):** every payload in the table is a typed `$def` (`BouncePayload`, `ServeTossPayload`, …); `trophy.events.make_event` validates it. `serve_toss` points use `pos_m: {x, y, z}` like everything else. Any payload may carry `calib_untrusted`.
 > - **Call (§10):** adds optional `rally_no`, `emotion` (Cartesia, game/match point only), `suggested` (the decide() verdict, advisory) and `overlay.serve_toss_event_id` (the toss trace the replay draws).
 > - **`ai_vote` (§11) is keyed by `(call_id, backend)`**, with `challenge_id` nullable: votes start speculatively before any challenge exists (D-23). See D-25.
-> - **Reducer args (§7.1, §11):** reducers take one JSON string argument (e.g. `post_observations(batch_json)`, a JSON array). The HTTP body is the args array, so it's `["<json text>"]`. Verified in the Spacetime spike (`spikes/spacetime-latency/`).
+> - **Reducer args (§7.1, §11):** reducers take one JSON string argument (e.g. `post_observations(batch_json)`, a JSON array). The HTTP body is the args array, so it's `["<json text>"]`. Verified in the Spacetime latency spike (removed in the 2026-10-24 cleanup; numbers in `docs/status/a1.md`).
 > - **Vision identity:** `trophy.world` writers send `Authorization: Bearer $SPACETIME_VISION_TOKEN` (new `.env` key).
 > - **`TrophyState` (§11)** adds `synthetic`, `label`, `calls()`, `scores()`, `onObservation` and `onTrackSample` (the world view), and every `on*` replays known rows first. `MockState` scripts are `trophy.mock_script.v1`.
 > - **`/api/ws/ctl` (§13):** `ping {t0, prev?}` carries the previous completed exchange `{t0, t1, t2, t3}` so the gateway can fit the clock (`trophy.timebase.ClockFit`).
@@ -90,7 +90,7 @@ courtcam-adapter (A2) ← POST /calibrate from the gateway
 ```
 compiler (A3, Node + Factory Droid SDK) ◀─subscribes─ Spacetime house_rule rows ─▶ reducers (plan/diff/results) ; writes rulepacks/house/…
 rules (A3, py3.11) ◀─ gateway POST /api/ask ; Apify actor output → Moss index ; Claude answers from retrieved clauses
-engine (A3) ─ on challenge: decide() fan-out to Claude ‖ Gemini ‖ Bitdeer (crops from gateway /api/replay/.../frames)
+engine (A3) ─ on challenge: decide(): Claude + geometry (crops from gateway /api/replay/.../frames)
 ```
 **Rules:**
 1. Only **backend services** write to SpacetimeDB: the **vision modules** (`observation` and `track_sample` only, D-21), the **engine** (game state, calls, votes, ask log) and the **compiler** (house-rule plan, diff and results only). Reducers check the caller's service identity. **Video frames never go into Spacetime.** They stay on the Redis frame bus and in the local recorder.
@@ -256,7 +256,7 @@ Each entry has one field, `json`: `{schema, req_id, cmd, game_id, t_srv_ms, by_c
 | `score` | `(game_id, team_id)` | `points, games?, sets?, display, updated_at_ms` (`display` is a sport-formatted string, e.g. `"10–9"` or `"40–30, 3–2"`) |
 | `challenge` | `challenge_id` | `game_id, call_id, by_cam_id, status, result?, created_at_ms, resolved_at_ms?` |
 | `house_rule` | `rule_version` | `game_id, sport, text, source, status (pending\|compiling\|ready\|approved\|rejected\|failed), backend (droid\|claude-fallback), plan_md, steps_json (streamed), diff, results_json ({tests:[{name, before, after, pass}], calls_changed:[…]}), pack_path, error?, created_at_ms, updated_at_ms` |
-| `ai_vote` | `(call_id, backend)` | `challenge_id?, backend (claude\|gemini\|bitdeer), model, choice, probs_json, latency_ms, error?, rationale (≤ 140 chars)` |
+| `ai_vote` | `(call_id, backend)` | `challenge_id?, backend (claude\|geometry), model, choice, probs_json, latency_ms, error?, rationale (≤ 140 chars)` |
 | `observation` | `event_id` | `game_id, cam_id(s), t_game_s, sport, type, source, track_id?, team_id?, side?, pos_json?, sigma_m?, conf, payload_json, supersedes?` (one row per Event, §7.1) |
 | `track_sample` | `(cam_id, t_game_s)` | `game_id, object (ball\|player:<id>), pos_json?, px_json?, conf` (10 Hz, rolling 120 s) |
 | `ask` | `ask_id` | `game_id, sport, question, answer, citations_json ([{rule_id, title, url, quote}]), latency_ms, created_at_ms` |
@@ -336,8 +336,8 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 ## 14. Dev and runtime conventions (M5 Pro)
 - **One HTTPS origin for phones** (OPEN-2). Caddy + a DNS-01 certificate for a real domain pointing at the Mac's LAN IP is required for WebRTC and best for 720p30. A tunnel (cloudflared/ngrok) works for WebSocket only and adds latency, so it's acceptable for day-1 UI work only.
 - **Ports:** gateway 8000, courtcam-adapter 8050, SpacetimeDB 3000, Redis 6379, PWA 5173, dashboard 5174. Each worktree adds its offset (A1 +0, A2 +100, A3 +200).
-- **Native processes** in per-service `uv` venvs, run under a `Procfile` (`make dev`). The `docker-compose.yml` is the Linux/AWS path.
-- **`.env`** is never committed: `TROPHY_TOKEN_SECRET`, `REDIS_URL`, `SPACETIME_URI`, `SPACETIME_MODULE`, `SPACETIME_ENGINE_TOKEN`, `SPACETIME_COMPILER_TOKEN`, `SPACETIME_VISION_TOKEN`, `ANTHROPIC_API_KEY`, `CLAUDE_MODEL`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `BITDEER_API_KEY`, `BITDEER_BASE_URL=https://api-inference.bitdeer.ai/v1`, `BITDEER_VISION_MODEL`, `CARTESIA_API_KEY`, `CARTESIA_VERSION`, `CARTESIA_VOICE_CALLS`, `CARTESIA_VOICE_REF`, `FACTORY_API_KEY`, `MOSS_PROJECT_ID`, `MOSS_PROJECT_KEY`, `APIFY_TOKEN`, optional `ROBOFLOW_API_KEY`. Ports for the new services: `rules` 8100, `compiler` 8200.
+- **Native processes** in per-service `uv` venvs, run under a `Procfile` (`make dev`). A tested compose stack for a later Linux deploy is on the closed rustybubble/trophy#16.
+- **`.env`** is never committed: `TROPHY_TOKEN_SECRET`, `REDIS_URL`, `SPACETIME_URI`, `SPACETIME_MODULE`, `SPACETIME_ENGINE_TOKEN`, `SPACETIME_COMPILER_TOKEN`, `SPACETIME_VISION_TOKEN`, `ANTHROPIC_API_KEY`, `CLAUDE_MODEL`, `CARTESIA_API_KEY`, `CARTESIA_VERSION`, `CARTESIA_VOICE_CALLS`, `CARTESIA_VOICE_REF`, `FACTORY_API_KEY`, `MOSS_PROJECT_ID`, `MOSS_PROJECT_KEY`, `APIFY_TOKEN`, optional `ROBOFLOW_API_KEY`. Ports for the new services: `rules` 8100, `compiler` 8200.
 
 ---
 
@@ -349,6 +349,7 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
   - **Measure the voter latencies in P0.** If one stays slow, switch it to a faster model.
   - **Decision models never make a line call alone** (D-5): they vote on crops, and geometry stays in the blend.
 - **Request** (`trophy.decide.v1`): `{question, options: ["EDGE_GOOD", "SIDE_FAULT"], context (event facts as text: distance to edge, σ, trajectory after contact, audio class if any), images: ≤ 4 JPEG crops from /api/replay/.../frames around the bounce or toss (each < 1 MB), observations: [the relevant `observation` rows as JSON], timeout_s: 4}`.
+> **D-41 (the user, 2026-10-24):** Gemini and Bitdeer are dropped. Claude is the only model voter, blended with geometry; the fan-out below is kept as the record of the old design.
 - **Fan out in parallel** to three voters through one `Voter` interface:
   - **Claude** (`claude-opus-5-5`; structured output via `output_config.format` = `{choice, probs{opt: p}, rationale}`; no `temperature`, no forced `tool_choice`);
   - **Gemini** (`GEMINI_MODEL`; enum or JSON structured output);
@@ -366,6 +367,8 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 - **As built (2026-10-24, `apps/pwa`):** a new call cancels the line that's still playing (a fresh `context_id` per line, `cancel` on the old one, rather than one continued context per game). Push-to-talk **reuses the raw onset mic** when it's open instead of opening a second, echo-cancelled track, because iOS can mute an earlier capture when a second one starts; Ink-2 transcribed correctly without echo cancellation in the iPhone spike. Calls older than 15 s when they arrive (e.g. after a reconnect) are listed, not announced.
 
 ## 17. Ask the ref: Apify → Moss → Claude (Agent 3, `services/rules`)
+> **Dropped (D-36, the user 2026-10-24):** Moss and Apify are out and `services/rules` was never merged. Ask the ref is the referee service (§20, D-37, rustybubble/trophy#19). This section is kept only as the record of the old design.
+
 - **Apify actor "Sports Rulebook Scraper"** (`actors/rulebook-scraper/`, Python Apify SDK + Crawlee):
   - Input: `{sources: [{sport, url, kind: "html"|"pdf"}]}`.
   - Output dataset items, **one per rule**: `{sport, rule_id, title, text, url, source, license_note, fetched_at}`.

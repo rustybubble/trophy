@@ -1,7 +1,7 @@
 [project]
 name = "flight"
 version = "0.1.0"
-description = "Trophy flight: ball track -> field-frame 3D map (field.json + track3d.jsonl) for table tennis."
+description = "Trophy flight: BlurBall on live camera streams, ball tracks, the field-frame 3D map for table tennis."
 requires-python = ">=3.11,<3.12"
 dependencies = [
     "numpy==1.26.4",

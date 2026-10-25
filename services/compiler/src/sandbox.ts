@@ -10,7 +10,7 @@
  *   samples/*.l1.jsonl + .labels.json
  *   replay_test               the test gate, pinned to the engine venv; the one command the Droid may run
  *
- * calibrate_checks (D-31):
+ * calibrate_checks (D-36):
  *   checks/*.py + library.json   a copy of the golden check library to specialise (the *.py are the editable files)
  *   reference/checks/            the same copy, read-only (the gate's "before" column)
  *   samples/field.json + *.track3d.jsonl + *.labels3d.json   this calibration and its labelled fused tracks
@@ -49,6 +49,18 @@ export interface Job {
   sessionId?: string;
   gameId?: string;
   ruleVersion?: string;
+  /** new_check: the referee's question that no session check answers (interfaces-v1 section 20) */
+  newCheck?: {
+    /** the new check's name: checks/<name>.py, [a-z][a-z0-9_]* */
+    name: string;
+    question: string;
+    hint?: string;
+    /** the session's fused 3D track (a snapshot) and its field.json */
+    sessionTrack: string;
+    sessionField: string;
+    /** the arguments the referee asked with (t_s, or t0/t1) */
+    query: Record<string, unknown>;
+  };
 }
 
 export interface Sandbox {
@@ -70,15 +82,14 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
   if (readdirSync(dir).length) throw new Error(`sandbox dir is not empty: ${dir}`);
   const gate = gateScript(job.kind);
   const { moduleDir, allowlist, samples, gateCmd } =
-    job.kind === "calibrate_checks" ? layoutChecks(job, dir, root) : layoutModule(job, dir, root);
-  // the gate: a fixed script so the Droid cannot vary the interpreter, module or samples
-  const script = [
-    "#!/bin/sh",
-    `# The Droid's test gate (${gateCmd.module}). The only command the sandbox allows.`,
-    `cd "$(dirname "$0")" || exit 2`,
-    `exec "${enginePython}" -m ${gateCmd.module} ${gateCmd.args} --json .trophy/results.json --events .trophy/events.json "$@"`,
-    "",
-  ].join("\n");
+    job.kind === "new_check"
+      ? layoutNewCheck(job, dir, root)
+      : job.kind === "calibrate_checks"
+        ? layoutChecks(job, dir, root)
+        : layoutModule(job, dir, root);
+  // the gate: a fixed script so the Droid cannot vary the interpreter, module or samples; it runs the Droid-written
+  // code jailed (review blocker 2): a clean env (no keys), isolated Python, no network, writes only in the sandbox
+  const script = gateScriptText(gateCmd.module, gateCmd.args, enginePython);
   writeFileSync(join(dir, gate), script);
   chmodSync(join(dir, gate), 0o755);
   writeFileSync(join(dir, ".gitignore"), ".trophy/\n__pycache__/\n");
@@ -135,7 +146,7 @@ function layoutModule(job: Job, dir: string, root: string): Layout {
   if (job.kind === "compile") {
     const base = job.baseSport ?? "table_tennis";
     const refSrc = job.moduleDir ?? join(root, "sports", base);
-    // only the three module files: sports/<sport>/ also holds checks/ (D-31), which is not this job's business
+    // only the three module files: sports/<sport>/ also holds checks/ (D-36), which is not this job's business
     mkdirSync(join(dir, "reference", base), { recursive: true });
     for (const f of MODULE_FILES) cpSync(join(refSrc, f), join(dir, "reference", base, f));
     // Seed the new module with the reference so the Droid edits (a 90 s job) instead of retyping events.py.
@@ -181,6 +192,8 @@ function layoutChecks(job: Job, dir: string, root: string): Layout {
   const moduleDir = join(dir, "checks");
   cpSync(src, moduleDir, { recursive: true, filter: noPycache });
   cpSync(src, join(dir, "reference", "checks"), { recursive: true, filter: noPycache });
+  // the API the checks import, to read instead of searching the disk (reads outside the sandbox are refused)
+  cpSync(join(root, "services/engine/trophy_engine/checks/api.py"), join(dir, "reference", "checks_api.py"));
   const checkFiles = readdirSync(moduleDir)
     .filter((f) => f.endsWith(".py") && !f.startsWith("_"))
     .sort();
@@ -219,12 +232,14 @@ export function installGuard(dir: string, allowlist: string[], commands: string[
   const allowPath = join(dir, ".trophy", "allowlist.json");
   writeFileSync(allowPath, JSON.stringify({ files: allowlist, commands }, null, 1));
   chmodSync(allowPath, 0o444);
-  const cmd = `python3 "${GUARD}" "${dir}"`;
+  // the hook runs with whatever python the host has: `python` on Windows (python3 there is often a Store stub)
+  const py = process.env.GUARD_PYTHON || (process.platform === "win32" ? "python" : "python3");
+  const cmd = `${py} "${GUARD}" "${dir}"`;
   const hooks = {
     hooksDisabled: false,
     PreToolUse: [
       {
-        matcher: "Edit|Create|ApplyPatch|MultiEdit|Write|Execute",
+        matcher: "Edit|Create|ApplyPatch|MultiEdit|Write|Execute|Read|Grep|Glob|LS",
         hooks: [{ type: "command", command: cmd, timeout: 10 }],
       },
     ],
@@ -232,6 +247,35 @@ export function installGuard(dir: string, allowlist: string[], commands: string[
   const hooksPath = join(dir, ".factory", "hooks.json");
   writeFileSync(hooksPath, JSON.stringify(hooks, null, 1));
   chmodSync(hooksPath, 0o444); // the guard also refuses writes to it; the git audit catches any change
+}
+
+/**
+ * new_check: the session library (read-only by the allowlist), the labelled samples for check-test, the session's own
+ * track and the question's arguments. The gate is new-check-test: the library must still pass and the new check must
+ * load, run deterministically on the session track and answer (.trophy/answer.json).
+ */
+function layoutNewCheck(job: Job, dir: string, root: string): Layout {
+  const nc = job.newCheck;
+  if (!nc) throw new Error("new_check job without newCheck");
+  if (!/^[a-z][a-z0-9_]{0,39}$/.test(nc.name)) throw new Error(`bad check name ${JSON.stringify(nc.name)}`);
+  const base = layoutChecks(job, dir, root);
+  if (existsSync(join(dir, "checks", `${nc.name}.py`))) throw new Error(`checks/${nc.name}.py already exists`);
+  const sessionDir = join(dir, "session");
+  mkdirSync(sessionDir);
+  cpSync(nc.sessionTrack, join(sessionDir, "track3d.jsonl"));
+  cpSync(nc.sessionField, join(sessionDir, "field.json"));
+  writeFileSync(join(sessionDir, "query.json"), JSON.stringify(nc.query, null, 1));
+  return {
+    ...base,
+    allowlist: editableFiles("new_check", job.sport, [nc.name]),
+    gateCmd: {
+      module: "trophy_engine.check_test.newcheck",
+      args:
+        `--checks checks --samples samples --field samples/field.json --rules "rules/${job.sport}" --new ${nc.name} ` +
+        "--session session/track3d.jsonl --session-field session/field.json --query session/query.json " +
+        "--answer .trophy/answer.json",
+    },
+  };
 }
 
 export function renderTask(job: Job, allowlist: string[], samples: string[]): string {
@@ -248,6 +292,10 @@ export function renderTask(job: Job, allowlist: string[], samples: string[]): st
     allowlist: allowlist.map((f) => `- \`${f}\``).join("\n"),
     samples: samples.map((f) => `- \`samples/${f}\` (labels: \`samples/${labelOf(f)}\`)`).join("\n"),
     scene: job.scene ? "`scene/scene.json`" : "(none)",
+    name: job.newCheck?.name ?? "",
+    question: job.newCheck?.question ?? "",
+    hint: job.newCheck?.hint ?? "(none)",
+    query: JSON.stringify(job.newCheck?.query ?? {}),
   };
   return tpl.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => vars[k] ?? `{{${k}}}`);
 }
@@ -289,4 +337,37 @@ export function commitSandbox(sb: Sandbox, message: string): string {
     "--allow-empty",
   );
   return git(sb.dir, "rev-parse", "HEAD");
+}
+
+/**
+ * The gate script. Never forwards its own arguments ("$@" was a bypass). The Python it runs gets `env -i` (only PATH,
+ * a HOME and TMPDIR inside the sandbox), `-I -B` (no PYTHON* variables, no user site, no bytecode written outside), and
+ * no network and no writes outside the sandbox: `sandbox-exec` on macOS, `unshare -rn` on Linux where permitted. Where
+ * neither exists it says so on stderr and in .trophy/isolation, rather than failing silently.
+ */
+export function gateScriptText(module: string, args: string, enginePython: string): string {
+  const profile =
+    "(version 1)(allow default)(deny network*)(deny file-write*)" +
+    '(allow file-write* (subpath "$SB") (literal "/dev/null") (literal "/dev/dtracehelper"))';
+  return [
+    "#!/bin/sh",
+    `# The Droid's test gate (${module}). The only command the sandbox allows; it takes no arguments.`,
+    'cd "$(dirname "$0")" || exit 2',
+    'SB="$(pwd -P)"',
+    "mkdir -p .trophy/home .trophy/tmp",
+    `set -- "${enginePython}" -I -B -m ${module} ${args} --json .trophy/results.json --events .trophy/events.json`,
+    'CLEAN="env -i PATH=/usr/bin:/bin HOME=$SB/.trophy/home TMPDIR=$SB/.trophy/tmp LANG=C.UTF-8"',
+    'if [ "$(uname)" = Darwin ] && [ -x /usr/bin/sandbox-exec ]; then',
+    "  echo sandbox-exec > .trophy/isolation",
+    `  exec $CLEAN /usr/bin/sandbox-exec -p "${profile.replace(/"/g, '\\"')}" "$@"`,
+    "elif command -v unshare >/dev/null 2>&1 && unshare -rn true 2>/dev/null; then",
+    "  echo unshare > .trophy/isolation",
+    '  exec $CLEAN unshare -rn "$@"',
+    "else",
+    "  echo none > .trophy/isolation",
+    '  echo "trophy gate: no network isolation on this host (no sandbox-exec; unshare -rn refused): clean env only" >&2',
+    '  exec $CLEAN "$@"',
+    "fi",
+    "",
+  ].join("\n");
 }

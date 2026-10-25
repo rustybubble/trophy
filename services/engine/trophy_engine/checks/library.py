@@ -23,6 +23,9 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
+# typing, collections, dataclasses and enum are out (review blocker 2: e.g. typing.get_type_hints evaluates a string
+# annotation, which the AST walk can't see); operator too (attrgetter("__class__") reaches dunders by string).
+from ..sportmod.loader import module_reach_errors  # noqa: E402
 from .api import Field, Track
 
 ALLOWED_IMPORTS: frozenset[str] = frozenset(
@@ -30,19 +33,27 @@ ALLOWED_IMPORTS: frozenset[str] = frozenset(
         "__future__",
         "math",
         "statistics",
-        "collections",
-        "collections.abc",
-        "dataclasses",
-        "typing",
         "itertools",
         "functools",
         "bisect",
         "heapq",
-        "enum",
-        "operator",
         "trophy_engine.checks.api",
     }
 )
+
+API_MODULES = (
+    "trophy_engine.sportmod.api",
+    "trophy_engine.checks.api",
+)
+
+
+def _api_names() -> dict[str, frozenset[str]]:
+    import importlib
+
+    return {m: frozenset(importlib.import_module(m).__all__) for m in API_MODULES}
+
+
+API_NAMES = _api_names()  # names module code may import from the engine's API modules
 FORBIDDEN_CALLS: frozenset[str] = frozenset(
     {"exec", "eval", "compile", "__import__", "open", "input", "globals", "locals", "vars"}
     | {"getattr", "setattr", "delattr", "breakpoint", "exit", "quit"}
@@ -70,6 +81,10 @@ def check_source(src: str, filename: str) -> list[str]:
                     errors.append(f"{filename}:{node.lineno}: import {a.name!r} is not allowed")
         elif isinstance(node, ast.ImportFrom):
             mod = node.module or ""
+            if not node.level and mod in API_NAMES:
+                bad = [a.name for a in node.names if a.name == "*" or a.name not in API_NAMES[mod]]
+                if bad:
+                    errors.append(f"{filename}:{node.lineno}: {', '.join(bad)} not in {mod}.__all__")
             if node.level or mod not in ALLOWED_IMPORTS:
                 errors.append(f"{filename}:{node.lineno}: from {mod!r} import is not allowed")
         elif isinstance(node, ast.Call):
@@ -81,6 +96,7 @@ def check_source(src: str, filename: str) -> list[str]:
             errors.append(f"{filename}:{node.lineno}: dunder attribute {node.attr!r} is not allowed")
         elif isinstance(node, ast.Name) and node.id in {"__builtins__", "__loader__", "__spec__"}:
             errors.append(f"{filename}:{node.lineno}: {node.id} is not allowed")
+    errors += module_reach_errors(tree, filename, ALLOWED_IMPORTS)
     if not any(isinstance(n, ast.FunctionDef) and n.name == "check" for n in tree.body):
         errors.append(f"{filename}: no top-level `def check(track, field, params=None, **q)`")
     if not any(

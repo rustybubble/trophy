@@ -92,3 +92,19 @@ def test_no_wrong_auto_call_on_a_fresh_seed(tmp_path: Path, lib) -> None:
 def test_library_run_unknown_check(lib, fld, game) -> None:
     with pytest.raises(LibraryError):
         lib.run("nope", game[0], fld)
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "from typing import get_type_hints",
+        "from dataclasses import dataclass",
+        "import statistics\nx = statistics.sys",
+        "import trophy_engine.checks.api as a",
+        "from trophy_engine.checks.api import math",  # imported there, not in its __all__
+    ],
+)
+def test_check_loader_refuses_the_escapes_from_review(line: str) -> None:
+    """Review blocker 2, for Droid-written checks."""
+    src = f"{line}\n\nPARAMS = {{}}\n\n\ndef check(track, field, params=None, **q):\n    return None\n"
+    assert check_source(src, "x.py")

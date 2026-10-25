@@ -113,7 +113,7 @@ Each check is a pure function `check(track, field, params, **q) -> {"verdict", "
 | `sportmod` loader with the import allowlist | `services/engine/trophy_engine/sportmod` | loads `checks/*.py` too |
 | synthetic generator | `trophy_engine/synth` | emit 3D tracks from a `field.json` |
 | decide(): Claude second opinion on BETA calls | `trophy_engine/decide` | Claude only (Gemini and Bitdeer dropped unless the user says otherwise) |
-| Drop | `services/rules`, `actors/`, Moss, Apify, `/coach`, moments index | see `docs/plan/simplified-architecture.md` |
+| Drop | `services/rules`, `actors/`, Moss, Apify, `/coach`, moments index | D-36 (the simplified-architecture proposal was not adopted and is deleted) |
 
 ## 9. Honest limits
 

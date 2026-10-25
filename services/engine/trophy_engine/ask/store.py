@@ -13,6 +13,9 @@ from ..checks.library import CheckLibrary
 MAX_CALLS = 50
 
 
+MAX_ROWS = 60_000  # about 30 min at 30 Hz
+
+
 class TrackStore:
     """``push`` samples as they arrive; ``track()`` is a time-ordered snapshot for the checks."""
 
@@ -24,6 +27,7 @@ class TrackStore:
         self.recent_calls: list[dict[str, Any]] = []
         self.score: dict[str, Any] = {}
         self._samples: list[Sample] = []
+        self._rows: list[dict[str, Any]] = []  # the raw track3d rows, for a new_check sandbox's session snapshot
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------ writers (the engine)
@@ -40,7 +44,15 @@ class TrackStore:
         s = sample_from_row(row, self.field)
         with self._lock:
             self._samples.append(s)
+            self._rows.append(dict(row))
+            if len(self._rows) > MAX_ROWS:
+                del self._rows[: len(self._rows) - MAX_ROWS]
         return s
+
+    def rows(self) -> list[dict[str, Any]]:
+        """The raw rows pushed so far (the newest MAX_ROWS), time-ordered."""
+        with self._lock:
+            return sorted(self._rows, key=lambda r: float(r["t_s"]))
 
     def extend(self, rows: Iterable[Mapping[str, Any]]) -> int:
         n = 0

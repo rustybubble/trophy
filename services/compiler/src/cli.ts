@@ -6,13 +6,16 @@
  *   trophy-droid house-rule --sport table_tennis --text "a serve that clips the net is a let" --samples <dir> [--rule-version <ulid> --spacetime]
  *   trophy-droid retune     --sport table_tennis --reason "ball lost in 45% of frames" --scene <scene.json> --samples <dir>
  *   trophy-droid calibrate  --sport table_tennis --field <field.json> --samples <dir> [--checks <dir>] [--session <id>]
- *                                                        # D-31: specialise sports/<sport>/checks to this calibration
+ *   trophy-droid new-check  --sport table_tennis --name ball_speed --question "how fast was that" --hint "..."
+ *                           --session-track <track3d.jsonl> --session-field <field.json> --query '{"t0":1,"t1":4}'
+ *                           # the referee's request_check: write one check, gate it on the session's own track
+ *                                                        # D-36: specialise sports/<sport>/checks to this calibration
  *   trophy-droid watch      [--ws ws://127.0.0.1:3000]   # subscribe to pending house rules and compile each one
  *   trophy-droid approve    <run_id> [--by judge] [--session <id>]
  *                           # module runs: promote to data/local/modules/<sport>/v<n>
  *                           # calibrate runs: install the checks in data/local/sessions/<session|run_id>/checks
  *
- * Every run streams to stderr and to data/local/droid_runs/<run_id>/run.jsonl (the job as job.json beside it); the
+ * Every run streams to stderr and to ~/.trophy/droid_runs/<run_id> (DROID_RUNS_DIR)/run.jsonl (the job as job.json beside it); the
  * sandbox stays as the artifact.
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -98,6 +101,12 @@ async function main(argv: string[]): Promise<number> {
       ws: { type: "string", default: "ws://127.0.0.1:3000" },
       by: { type: "string", default: "judge" },
       field: { type: "string" },
+      name: { type: "string" },
+      question: { type: "string" },
+      hint: { type: "string" },
+      "session-track": { type: "string" },
+      "session-field": { type: "string" },
+      query: { type: "string", default: "{}" },
       checks: { type: "string" },
       session: { type: "string" },
     },
@@ -162,6 +171,31 @@ async function main(argv: string[]): Promise<number> {
         checksDir: values.checks,
         sessionId: values.session,
         gameId: values["game-id"],
+      });
+      return run.status === "ready" ? 0 : 1;
+    }
+    case "new-check": {
+      // the engine starts this for the referee's request_check (interfaces-v1 section 20); prints the run JSON
+      if (!values.sport || !values.name || !values.question || !values["session-track"]) usage();
+      const sport = values.sport;
+      const samplesDir = values.samples ?? join(REPO_ROOT, "evals/fixtures/synthetic", `${sport}_3d`);
+      const run = await runOne({
+        kind: "new_check",
+        sport,
+        text: values.question,
+        fieldPath: values.field ?? join(samplesDir, "field.json"),
+        samplesDir,
+        checksDir: values.checks,
+        sessionId: values.session,
+        gameId: values["game-id"],
+        newCheck: {
+          name: values.name,
+          question: values.question,
+          hint: values.hint,
+          sessionTrack: values["session-track"],
+          sessionField: values["session-field"] ?? values.field ?? join(samplesDir, "field.json"),
+          query: JSON.parse(values.query) as Record<string, unknown>,
+        },
       });
       return run.status === "ready" ? 0 : 1;
     }

@@ -7,16 +7,16 @@ of the root README's Factory section.
 
 Trophy keeps rules out of code: a sport is a module in `sports/<sport>/` (`config.yaml` detector parameters,
 `events.py` layer 1 → layer 2 events, `rules.yaml` the CEL rule pack; see [`sports/README.md`](../../sports/README.md))
-plus, since D-31, a **check library** `sports/<sport>/checks/*.py`: handwritten geometry checks (`phases`, `bounces`,
+plus, since D-36, a **check library** `sports/<sport>/checks/*.py`: handwritten geometry checks (`phases`, `bounces`,
 `in_out`, `net_touch`, `contacts`, `serve_toss`, `rally_summary`) over a fused 3D ball track, with `library.json`
 saying whether they were calibrated. A Factory Droid is the thing that writes and edits those files. It does four
 jobs, each from a trigger we designed:
 
-| Trigger | Job | What the Droid may edit |
-|---|---|---|
-| a `house_rule` row with `status = 'pending'` in Spacetime (the judge typed or said a rule) | **house_rule**: implement "first to 7, win by 1" or "a serve that clips the net is a let" | `rules.yaml` only |
-| a session with no approved module for its sport, plus Agent 2's scene descriptor (`scene.schema.json`) | **compile**: derive `sports/pickleball/` from the golden `sports/table_tennis/` | all three files of the new module |
-| a health metric crossing a threshold (ball lost > 40 % of frames, reprojection error rising) | **retune**: adjust thresholds, or the detector logic if a parameter can't fix it | `config.yaml`, `events.py` |
+| Trigger                                                                                                               | Job                                                                                                                                                    | What the Droid may edit                                              |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| a `house_rule` row with `status = 'pending'` in Spacetime (the judge typed or said a rule)                            | **house_rule**: implement "first to 7, win by 1" or "a serve that clips the net is a let"                                                              | `rules.yaml` only                                                    |
+| a session with no approved module for its sport, plus Agent 2's scene descriptor (`scene.schema.json`)                | **compile**: derive `sports/pickleball/` from the golden `sports/table_tennis/`                                                                        | all three files of the new module                                    |
+| a health metric crossing a threshold (ball lost > 40 % of frames, reprojection error rising)                          | **retune**: adjust thresholds, or the detector logic if a parameter can't fix it                                                                       | `config.yaml`, `events.py`                                           |
 | the judge finishes camera setup: corners, clap sync, a warm-up recording (`field.json` + labelled `track3d` fixtures) | **calibrate_checks**: specialise the golden check library to this calibration (sigma model, surface/floor bands, serve zone, dead-ball gap, edge band) | every `checks/<name>.py` of the copied library; never `library.json` |
 
 Today the house-rule trigger is live through the Spacetime subscription (`trophy-droid watch`); compile, retune and
@@ -26,18 +26,20 @@ calibrate run from the CLI until Agent 1 adds the `droid_run` and `sport_module`
 
 ## Scoped access: what the Droid can touch
 
-Each run gets a **fresh sandbox** (`data/local/droid_runs/<run_id>/workspace`, its own git repository) containing
+Each run gets a **fresh sandbox** (`~/.trophy/droid_runs/<run_id>/workspace`, or under `DROID_RUNS_DIR`; its own git repository) containing
 only what the job needs, `TASK.md` (the brief from `prompts/`) and one fixed gate script that runs the engine's gate
 with a pinned interpreter, module and samples. No repo, no `.env`, no secrets.
+
 - **Module jobs:** the module to edit, the golden reference (compile jobs, read-only), the JSON Schemas, the scene
   descriptor, the sample layer-1 logs with labels, and `replay_test`.
 - **calibrate_checks:** `checks/` (a copy of the golden library incl. `library.json`), `reference/checks/` (the same
-  copy, read-only; the gate's *before* column), `samples/field.json` + `*.track3d.jsonl` + `*.labels3d.json`,
+  copy, read-only; the gate's _before_ column), `samples/field.json` + `*.track3d.jsonl` + `*.labels3d.json`,
   `rules/<sport>/` (the module, read-only; the gate scores the library's events with its `rules.yaml`),
   `schema/track3d.schema.json`, and `check_test`.
 
 Enforcement is layered, because the SDK's own permission handler turned out not to be enough (measured 2026-10-24:
-autonomy *off* offers no Edit tool, autonomy *low* auto-approves edits without asking; D-30):
+autonomy _off_ offers no Edit tool, autonomy _low_ auto-approves edits without asking; D-35):
+
 1. **A PreToolUse hook in every sandbox** (`.factory/hooks.json` → [`hooks/guard.py`](hooks/guard.py), read-only):
    the Droid CLI runs it before each `Edit|Create|ApplyPatch|MultiEdit|Write|Execute`; it allows only the job's
    allowlisted files and the job's gate (`.trophy/allowlist.json` `commands`: `./replay_test` or `./check_test`,
@@ -45,16 +47,25 @@ autonomy *off* offers no Edit tool, autonomy *low* auto-approves edits without a
    the model and recorded as a `blocked` step.
 2. **The git audit:** after each turn the runner diffs the sandbox and **fails the run if any path outside the
    allowlist changed, or if nothing changed** (a gate that passes on an unchanged module proves nothing).
-3. **The runner runs the gate itself** (`replay_test` or `check_test`) and enforces a 90 s wall clock (`DROID_TIMEOUT_S`).
-4. The SDK permission handler ([`src/droidAgent.ts`](src/droidAgent.ts)) still answers any confirmation that does
+3. **The gate runs the Droid-written code jailed** (review blocker 2): the gate script takes no arguments and runs the
+   engine's Python with `env -i` (only `PATH`, plus a `HOME` and `TMPDIR` inside the sandbox: no API keys), `-I -B`, and
+   no network and no writes outside the sandbox (`sandbox-exec` on macOS; `unshare -rn` on Linux where the host allows
+   user namespaces, network only; otherwise it says `none` in `.trophy/isolation` and on stderr). Sandboxes live in
+   `~/.trophy/droid_runs` (`DROID_RUNS_DIR`), outside the repo, so none has the repo or its `.env` as an ancestor.
+   Module and check code may import only `math`, `statistics`, `itertools`, `functools`, `bisect`, `heapq` and the
+   engine's API modules, and from those only names in their `__all__`; a module object reached through an allowed
+   module (`statistics.sys`) is refused. Approved code is never loaded automatically: the engine and `trophy-live` run
+   the handwritten golden module; session checks load only with an explicit `--checks`.
+4. **The runner runs the gate itself** (`replay_test` or `check_test`) and enforces a 90 s wall clock (`DROID_TIMEOUT_S`).
+5. The SDK permission handler ([`src/droidAgent.ts`](src/droidAgent.ts)) still answers any confirmation that does
    arrive with the same allowlist, and refuses script-mode confirmations outright.
-Web fetch, web search, sub-agents, skills and automation tools are disabled. Inside `events.py` the engine's loader
-refuses imports outside a small stdlib allowlist and the usual escape hatches (`exec`, `eval`, `open`,
-`__import__`, dunder access); the checks loader (`trophy_engine.checks.library`) applies the same allowlist to
-`checks/*.py` and additionally requires a top-level `PARAMS` and `check()`.
+   Web fetch, web search, sub-agents, skills and automation tools are disabled. Inside `events.py` the engine's loader
+   refuses imports outside a small stdlib allowlist and the usual escape hatches (`exec`, `eval`, `open`,
+   `__import__`, dunder access); the checks loader (`trophy_engine.checks.library`) applies the same allowlist to
+   `checks/*.py` and additionally requires a top-level `PARAMS` and `check()`.
 
 **Model.** `DROID_MODEL` defaults to `claude-sonnet-5`. In SDK sessions some models (`claude-opus-5-5`,
-`claude-fable-5.1`, `gpt-6-sol`; measured 2026-10-24) run in *script* tool-execution mode, where edits happen inside a
+`claude-fable-5.1`, `gpt-6-sol`; measured 2026-10-24) run in _script_ tool-execution mode, where edits happen inside a
 script the permission handler can only partly inspect; the runner refuses script confirmations, so pick a model that
 runs in direct mode (`claude-sonnet-5`, `claude-opus-4-8`).
 
@@ -62,19 +73,20 @@ runs in direct mode (`claude-sonnet-5`, `claude-opus-4-8`).
 
 draft → gate → repair, at most `DROID_MAX_ATTEMPTS` (3) times. Both gates print a before/after table and write it as
 `DroidRunResults` JSON (`.trophy/results.json`), with the events in `.trophy/events.json`.
+
 - **`replay_test`** (module jobs; `services/engine/trophy_engine/replay_test`) replays every sample log through the
   candidate module and checks: the module loads (schemas + allowlist), `events()` runs, every event validates against
   `trophy.event.v1`, the run is deterministic, the surface-bounce count matches the labels, bounces alternate sides, and
   bounce times match the labels (recall/precision). The rule engine's "calls that would change" column joins the
   table in stage 2.
-- **`check_test`** (calibrate_checks; `services/engine/trophy_engine/check_test`) loads the candidate library under the
+- **`check_test`** (calibrate*checks; `services/engine/trophy_engine/check_test`) loads the candidate library under the
   import allowlist, runs every check on each labelled fused track and checks determinism, the labelled rallies
   (`phases`), table and floor bounces (recall, precision, side, position error), in/out on every labelled margin
   (never wrong at AUTO confidence), nets, contacts and serve legality; then it replays the library's events through
   the rule engine with `rules/<sport>/rules.yaml` and compares rally winners with the labels. `reference/checks` is
-  the *before* column.
+  the \_before* column.
 
-### calibrate_checks (D-31)
+### calibrate_checks (D-36)
 
 - **Trigger:** the judge finishes camera setup; the gateway will write a `droid_run` row of kind `calibrate_checks`
   (today: `trophy-droid calibrate`). `trigger.source` is `session`; `trigger.samples` records the `field.json` and the
@@ -89,7 +101,7 @@ draft → gate → repair, at most `DROID_MAX_ATTEMPTS` (3) times. Both gates pr
 - **Approve:** `trophy-droid approve <run_id> [--session <id>]` copies `workspace/checks/` to
   `data/local/sessions/<session_id>/checks/` (the session from `--session`, else the job that started the run
   (`job.json` beside `run.jsonl`), else the run id), writes `library.json` there as `{"calibrated": true, run_id,
-  session_id, field, field_sha256, approved_at_ms, approved_by}` (the engine reads `calibrated`) and a
+session_id, field, field_sha256, approved_at_ms, approved_by}` (the engine reads `calibrated`) and a
   `SportModuleRow` as `sport_module.json`, and marks the run `approved`. Module runs keep the
   `data/local/modules/<sport>/v<n>` path.
 - **Session lifecycle:** the library lives as long as the session; a new calibration is a new run whose approval
@@ -99,16 +111,16 @@ draft → gate → repair, at most `DROID_MAX_ATTEMPTS` (3) times. Both gates pr
 ## Visible work
 
 Every change to the run row (`DroidRun`, `droidrun.schema.json`: plan, steps, diff, test table, blocked calls, timings,
-token usage) is pushed to the sinks as it happens: stderr, `data/local/droid_runs/<run_id>/run.jsonl`, and for
+token usage) is pushed to the sinks as it happens: stderr, `~/.trophy/droid_runs/<run_id>/run.jsonl`, and for
 house rules the Spacetime `house_rule` row via `update_house_rule_progress`, which Agent 1's dashboard panel renders.
 
 ## Measured (2026-10-24, this Mac, `claude-sonnet-5`, effort low, single runs)
 
-| Job | Wall time | Attempts | Gate |
-|---|---|---|---|
-| House rule "a serve that clips the net and lands in is a let" | 30.6 s | 1 | 19/19 in 0.5 s |
-| Derive `sports/pickleball/` from table tennis + the synthetic scene | 69.2 s | 1 | 19/19 in 0.5 s |
-| calibrate_checks on `evals/fixtures/synthetic/table_tennis_3d` | not yet run live | — | 25 checks; ~1.9 s per gate run with a scripted agent (2026-10-24) |
+| Job                                                                 | Wall time        | Attempts | Gate                                                              |
+| ------------------------------------------------------------------- | ---------------- | -------- | ----------------------------------------------------------------- |
+| House rule "a serve that clips the net and lands in is a let"       | 30.6 s           | 1        | 19/19 in 0.5 s                                                    |
+| Derive `sports/pickleball/` from table tennis + the synthetic scene | 69.2 s           | 1        | 19/19 in 0.5 s                                                    |
+| calibrate_checks on `evals/fixtures/synthetic/table_tennis_3d`      | not yet run live | —        | 25 checks; ~1.9 s per gate run with a scripted agent (2026-10-24) |
 
 ## Approval
 

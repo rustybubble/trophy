@@ -43,10 +43,10 @@ describe("MockState", () => {
       ["challenged", "update"],
       ["upheld", "update"],
     ]);
-    expect(new Set(votes.map((v) => v.backend))).toEqual(new Set(["claude", "gemini", "bitdeer"]));
+    expect(new Set(votes.map((v) => v.backend))).toEqual(new Set(["claude"]));
     expect(rules.map((r) => r.status)).toEqual(["pending", "compiling", "ready", "approved"]);
     expect(score.find((x) => x.team_id === "B")?.points).toBe(3);
-    expect(asks).toBe(1);
+    expect(asks).toBe(2); // a rulebook answer and a geometry-check answer
     expect(obs).toBeGreaterThan(5);
     expect(samples).toBeGreaterThan(20);
   });

@@ -215,7 +215,7 @@ export interface AiVote {
   call_id: string;
   challenge_id?: string | null;
   game_id?: string;
-  backend: "claude" | "gemini" | "bitdeer" | "geometry";
+  backend: "claude" | "geometry";
   model: string;
   choice?: string | null;
   probs: {
@@ -266,6 +266,30 @@ export interface Ask {
   moss_ms?: number | null;
   latency_ms: number;
   created_at_ms: number;
+  /**
+   * Spoken form; phones speak it when the row arrives late (a pending answer)
+   */
+  speech?: string;
+  /**
+   * How the referee answered
+   */
+  kind?: "check" | "rule" | "score" | "explain" | "pending" | "none";
+  /**
+   * The session check that answered, when kind = check
+   */
+  check?: string;
+  /**
+   * The check's probability for its verdict; uncalibrated unless `calibrated` is true
+   */
+  p?: number | null;
+  /**
+   * false on the unedited golden check library or when sigma was a default
+   */
+  calibrated?: boolean | null;
+  /**
+   * Who asked
+   */
+  by_cam_id?: string;
 }
 /**
  * This interface was referenced by `StateTables`'s JSON-Schema

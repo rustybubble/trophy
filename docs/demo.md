@@ -16,7 +16,7 @@ exactly what the Droid's gate replays. No accuracy on real footage is claimed an
 | Tools | `brew install redis ffmpeg`; `spacetime version upgrade` (2.13.0); `uv`, Node 24, the `droid` CLI |
 | Env | `cp .env.local .env`; `TROPHY_TOKEN_SECRET` ≥ 16 chars (`python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`); `SPACETIME_PUBLIC_URI=ws://127.0.0.1:5173/stdb` for a localhost demo (phones on `trophy.photo` need Caddy + the Porkbun keys instead) |
 | Keys present | `CARTESIA_API_KEY` (calls are spoken), `FACTORY_API_KEY` (house rules compile) |
-| Keys missing | `ANTHROPIC_API_KEY`: the referee service (`services/referee`, ask the ref) refuses to start without it, by design (no keyless mode); `GEMINI_API_KEY`, `BITDEER_API_KEY`: no AI votes (`trophy-engine --votes` refuses) |
+| Keys missing | `ANTHROPIC_API_KEY`: the referee service (`services/referee`, ask the ref) refuses to start without it, by design (no keyless mode), and without it there is no AI vote (`trophy-engine --votes` refuses). Gemini and Bitdeer are cut (D-41) |
 | Deps | `npm ci`; `uv sync --frozen` in `packages/py-trophy`, `services/{gateway,recorder,engine,referee,flight}` |
 
 ## 1. Bring the stack up
@@ -33,33 +33,31 @@ make stdb-seed                                   # smoke test: 97 reducer calls 
 ```
 Restart the engine and compiler after provisioning (they read the tokens at start): `python3 scripts/dev.py engine compiler`.
 
-## 2. Upload a clip and referee it (the demo site, localhost)
-Open **http://127.0.0.1:5174/** (the judges' dashboard), click **Start a game**, then in the **Upload a clip** panel:
-1. choose a clip (mp4 / mov / webm; one phone, side-on at the net line, white ball works best);
-2. the first frame appears: tap the four table corners in the order shown (A end right, B end right, B end left, A end left);
-3. pick the ball colour and the replay speed, click **Referee this clip**.
+## 2. Recorded clips as live cameras (the demo site, localhost; D-38)
+Open **http://127.0.0.1:5174/** (the judges' dashboard), click **Start a game**, then in **Recorded clips as live cameras**:
+1. choose one or more clips (mp4 / mov / webm, any resolution; iPhone 4K HEVC is fine). Each one is stored under
+   `data/local/uploads/<game>/`, gets a preview, and its table corners are found automatically (Mu's tabletop detector);
+   click a thumbnail to check them, or **retap** in the order shown (A near, B near, B far, A far);
+2. **Cameras**: *auto* reads the recordings' own timestamps: clips recorded at the same time are angles of one moment and
+   stream together (aligned by those timestamps); clips recorded one after another are takes from one camera position and
+   play back to back as one phone. You can force either;
+3. **Go live.**
 
-What happens (`services/gateway/gateway/demo.py`): the clip is stored under `data/local/uploads/<game>/`, flight extracts
-the first frame; on run, `flight.clip2l1` tracks the ball (classical detector + gated tracker) and turns the corners into
-the image→table homography, writing a layer-1 log; `trophy-play --samples` runs the golden `sports/table_tennis/events.py`
-over it (bounces, contacts, dead ball), registers the camera with its **untrusted** calibration, and publishes the events
-on Redis `ev:flight` paced by the clip's clock while mirroring the track into Spacetime. The live `trophy-engine` consumes
-them like perception's events and posts calls, rallies and the score to Spacetime, so they appear in the **Calls** panel,
-the **World state** view (ball trail + bounces) and on every joined phone (spoken through Cartesia). The video plays in
-sync with the replay. Because the calibration is four tapped corners on one camera with no clock sync, the engine caps
-every call at **BETA**; nothing here is a measurement of accuracy.
+Every clip then joins the game as a camera phone and streams 1280x720 JPEG at 30 fps in real time over the same socket a
+phone uses. Nothing downstream knows it's a file:
+```
+stream_clips.py --(ws/frames, real time)--> gateway --> frames:{cam} --> flight.live: BlurBall (MPS, fp16) per frame
+   --> trk:ball:{cam} --> trophy-live: short dropouts completed (PCHIP, D-39), then the golden sports/table_tennis/events.py,
+       sliding window, all cameras together
+   --> ev:flight --> trophy-engine --> Spacetime --> dashboard (calls, score, world state) + phones (spoken calls)
+```
+The panel shows each camera's live frame (`/api/demo/cams/<cam>/live`) with BlurBall's detection for that frame. Calls are
+BETA at most (corners are not auto-checked, so calibration is untrusted). Measured numbers: `docs/progress.md`, "Recorded
+clips as live cameras". Headless: `services/gateway/scripts/stream_clips.py --game G --join-key K --clip PATH:LABEL:corners`.
 
-**Measured on this Mac (2026-10-24, single runs) with flight's rendered SYNTHETIC side clip** (`flight.cloud synth`,
-1280×720, 196 frames): upload + first frame < 1 s; tracking **0.68–0.73 s** for 177 samples (90 % of frames);
-11 events replayed at 2× in 5.0 s; 1 call (`off_table`, BETA) into Spacetime; 11 observations + 52 track samples mirrored;
-the dashboard showed the call, the score and the trail live. No real clip was available on this machine.
-Through the API: `POST /api/demo/uploads`, `POST /api/demo/runs`, `GET /api/demo/runs/<id>` (a judge/display token).
-
-A clip to try without filming: `data/local/clips/synthetic/side-SYNTHETIC.mp4` (flight's rendered synthetic rally;
-its true corners are in the `.corners.txt` next to it; regenerate both with `python -m flight.cloud synth`). It is
-labelled SYNTHETIC everywhere.
-
-Flight's two-camera 3D fusion (`services/flight`, §6) still needs two clips; a single upload goes through this 2D path.
+Setup once: `cd spikes/serve-analysis && bash scripts/bootstrap.sh` (Python 3.12 env + the checksum-verified BlurBall
+weights, 6.2 MB, license unstated: the user approved using them for this demo). The Procfile runs `flight` (BlurBall) and
+`live` (the module) next to the engine. Throughput on this M5: two cameras at 30 fps; a third degrades to about 25 fps each.
 
 ## 3. The live game (synthetic rallies through the real pipeline)
 ```bash

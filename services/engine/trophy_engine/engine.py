@@ -5,6 +5,8 @@ house rules, asks and moments out. Scores are derived by replaying the call log,
 from __future__ import annotations
 
 import logging
+import re
+import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -26,6 +28,9 @@ log = logging.getLogger("trophy.engine")
 ROOT = Path(__file__).resolve().parents[3]
 RALLY_OPENERS = frozenset({"bounce", "contact", "serve_toss", "shot"})
 SCORING_KINDS = frozenset({"point", "violation", "basket"})
+# After a point called on a bounce the ball is dead until a ball_dead event, or this long: a trailing bounce or the
+# ball rolling off must not open a rally of its own and score again (review blocker 4).
+DEAD_AFTER_POINT_S = 2.0
 ENSEMBLE_LO, ENSEMBLE_HI = 0.35, 0.75
 
 
@@ -56,6 +61,10 @@ class GameState:
     decided: set[str] = field(default_factory=set)
     last_t_s: float = 0.0
     calib_untrusted: bool = False
+    # after a point is called on a bounce, the ball is dead until the track says so (a ball_dead event), or for
+    # DEAD_AFTER_POINT_S at most: players pick the ball up and knock it around, and those bounces are not a new rally
+    dead_since_t_s: float | None = None
+    rally_hit_seen: bool = False  # a racket hit was seen in the current rally (server_from_first_hit)
 
     @property
     def sides(self) -> tuple[str, str]:
@@ -81,8 +90,22 @@ class Engine:
         decider: Decider | None = None,
         now_ms=None,
         labels_dir: Path | None = None,
+        dead_after_point_s: float = DEAD_AFTER_POINT_S,
+        server_from_first_hit: bool = False,
     ) -> None:
         self.state = state
+        # The ball stays dead after a point called on a bounce until a ball_dead event (or this many seconds; 0 turns
+        # it off). server_from_first_hit (real play; off for the hand-written sequences of the tests and the gate):
+        # the first racket hit of a rally names the server (a serve is a hit, ITTF 2.6.3); when that hit was not
+        # seen, the side of the first bounce does (a legal serve lands there first), so no serve fault is unseen.
+        self.dead_after_point_s = dead_after_point_s
+        # set by the live loop: run a session check (game_id, check, t, window, args) -> CheckResult fields, and
+        # XADD a reply to the referee's stream (interfaces-v1 section 20)
+        self.check_runner = None
+        self.reply = None
+        # set by the live loop with a 3D track: start a Droid new_check job (game_id, question, hint, query, reply)
+        self.new_check = None
+        self.server_from_first_hit = server_from_first_hit
         self.modules_dir = modules_dir or ROOT / "sports"
         self.decider = decider
         self.now_ms = now_ms or (lambda: time.time() * 1000.0)
@@ -165,11 +188,36 @@ class Engine:
             return []
         t = float(ev.get("t_game_s", 0.0))
         g.last_t_s = t
+        if g.dead_since_t_s is not None:
+            if ev.get("type") == "ball_dead" or t - g.dead_since_t_s > self.dead_after_point_s:
+                g.dead_since_t_s = None
+            if ev.get("type") == "ball_dead" or g.dead_since_t_s is not None:
+                return []
+        if _pre_serve_floor_bounce(ev, g):
+            return []  # the ball bounced on the floor before the serve (players do that): not part of a rally
         if g.rally is None:
             if ev.get("type") not in RALLY_OPENERS:
                 return []
             self._open_rally(g, t)
         assert g.rally is not None
+        payload = ev.get("payload") or {}
+        if (
+            self.server_from_first_hit
+            and g.rally.phase == "serve"
+            and g.rally.bounces == 0
+            and payload.get("side") in g.sides
+            and (
+                ev.get("type") == "contact"  # the serve was seen: the hitter serves
+                or (ev.get("type") == "bounce" and payload.get("surface") != "floor" and not g.rally_hit_seen)
+            )  # the serve's hit was not seen: a legal serve lands on the server's side first, so that side serves
+        ):
+            g.rally_hit_seen = g.rally_hit_seen or ev.get("type") == "contact"
+            hitter = payload["side"]
+            if g.score().server != hitter:
+                g.first_server = g.sides[1] if g.first_server == g.sides[0] else g.sides[0]
+                g.rally.server_side = hitter
+                g.game["server_team_id"] = hitter
+                self.state.upsert_game(g.game)
         calib_untrusted = bool((ev.get("payload") or {}).get("calib_untrusted")) or g.calib_untrusted
         activation = {"ev": _strip_none(ev), "rally": g.rally.view(), "game": self._game_view(g), "params": g.params}
         posted: list[dict[str, Any]] = []
@@ -191,6 +239,8 @@ class Engine:
         g.rally.apply(ev)
         if scoring_call is not None:
             self._end_rally(g, scoring_call)
+            if ev.get("type") != "ball_dead" and self.dead_after_point_s > 0:
+                g.dead_since_t_s = t
         return posted
 
     def _make_call(
@@ -300,6 +350,7 @@ class Engine:
         g.rally_no += 1
         server = g.score().server
         g.rally = RallyState(rally_no=g.rally_no, server_side=server, t_start_s=t, last_t_s=t)
+        g.rally_hit_seen = False
         g.game["rally_no"] = g.rally_no
         g.game["server_team_id"] = server
         self.state.open_rally(
@@ -364,7 +415,7 @@ class Engine:
         if m is not None:
             g.moments[m["moment_id"]] = m
             g.call_moment[call["id"]] = m["moment_id"]
-            self.state.upsert_moment(m)
+            self._post_game(self.state.upsert_moment, m)
 
     def _recompute(self, g: GameState) -> GameScore:
         gs = g.score()
@@ -581,7 +632,7 @@ class Engine:
         if mid:
             m = rescore_for_challenge(g.moments[mid], result)
             g.moments[mid] = m
-            self.state.upsert_moment(m)
+            self._post_game(self.state.upsert_moment, m)
         self._recompute(g)
 
     def _ctl_undo_last_call(self, g: GameState, _a: dict[str, Any], _by: str | None) -> None:
@@ -634,7 +685,7 @@ class Engine:
         bp = best_play(list(g.moments.values()))
         if bp is not None:
             bp["is_best_play"] = True
-            self.state.set_best_play(game_id, bp["moment_id"], list(bp.get("reasons", [])))
+            self._post_game(self.state.set_best_play, game_id, bp["moment_id"], list(bp.get("reasons", [])))
 
     def _ctl_submit_house_rule(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         now = self.now_ms()
@@ -666,24 +717,26 @@ class Engine:
             fetched = fetch(rv)
             if fetched:
                 row = {**row, **fetched}
-        pack_path = a.get("pack_path") or row.get("pack_path")
-        if not pack_path:
+        # Only what the compiler gated counts (review blocker 7): never a pack_path from the command's args, only a
+        # row the compiler marked ready, and the file as it was at the gated commit, not the sandbox's working tree.
+        pack_path = row.get("pack_path")
+        if row.get("status") != "ready" or not pack_path:
             self.state.set_house_rule_status(
                 {
                     "rule_version": rv,
                     "status": "failed",
-                    "error": "no pack_path on the house rule (compiler never reported ready)",
+                    "error": f"not approvable: status {row.get('status')!r}, "
+                    f"pack_path {'set' if pack_path else 'missing'} (the compiler must report ready)",
                 }
             )
             return
-        path = Path(str(pack_path).split("@", 1)[0])
         try:
-            pack = yaml.safe_load(path.read_text("utf8"))
+            pack = yaml.safe_load(gated_file(str(pack_path)))
             errs = validate_against("rules", pack)
             if errs:
                 raise LoadError(errs)
             rules = compile_rules(pack)
-        except (OSError, yaml.YAMLError, LoadError, CelError) as e:
+        except (OSError, yaml.YAMLError, LoadError, CelError, ValueError) as e:
             self.state.set_house_rule_status(
                 {"rule_version": rv, "status": "failed", "error": f"hot-load failed: {e}"[:400]}
             )
@@ -727,7 +780,7 @@ class Engine:
             "thumb_t_s": g.last_t_s,
         }
         g.moments[m["moment_id"]] = m
-        self.state.upsert_moment(m)
+        self._post_game(self.state.upsert_moment, m)
 
     def _ctl_reject_house_rule(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         self.state.set_house_rule_status({"rule_version": a["rule_version"], "status": "rejected"})
@@ -744,8 +797,75 @@ class Engine:
                 "moss_ms": a.get("moss_ms"),
                 "latency_ms": float(a.get("latency_ms", 0)),
                 "created_at_ms": self.now_ms(),
+                # the referee's fields (interfaces-v1 section 20; the ask table has these columns since #27)
+                **{k: a[k] for k in ("speech", "kind", "check", "p", "calibrated") if a.get(k) is not None},
+                **({"by_cam_id": a.get("by_cam_id") or _by} if (a.get("by_cam_id") or _by) else {}),
             }
         )
+
+    # ------------------------------------------------------------ the referee's checks (interfaces-v1 section 20)
+
+    def _check_time(self, g: GameState, args: dict[str, Any]) -> tuple[float | None, dict[str, Any] | None]:
+        """args.t_game_s, else ref: last (the newest call) | last_rally | call:<id>. Returns (t, rally window)."""
+        if args.get("t_game_s") is not None:
+            return float(args["t_game_s"]), None
+        ref = str(args.get("ref") or "last")
+        calls = [c for c in g.calls if c.get("kind") != "info" and c.get("status") not in ("voided", "overturned")]
+        if ref.startswith("call:"):
+            c = next((c for c in g.calls if c["id"] == ref[5:]), None)
+            return (float(c["t_game_s"]), None) if c else (None, None)
+        if ref == "last_rally":
+            return None, {"t0": args.get("t0_s"), "t1": args.get("t1_s"), "rally_no": args.get("rally_no")}
+        return (float(calls[-1]["t_game_s"]), None) if calls else (None, None)
+
+    def _ctl_run_check(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
+        t0 = time.perf_counter()
+        name = str(a["check"])
+        t, window = self._check_time(g, a.get("args") or {})
+        reply: dict[str, Any] = {"check": name, "calibrated": False}
+        if self.check_runner is None:
+            reply["error"] = "no_data"  # no fused 3D track in this session (the one-camera path has none)
+        elif t is None and window is None:
+            reply["error"] = "no_data"
+        else:
+            try:
+                reply = {**reply, **self.check_runner(g.game["game_id"], name, t, window, a.get("args") or {})}
+            except KeyError:
+                reply["error"] = "no_such_check"
+            except Exception as e:  # noqa: BLE001 - the referee gets an honest error, never a made-up answer
+                reply["error"] = f"failed:{type(e).__name__}"
+        reply["latency_ms"] = round((time.perf_counter() - t0) * 1000, 2)
+        self._reply(a.get("reply_to"), reply)
+
+    def _ctl_request_check(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
+        """No session check answers the question: a Droid writes one (a new_check job, in its jailed sandbox, gated on
+        the session's own track) and the answer goes to reply_to when it is ready. Without a fused 3D track there is
+        nothing to write a check over, so the referee hears that at once instead of waiting 95 s."""
+        reply_to = a.get("reply_to")
+        if self.new_check is None:
+            self._reply(reply_to, {"check": "new", "calibrated": False, "error": "no_data", "latency_ms": 0.0})
+            return
+        args = a.get("args") or {}
+        t, window = self._check_time(g, args)
+        if window and window.get("t0") is not None:
+            query = {"t0": float(window["t0"]), "t1": float(window.get("t1") or window["t0"] + 3.0)}
+        elif t is not None:
+            query = {"t0": t - 1.5, "t1": t + 1.5, "t_s": t}
+        else:
+            query = {}
+        self.new_check(
+            g.game["game_id"], str(a.get("question") or ""), str(a.get("check_hint") or ""), query,
+            lambda payload: self._reply(reply_to, payload),
+        )  # fmt: skip
+
+    def _reply(self, stream: Any, payload: dict[str, Any]) -> None:
+        if not stream or self.reply is None:
+            log.warning("check reply dropped (no reply_to or no Redis): %s", payload.get("check"))
+            return
+        try:
+            self.reply(str(stream), payload)
+        except Exception:  # noqa: BLE001
+            log.exception("check reply to %s failed", stream)
 
     def _ctl_bookmark(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         t = float(a.get("t_game_s", g.last_t_s))
@@ -769,7 +889,7 @@ class Engine:
             "thumb_t_s": t,
         }
         g.moments[m["moment_id"]] = m
-        self.state.upsert_moment(m)
+        self._post_game(self.state.upsert_moment, m)
 
     def _ctl_clip_that(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         """Trigger-to-play: the moment that ends within [t - 8 s, t + 0.5 s] gets the `clipped` tag."""
@@ -779,7 +899,7 @@ class Engine:
             return
         m = max(cands, key=lambda m: float(m.get("t_end_s", m["t_game_s"])))
         m["tags"] = list(dict.fromkeys(list(m.get("tags", [])) + ["clipped"]))
-        self.state.upsert_moment(m)
+        self._post_game(self.state.upsert_moment, m)
 
     def _ctl_review_call(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         call = next((c for c in g.calls if c["id"] == a["call_id"]), None)
@@ -820,6 +940,14 @@ class Engine:
                 )
             self._recompute(g)
 
+    def _post_game(self, write, *args: Any) -> None:
+        """Moments and the best play are post-game data: a failed Spacetime write is logged, never raised, so it can't
+        leave a rally open or stop scoring (review blocker 3)."""
+        try:
+            write(*args)
+        except Exception:  # noqa: BLE001 - the live game must go on
+            log.exception("post-game write %s failed", getattr(write, "__name__", write))
+
     # ------------------------------------------------------------ helpers for replay / tests
 
     def remember_event(self, ev: dict[str, Any]) -> None:
@@ -837,6 +965,34 @@ class Engine:
     def feed(self, ev: dict[str, Any]) -> list[dict[str, Any]]:
         self.remember_event(ev)
         return self.handle_event(ev)
+
+
+def gated_file(pack_path: str) -> str:
+    """`<repo>/<file>@<commit>` -> the file's text at that commit (`git show`), so an edit made in the sandbox after the
+    gate passed can never be what gets approved. Raises ValueError without a commit or outside a git repository."""
+    path_s, sep, commit = pack_path.rpartition("@")
+    if not sep or not re.fullmatch(r"[0-9a-f]{7,40}", commit):
+        raise ValueError(f"pack_path has no gated commit: {pack_path!r}")
+    path = Path(path_s).resolve()
+    top = subprocess.run(
+        ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"], capture_output=True, text=True, timeout=10
+    )
+    if top.returncode != 0:
+        raise ValueError(f"not in a git repository: {path.parent}")
+    repo = Path(top.stdout.strip()).resolve()
+    rel = path.relative_to(repo).as_posix()
+    out = subprocess.run(
+        ["git", "-C", str(repo), "show", f"{commit}:{rel}"], capture_output=True, text=True, timeout=10
+    )
+    if out.returncode != 0:
+        raise ValueError(f"{rel} is not in commit {commit}: {out.stderr.strip()[:200]}")
+    return out.stdout
+
+
+def _pre_serve_floor_bounce(ev: dict[str, Any], g: GameState) -> bool:
+    if ev.get("type") != "bounce" or (ev.get("payload") or {}).get("surface") != "floor":
+        return False
+    return g.rally is None or (g.rally.phase == "serve" and g.rally.bounces == 0 and not g.rally_hit_seen)
 
 
 def render_text(template: str, ctx: dict[str, Any]) -> str:  # re-exported for tests

@@ -28,7 +28,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PIDS = ROOT / "data" / "local" / "dev.pids"
-DEFAULTS = {"SPACETIME": "spacetime", "PYTHON": sys.executable}  # this Mac has python3 only; Windows has python
+# $PYTHON: the interpreter running this script, quoted for the shell (Windows paths often contain spaces)
+PY = f'"{sys.executable}"' if os.name == "nt" else shlex.quote(sys.executable)
+DEFAULTS = {"SPACETIME": "spacetime", "PYTHON": PY}
 PORTS = {
     "redis": 6379,
     "spacetime": 3000,
@@ -37,6 +39,7 @@ PORTS = {
     "voice": 8765,
     "pwa": 5173,
     "dashboard": 5174,
+    "watch": 5175,
     "caddy": 443,
 }
 WAITS = {
@@ -45,7 +48,7 @@ WAITS = {
     "engine": [6379, 3000],
     "referee": [6379],
     "compiler": [3000],
-    "caddy": [8000, 5173, 5174],
+    "caddy": [8000, 5173, 5174, 5175],
     "flight": [6379, 3000, 8000],
 }
 WIN = os.name == "nt"

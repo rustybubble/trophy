@@ -1,4 +1,4 @@
-/** Approval of a ready calibrate_checks run: the checks become the session's library (D-31). */
+/** Approval of a ready calibrate_checks run: the checks become the session's library (D-36). */
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -9,7 +9,7 @@ import { REPO_ROOT } from "./config.ts";
 import type { Job } from "./sandbox.ts";
 
 /**
- * Install a ready calibrate_checks run as the session's library (D-31): data/local/sessions/<session>/checks/, with
+ * Install a ready calibrate_checks run as the session's library (D-36): data/local/sessions/<session>/checks/, with
  * library.json flipped to calibrated: true (the engine reads that flag) and the usual SportModuleRow beside it.
  * The session id comes from --session, else the job that started the run, else the run id.
  */

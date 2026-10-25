@@ -1,4 +1,5 @@
-"""decide(): three voters through recorded HTTP shapes (no live calls), timeouts, the blend, and key requirements."""
+"""decide(): the Claude voter (D-41) through recorded HTTP shapes (no live calls), timeouts, the blend, and the key
+requirement."""
 
 from __future__ import annotations
 
@@ -12,9 +13,7 @@ import pytest
 
 from trophy_engine.decide import (
     BackgroundDecider,
-    BitdeerVoter,
     ClaudeVoter,
-    GeminiVoter,
     VoterConfigError,
     blend,
     decide,
@@ -55,45 +54,6 @@ CLAUDE_BODY = {
     "stop_sequence": None,
     "usage": {"input_tokens": 10, "output_tokens": 10},
 }
-GEMINI_BODY = {
-    "candidates": [
-        {
-            "content": {
-                "role": "model",
-                "parts": [
-                    {
-                        "text": json.dumps(
-                            {
-                                "choice": "top_edge",
-                                "probs": {"top_edge": 0.8, "side_face": 0.2},
-                                "rationale": "trajectory continued",
-                            }
-                        )
-                    }
-                ],
-            }
-        }
-    ]
-}
-BITDEER_BODY = {
-    "id": "chatcmpl-1",
-    "object": "chat.completion",
-    "created": 0,
-    "model": "Qwen/Qwen3.5-397B-A17B",
-    "choices": [
-        {
-            "index": 0,
-            "finish_reason": "stop",
-            "message": {
-                "role": "assistant",
-                "content": json.dumps(
-                    {"choice": "top_edge", "probs": {"top_edge": 0.55, "side_face": 0.45}, "rationale": "hard to tell"}
-                ),
-            },
-        }
-    ],
-    "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
-}
 
 
 def transport(body, status=200, delay=0.0, capture: list | None = None, lib=httpx):
@@ -114,10 +74,6 @@ def claude_client(body, status=200, delay=0.0, capture: list | None = None):
 def test_voters_require_keys() -> None:
     with pytest.raises(VoterConfigError):
         ClaudeVoter.from_env({})
-    with pytest.raises(VoterConfigError):
-        GeminiVoter.from_env({"GEMINI_API_KEY": "x"})
-    with pytest.raises(VoterConfigError):
-        BitdeerVoter.from_env({})
 
 
 def test_claude_vote_uses_structured_output_and_maps_options() -> None:
@@ -138,24 +94,10 @@ def test_claude_vote_uses_structured_output_and_maps_options() -> None:
     assert body["model"] == "claude-opus-5-5"
 
 
-def test_gemini_and_bitdeer_votes() -> None:
-    g = GeminiVoter(api_key="k", model="gemini-test", http_client=httpx.Client(transport=transport(GEMINI_BODY)))
-    out = g.vote(REQ, 2.0)
-    assert out["choice"] == "top_edge" and out["probs"]["top_edge"] == 0.8
-    seen: list[httpx.Request] = []
-    b = BitdeerVoter(
-        api_key="k",
-        model="Qwen/Qwen3.5-397B-A17B",
-        http_client=httpx.Client(transport=transport(BITDEER_BODY, capture=seen)),
-    )
-    out = b.vote(REQ, 2.0)
-    assert out["choice"] == "top_edge" and abs(out["probs"]["side_face"] - 0.45) < 1e-6
-    assert seen[0].url.host == "api-inference.bitdeer.ai" and seen[0].url.path.endswith("/chat/completions")
-
-
 def test_errors_are_recorded_not_raised() -> None:
-    g = GeminiVoter(api_key="k", model="m", http_client=httpx.Client(transport=transport({"error": "x"}, status=429)))
-    assert g.vote(REQ, 1.0)["error"] == "http_429"
+    c = ClaudeVoter(api_key="k", http_client=claude_client({"type": "error", "error": {"type": "rate_limit_error",
+                    "message": "x"}}, status=429))  # fmt: skip
+    assert c.vote(REQ, 1.0)["error"] == "http_429"
     c = ClaudeVoter(
         api_key="k",
         http_client=claude_client({"type": "error", "error": {"type": "overloaded_error", "message": "x"}}, status=529),
@@ -166,18 +108,21 @@ def test_errors_are_recorded_not_raised() -> None:
     assert ClaudeVoter(api_key="k", http_client=claude_client(bad)).vote(REQ, 1.0)["error"] == "parse"
 
 
-def test_parallel_fan_out_with_a_timed_out_voter() -> None:
-    slow = GeminiVoter(api_key="k", model="m", http_client=httpx.Client(transport=transport(GEMINI_BODY, delay=1.5)))
-    fast = BitdeerVoter(api_key="k", model="m", http_client=httpx.Client(transport=transport(BITDEER_BODY)))
+def test_a_timed_out_voter_leaves_geometry_and_never_waits() -> None:
+    slow = ClaudeVoter(api_key="k", http_client=claude_client(CLAUDE_BODY, delay=1.5))
     t0 = time.perf_counter()
-    res = decide({**REQ, "timeout_s": 0.5}, [slow, fast])
+    res = decide({**REQ, "timeout_s": 0.5}, [slow])
     assert time.perf_counter() - t0 < 1.4
-    by = {v["backend"]: v for v in res["votes"]}
-    assert by["gemini"]["error"] == "timeout" and by["bitdeer"]["error"] is None
-    assert res["weights"] == {"geometry": 0.5, "bitdeer": 0.5}
+    assert res["votes"][0]["backend"] == "claude" and res["votes"][0]["error"] == "timeout"
+    assert res["weights"] == {"geometry": 0.5} and res["p_final"] == REQ["p_geometry"]
+
+
+def test_claudes_vote_is_blended_with_geometry() -> None:
+    res = decide(REQ, [ClaudeVoter(api_key="k", http_client=claude_client(CLAUDE_BODY))])
+    assert res["weights"] == {"geometry": 0.5, "claude": 0.5}
     assert res["calibrated"] is False and res["p_source"] == "decide:ensemble"
-    assert abs(res["p_final"]["top_edge"] - (0.5 * 0.6 + 0.5 * 0.55)) < 1e-6
-    assert res["suggested"] == "top_edge"
+    assert abs(res["p_final"]["side_face"] - (0.5 * 0.4 + 0.5 * 0.7)) < 1e-6
+    assert res["suggested"] == "side_face"
 
 
 def test_blend_without_voters_is_geometry() -> None:
@@ -189,10 +134,7 @@ def test_background_decider_posts_one_vote_per_voter_and_never_blocks() -> None:
     posted = []
     results = []
     done = threading.Event()
-    voters = [
-        ClaudeVoter(api_key="k", http_client=claude_client(CLAUDE_BODY, delay=0.2)),
-        GeminiVoter(api_key="k", model="m", http_client=httpx.Client(transport=transport(GEMINI_BODY))),
-    ]
+    voters = [ClaudeVoter(api_key="k", http_client=claude_client(CLAUDE_BODY, delay=0.2))]
     dec = BackgroundDecider(
         voters, posted.append, lambda req, res: (results.append(res), done.set()), now_ms=lambda: 1.0
     )
@@ -200,7 +142,7 @@ def test_background_decider_posts_one_vote_per_voter_and_never_blocks() -> None:
     dec.submit(REQ)
     assert time.perf_counter() - t0 < 0.05  # submit returns immediately
     assert done.wait(5)
-    assert {v["backend"] for v in posted} == {"claude", "gemini"}
+    assert [v["backend"] for v in posted] == ["claude"]
     assert all(v["call_id"] == REQ["call_id"] and v["created_at_ms"] == 1.0 for v in posted)
     from trophy.contracts import AiVote
 
