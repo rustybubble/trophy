@@ -5,7 +5,7 @@ import { useDashboard, type Source } from "./lib/useDashboard.ts";
 import { AskPanel } from "./components/AskPanel.tsx";
 import { CallFeed } from "./components/CallFeed.tsx";
 import { CameraHealth } from "./components/CameraHealth.tsx";
-import { ClipPanel } from "./components/ClipPanel.tsx";
+import { LiveClipsPanel } from "./components/LiveClipsPanel.tsx";
 import { DroidPanel } from "./components/DroidPanel.tsx";
 import { JoinCard } from "./components/JoinCard.tsx";
 import { Scoreboard } from "./components/Scoreboard.tsx";
@@ -124,6 +124,7 @@ export function App() {
           New game
         </button>
       </header>
+      {session && <LiveClipsPanel session={session} />}
       <section className="grid">
         <div className="col">
           <Scoreboard scores={v.scores} teams={teams} server={v.game?.server_team_id ?? undefined} />
@@ -136,7 +137,6 @@ export function App() {
         </div>
         <div className="col">
           {session && <JoinCard session={session} />}
-          {session && <ClipPanel session={session} />}
           <CameraHealth cameras={v.cameras} />
           <DroidPanel rules={v.houseRules} session={session} />
         </div>

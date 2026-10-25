@@ -152,6 +152,17 @@ def run(argv: list[str] | None = None) -> int:
     ap.add_argument("--modules", type=Path, default=ROOT / "sports")
     ap.add_argument("--log-json", action="store_true")
     ap.add_argument(
+        "--dead-after-point",
+        type=float,
+        default=0.0,
+        help="real play: after a point called on a bounce, ignore events until ball_dead or this many seconds",
+    )
+    ap.add_argument(
+        "--server-from-first-hit",
+        action="store_true",
+        help="real play: the first racket hit of a rally names the server",
+    )
+    ap.add_argument(
         "--field", type=Path, default=None, help="field.json: consume fused 3D samples through the checks (D-31)"
     )
     ap.add_argument(
@@ -171,7 +182,12 @@ def run(argv: list[str] | None = None) -> int:
     env = {**_dotenv(), **os.environ}
     logging.basicConfig(level=logging.INFO, format="%(message)s" if a.log_json else "%(asctime)s %(name)s %(message)s")
     state: StateWriter = SpacetimeState() if a.state == "spacetime" else MemoryState()
-    engine = Engine(state, modules_dir=a.modules)
+    engine = Engine(
+        state,
+        modules_dir=a.modules,
+        dead_after_point_s=a.dead_after_point,
+        server_from_first_hit=a.server_from_first_hit,
+    )
     if a.votes:
         try:
             engine.decider = build_decider(env, state, engine)

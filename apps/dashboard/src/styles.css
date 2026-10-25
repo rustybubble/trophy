@@ -366,3 +366,88 @@ td {
   overflow: auto;
   margin: 4px 0;
 }
+
+/* recorded clips as live cameras (LiveClipsPanel) */
+.liveclips {
+  margin: 0 0 12px;
+}
+.liveclips .cliplist {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.liveclips .cliplist li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.liveclips .thumb {
+  width: 160px;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.liveclips .frame {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  margin: 6px 0;
+}
+.liveclips .frame img {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  cursor: crosshair;
+  background: #000;
+}
+.liveclips .corner {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: #f5a623;
+  color: #0f1115;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  pointer-events: none;
+}
+.liveclips .camgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 10px;
+}
+.liveclips .camlive .frame img {
+  cursor: default;
+  aspect-ratio: 16/9;
+  object-fit: contain;
+}
+.liveclips .placeholder {
+  aspect-ratio: 16/9;
+  display: grid;
+  place-items: center;
+  background: #000;
+  border-radius: 6px;
+}
+.liveclips .ball {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  border: 3px solid #3ddc84;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 6px #3ddc84;
+}
+.liveclips .camtag {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}

@@ -56,6 +56,10 @@ class GameState:
     decided: set[str] = field(default_factory=set)
     last_t_s: float = 0.0
     calib_untrusted: bool = False
+    # after a point is called on a bounce, the ball is dead until the track says so (a ball_dead event), or for
+    # DEAD_AFTER_POINT_S at most: players pick the ball up and knock it around, and those bounces are not a new rally
+    dead_since_t_s: float | None = None
+    rally_hit_seen: bool = False  # a racket hit was seen in the current rally (server_from_first_hit)
 
     @property
     def sides(self) -> tuple[str, str]:
@@ -81,8 +85,16 @@ class Engine:
         decider: Decider | None = None,
         now_ms=None,
         labels_dir: Path | None = None,
+        dead_after_point_s: float = 0.0,
+        server_from_first_hit: bool = False,
     ) -> None:
         self.state = state
+        # Real play (recorded or live cameras), off for the hand-written rally sequences of the tests and the gate:
+        # the ball stays dead after a point called on a bounce until a ball_dead event (or this many seconds), and the
+        # first racket hit of a rally names the server (a serve is a hit, ITTF 2.6.3); when that hit was not seen,
+        # the side of the first bounce does (a legal serve lands there first), so no serve fault is called unseen.
+        self.dead_after_point_s = dead_after_point_s
+        self.server_from_first_hit = server_from_first_hit
         self.modules_dir = modules_dir or ROOT / "sports"
         self.decider = decider
         self.now_ms = now_ms or (lambda: time.time() * 1000.0)
@@ -165,11 +177,36 @@ class Engine:
             return []
         t = float(ev.get("t_game_s", 0.0))
         g.last_t_s = t
+        if g.dead_since_t_s is not None:
+            if ev.get("type") == "ball_dead" or t - g.dead_since_t_s > self.dead_after_point_s:
+                g.dead_since_t_s = None
+            if ev.get("type") == "ball_dead" or g.dead_since_t_s is not None:
+                return []
+        if self.server_from_first_hit and _pre_serve_floor_bounce(ev, g):
+            return []  # the ball bounced on the floor before the serve (players do that): not part of a rally
         if g.rally is None:
             if ev.get("type") not in RALLY_OPENERS:
                 return []
             self._open_rally(g, t)
         assert g.rally is not None
+        payload = ev.get("payload") or {}
+        if (
+            self.server_from_first_hit
+            and g.rally.phase == "serve"
+            and g.rally.bounces == 0
+            and payload.get("side") in g.sides
+            and (
+                ev.get("type") == "contact"  # the serve was seen: the hitter serves
+                or (ev.get("type") == "bounce" and payload.get("surface") != "floor" and not g.rally_hit_seen)
+            )  # the serve's hit was not seen: a legal serve lands on the server's side first, so that side serves
+        ):
+            g.rally_hit_seen = g.rally_hit_seen or ev.get("type") == "contact"
+            hitter = payload["side"]
+            if g.score().server != hitter:
+                g.first_server = g.sides[1] if g.first_server == g.sides[0] else g.sides[0]
+                g.rally.server_side = hitter
+                g.game["server_team_id"] = hitter
+                self.state.upsert_game(g.game)
         calib_untrusted = bool((ev.get("payload") or {}).get("calib_untrusted")) or g.calib_untrusted
         activation = {"ev": _strip_none(ev), "rally": g.rally.view(), "game": self._game_view(g), "params": g.params}
         posted: list[dict[str, Any]] = []
@@ -191,6 +228,8 @@ class Engine:
         g.rally.apply(ev)
         if scoring_call is not None:
             self._end_rally(g, scoring_call)
+            if ev.get("type") != "ball_dead" and self.dead_after_point_s > 0:
+                g.dead_since_t_s = t
         return posted
 
     def _make_call(
@@ -300,6 +339,7 @@ class Engine:
         g.rally_no += 1
         server = g.score().server
         g.rally = RallyState(rally_no=g.rally_no, server_side=server, t_start_s=t, last_t_s=t)
+        g.rally_hit_seen = False
         g.game["rally_no"] = g.rally_no
         g.game["server_team_id"] = server
         self.state.open_rally(
@@ -837,6 +877,12 @@ class Engine:
     def feed(self, ev: dict[str, Any]) -> list[dict[str, Any]]:
         self.remember_event(ev)
         return self.handle_event(ev)
+
+
+def _pre_serve_floor_bounce(ev: dict[str, Any], g: GameState) -> bool:
+    if ev.get("type") != "bounce" or (ev.get("payload") or {}).get("surface") != "floor":
+        return False
+    return g.rally is None or (g.rally.phase == "serve" and g.rally.bounces == 0 and not g.rally_hit_seen)
 
 
 def render_text(template: str, ctx: dict[str, Any]) -> str:  # re-exported for tests
