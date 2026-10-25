@@ -1,0 +1,49 @@
+# Sport module: indoor volleyball (6 v 6). Facts for the Droid-written interpreter; validated by
+# sportmodule.schema.json. Metres, seconds, pixels. Hand-annotated events drive this sport in the judging demo (D-44).
+sport: volleyball
+version: 1
+court:
+  template: volleyball_indoor    # field frame: origin on the floor under the centre of the net, +x toward team B's end
+                                 # line (beyond the net in the clip), +y to the left looking from A to B, z up
+  length_m: 18.0
+  width_m: 9.0
+  plane_z_m: 0.0
+  surface: court
+  net_x_m: 0.0
+  net_height_m: 2.35             # league setting assumed (mixed 2.35 m; men 2.43 m, women 2.24 m)
+  floor_z_m: 0.0
+  attack_line_m: 3.0             # 3 m from the net on each side
+  lines:
+    end_A: [[-9.0, -4.5], [-9.0, 4.5]]
+    end_B: [[9.0, -4.5], [9.0, 4.5]]
+    side_left: [[-9.0, 4.5], [9.0, 4.5]]
+    side_right: [[-9.0, -4.5], [9.0, -4.5]]
+    centre: [[0.0, -4.5], [0.0, 4.5]]
+    attack_A: [[-3.0, -4.5], [-3.0, 4.5]]
+    attack_B: [[3.0, -4.5], [3.0, 4.5]]
+teams:
+  - {team_id: A, name: Handymen, short: HND, look: "near court; white kits with blue and red, plus some dark shirts"}
+  - {team_id: B, name: AZIAN Mixed, short: AZM, look: "far court; black shirts, several with yellow shoes or red knee pads"}
+scoring:
+  template: rally                # every rally scores a point; set to 25 (win by 2)
+  points_to_win: 25
+  win_by: 2
+  max_team_hits: 3               # block touches don't count
+ball:
+  diameter_m: 0.21
+  colour: yellow-blue
+  radius_px: {min: 3, max: 30}
+capture:
+  fps: 30
+  min_conf: 0.3
+bounce:
+  min_track_len: 2
+  min_vy_px_s: 40
+  plane_margin_m: 1.0
+  edge_band_m: 0.05              # lines are 5 cm wide and part of the court
+  sigma_m: 0.3
+  merge_window_s: 0.12
+net:
+  window_m: 0.3
+dead:
+  gap_s: 1.5
