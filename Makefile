@@ -45,3 +45,9 @@ eval-live-check:
 	uv run --frozen --project packages/py-trophy python -m pytest -q tests/test_eval_live.py
 e2e-synthetic: ## headless check on the SYNTHETIC fixtures: gateway game -> trophy-play -> calls/score -> Droid house rule -> approve
 	$(PYTHON) scripts/e2e_synthetic.py
+
+.PHONY: recorded-analysis-check recorded-analysis-doctor
+recorded-analysis-check: ## Recorded prototype checks; bootstrap/import private assets first
+	cd spikes/serve-analysis && .venv/bin/python repro/reproduce.py test
+recorded-analysis-doctor:
+	cd spikes/serve-analysis && .venv/bin/python repro/reproduce.py doctor

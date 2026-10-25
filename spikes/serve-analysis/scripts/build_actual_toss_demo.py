@@ -32,7 +32,11 @@ FONT='/System/Library/Fonts/Supplemental/Arial.ttf'
 BOLD='/System/Library/Fonts/Supplemental/Arial Bold.ttf'
 
 
-def font(size,bold=False):return ImageFont.truetype(BOLD if bold else FONT,size)
+def font(size,bold=False):
+    for candidate in [BOLD if bold else FONT, 'DejaVuSans-Bold.ttf' if bold else 'DejaVuSans.ttf']:
+        try:return ImageFont.truetype(candidate,size)
+        except OSError:continue
+    return ImageFont.load_default(size=size)
 
 
 def prepare(session):

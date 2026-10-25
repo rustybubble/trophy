@@ -21,7 +21,7 @@ Point a phone at a ping-pong table and Trophy referees the game:
 | `services/gateway`, `services/recorder` | Phone API, replay recording, the demo's clip upload + "stream as a phone" |
 | `services/flight` | The ping-pong vision module: BlurBall live on every camera stream, N-camera 3D fusion |
 | `services/engine`, `services/compiler`, `services/referee` | Rule engine + AI votes + 3D checks, Factory Droid house rules, the referee voice |
-| `spikes/serve-analysis` | BlurBall adapter (vendored upstream + official weights), recorded-video serve spotting and toss evidence ([setup](spikes/serve-analysis/CHECKOUT.md)) |
+| `spikes/serve-analysis` | BlurBall adapter (vendored upstream + official weights), serve spotting, two-camera HMR2 replay, ball-track completion and toss evidence ([reproduce on another computer](spikes/serve-analysis/REPRODUCE.md)) |
 | `spacetime/` | SpacetimeDB module: the shared world state (metadata only, no video) |
 | `packages/` | Contracts (JSON Schema), generated types, shared Python lib, state client |
 | `infra/` | Caddy + Porkbun DNS for `https://trophy.photo` |

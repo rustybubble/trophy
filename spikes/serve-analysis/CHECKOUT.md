@@ -1,5 +1,10 @@
 # Using this checkout
 
+**For another computer or agent:** start with [REPRODUCE.md](REPRODUCE.md). It
+provides the verified private-asset import, four independent runtimes, exact run
+profiles, reference checks and receiving-agent task. The original quick-start
+below describes the earlier source-only checkout.
+
 This is the standalone analysis app from the Cal Hacks working directory. It
 contains serve spotting, two-camera toss evidence review, the actual-footage demo
 renderer, and the ball/pose/replay code that the combined workflow uses. It does

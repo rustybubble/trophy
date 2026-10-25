@@ -2,8 +2,9 @@
 
 > This standalone recorded-video prototype lives in `spikes/serve-analysis`.
 > Run its commands from this directory so its `trophy` package stays separate
-> from the platform services. See [CHECKOUT.md](CHECKOUT.md) for demo inputs,
-> checkpoint setup, checks, and the source-only publication boundary.
+> from the platform services. Start with [REPRODUCE.md](REPRODUCE.md) to restore
+> the private inputs/results and rerun them on another computer. [CHECKOUT.md](CHECKOUT.md)
+> retains the original source-only setup and publication boundary.
 
 ## Combined two-camera upload and analysis
 
