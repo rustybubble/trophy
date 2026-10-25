@@ -1,4 +1,4 @@
-.PHONY: dev e2e contracts fixtures check smoke stdb-publish stdb-provision stdb-bindings stdb-seed
+.PHONY: dev e2e contracts fixtures check stdb-publish stdb-provision stdb-bindings stdb-seed
 # macOS and most Linux ship only `python3`; Windows has `python` (and a Store stub named python3).
 ifeq ($(OS),Windows_NT)
 PYTHON ?= python
@@ -27,8 +27,6 @@ stdb-bindings:  ## regenerate the TS client bindings after module changes
 	$(SPACETIME) generate --lang typescript -p spacetime -o packages/state-client/src/bindings --no-config -y
 stdb-seed:      ## replay the labelled-synthetic demo into a new game and check it
 	$(PYTHON) spacetime/scripts/seed_demo.py --check
-smoke:      ## P0 spikes
-	bash scripts/smoke.sh
 
 .PHONY: recorder recorder-check gateway-check
 recorder:      ## local frame-bus HLS archive (install FFmpeg separately)
