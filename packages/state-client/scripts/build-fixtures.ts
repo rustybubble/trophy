@@ -8,10 +8,12 @@ import type {
   AiVote,
   Call,
   Camera,
+  Commentary,
   Event,
   Game,
   HouseRule,
   MockScript,
+  Moment,
   MockStep,
   Rally,
   Score,
@@ -223,7 +225,7 @@ function tableTennis(): MockScript {
   const b3 = bounce(3.4, "A", -1.0, -0.2);
   const d1 = ev(4.4, "ball_dead", { reason: "floor", last_side: "B" });
   rally(1, 1.0, 4.6, "B");
-  call(
+  const c1 = call(
     4800,
     {
       outcome: "point_B",
@@ -246,7 +248,7 @@ function tableTennis(): MockScript {
   rally(2, 7.0, null, null);
   const t2 = toss(7.0, 0.09, 8, "A");
   rally(2, 7.0, 7.8, "B");
-  call(
+  const c2 = call(
     8000,
     {
       rule_id: "serve_toss_height",
@@ -400,7 +402,7 @@ function tableTennis(): MockScript {
   };
   s.add(26000, "house_rule", ready);
   s.add(29000, "house_rule", { ...ready, status: "approved", updated_at_ms: T0 + 29000 });
-  call(
+  const c4 = call(
     29200,
     {
       rule_id: "house_rule",
@@ -418,6 +420,95 @@ function tableTennis(): MockScript {
     [],
     29.2,
   );
+
+  // Post-game moments (interfaces §19), as the engine would write them live. Synthetic scores and reasons.
+  const moment = (at: number, m: Omit<Moment, "game_id">) => {
+    const row: Moment = { game_id: G, ...m };
+    s.add(at, "moment", row);
+    return row;
+  };
+  moment(4900, {
+    moment_id: ulid("mom"),
+    kind: "point",
+    t_game_s: 4.6,
+    t_start_s: 1.0,
+    t_end_s: 4.6,
+    label: "Point B: return long",
+    team_id: "B",
+    call_id: c1.id,
+    rally_no: 1,
+    score_after: "0–1",
+    tags: ["point", "rally"],
+    highlight_score: 0.35,
+    reasons: ["3-shot rally"],
+    is_best_play: false,
+    thumb_t_s: 3.4,
+  });
+  moment(8100, {
+    moment_id: ulid("mom"),
+    kind: "serve_fault",
+    t_game_s: 7.6,
+    t_start_s: 7.0,
+    t_end_s: 7.8,
+    label: "Serve fault A: toss 9 cm",
+    team_id: "B",
+    call_id: c2.id,
+    rally_no: 2,
+    score_after: "0–2",
+    tags: ["serve_fault", "toss_low"],
+    highlight_score: 0.42,
+    reasons: ["clear serve fault (toss 7 cm under the 16 cm minimum)"],
+    is_best_play: false,
+    thumb_t_s: 7.3,
+  });
+  const edgeMoment = moment(20100, {
+    moment_id: ulid("mom"),
+    kind: "edge",
+    t_game_s: 12.4,
+    t_start_s: 10.0,
+    t_end_s: 13.2,
+    label: "Edge ball B, upheld on challenge",
+    team_id: "B",
+    call_id: edge.id,
+    rally_no: 3,
+    score_after: "0–3",
+    tags: ["edge", "challenge", "rally"],
+    highlight_score: 0.86,
+    reasons: ["close call (p = 0.71)", "challenge upheld", "longest rally (4 shots)"],
+    is_best_play: true,
+    thumb_t_s: 12.4,
+  });
+  moment(29300, {
+    moment_id: ulid("mom"),
+    kind: "house_rule",
+    t_game_s: 29.2,
+    t_start_s: 29.2,
+    t_end_s: 29.2,
+    label: "House rule: first to 7, win by 1",
+    call_id: c4.id,
+    score_after: "0–3",
+    tags: ["house_rule"],
+    highlight_score: 0.1,
+    reasons: ["approved house rule"],
+    is_best_play: false,
+    thumb_t_s: 29.2,
+  });
+  const line = (at: number, c: Omit<Commentary, "game_id" | "moment_id" | "created_at_ms">) =>
+    s.add(at, "commentary", { game_id: G, moment_id: edgeMoment.moment_id, created_at_ms: T0 + at, ...c });
+  line(20400, {
+    voice: "pbp",
+    text: "[Synthetic] B clips the top edge at end A, challenged, and the call stands.",
+    facts: { p: 0.71, result: "upheld", score_after: "0–3" },
+    validated: true,
+    source: "template",
+  });
+  line(20500, {
+    voice: "colour",
+    text: "[Synthetic] Eight millimetres inside the line: as close as it gets.",
+    facts: { d_mm: 8 },
+    validated: true,
+    source: "template",
+  });
 
   // Ask the ref (synthetic answer; the citation is a placeholder, not a real clause).
   s.add(32000, "ask", {

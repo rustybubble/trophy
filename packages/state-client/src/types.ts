@@ -4,9 +4,11 @@ import type {
   Call,
   Camera,
   Challenge,
+  Commentary,
   Event,
   Game,
   HouseRule,
+  Moment,
   Rally,
   Score,
   TrackSample,
@@ -18,9 +20,11 @@ export type {
   Call,
   Camera,
   Challenge,
+  Commentary,
   Event,
   Game,
   HouseRule,
+  Moment,
   Rally,
   Score,
   TrackSample,
@@ -58,6 +62,9 @@ export interface TrophyState {
   /** World state (D-21): vision observations and the 10 Hz ball track. */
   onObservation(cb: (o: Observation) => void): Unsubscribe;
   onTrackSample(cb: (s: TrackSample) => void): Unsubscribe;
+  /** Post-game (interfaces-v1 §19): moments the engine writes live, and grounded commentary lines. */
+  onMoment(cb: (m: Moment, change: RowChange) => void): Unsubscribe;
+  onCommentary(cb: (c: Commentary) => void): Unsubscribe;
 }
 
 export interface TableRows {
@@ -72,6 +79,8 @@ export interface TableRows {
   ask: Ask;
   observation: Observation;
   track_sample: TrackSample;
+  moment: Moment;
+  commentary: Commentary;
 }
 export type TableName = keyof TableRows;
 

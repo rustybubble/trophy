@@ -19,3 +19,6 @@ This lists **candidates and adopted components**. When you adopt one, add its re
 | OpenTTGames | CC BY-NC | Evaluation only | optional |
 | Pillow 13.0.0 | HPND/PIL license (see installed Pillow distribution notices) | Local source-frame crops and storyboard sprites | adopted in py-trophy; no third-party source copied |
 | FFmpeg (locally installed executable; tested 7.1 via existing imageio-ffmpeg package) | Build-dependent LGPL/GPL; tested libx264 build is GPL | Recorder HLS and private replay clip encoding | executable is not vendored or redistributed; install an appropriately licensed build on each demo machine |
+| Replay `packages/tv-core` (`types`, `follow`, `clock`, `retry`, `display`, `replays`) @ `2db92c0` | MIT, "Copyright (c) 2026 Replay" (notice in `apps/watch/src/vendor/tv-core/LICENSE`) | Trophy Watch: the media clock (others vendored for later features) | adopted (vendored unchanged) |
+| hls.js 1.6.19 | Apache-2.0 | Trophy Watch: HLS playback of recorder archives | adopted (npm) |
+| qrcode 1.5.4 | MIT | Dashboard join QR | adopted (npm) |

@@ -69,6 +69,7 @@ jobs:
       - run: npm test
       - run: npm run build -w @trophy/pwa
       - run: npm run build -w @trophy/dashboard
+      - run: npm run build -w @trophy/watch
 
   codegen:
     runs-on: ubuntu-latest

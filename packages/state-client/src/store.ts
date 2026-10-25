@@ -4,8 +4,10 @@ import type {
   Call,
   Camera,
   Challenge,
+  Commentary,
   Game,
   HouseRule,
+  Moment,
   Observation,
   Rally,
   RowChange,
@@ -28,6 +30,8 @@ export const ROW_KEY: { [T in TableName]: (r: TableRows[T]) => string } = {
   ask: (r) => r.ask_id,
   observation: (r) => r.id,
   track_sample: (r) => `${r.cam_id}/${r.t_game_s}`,
+  moment: (r) => r.moment_id,
+  commentary: (r) => `${r.moment_id}/${r.voice}`,
 };
 
 type Listener = (row: never, change: RowChange) => void;
@@ -119,5 +123,11 @@ export abstract class StateStore {
   }
   onTrackSample(cb: (s: TrackSample) => void): Unsubscribe {
     return this.on("track_sample", (s) => cb(s));
+  }
+  onMoment(cb: (m: Moment, change: RowChange) => void): Unsubscribe {
+    return this.on("moment", cb);
+  }
+  onCommentary(cb: (c: Commentary) => void): Unsubscribe {
+    return this.on("commentary", (c) => cb(c));
   }
 }

@@ -29,8 +29,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PIDS = ROOT / "data" / "local" / "dev.pids"
 DEFAULTS = {"SPACETIME": "spacetime"}
-PORTS = {"spacetime": 3000, "gateway": 8000, "voice": 8765, "pwa": 5173, "dashboard": 5174, "caddy": 443}
-WAITS = {"gateway": [6379, 3000], "recorder": [6379, 3000], "caddy": [8000, 5173, 5174], "flight": [6379, 3000, 8000]}
+PORTS = {"spacetime": 3000, "gateway": 8000, "voice": 8765, "pwa": 5173, "dashboard": 5174, "watch": 5175, "caddy": 443}
+WAITS = {
+    "gateway": [6379, 3000],
+    "recorder": [6379, 3000],
+    "caddy": [8000, 5173, 5174, 5175],
+    "flight": [6379, 3000, 8000],
+}
 WIN = os.name == "nt"
 COLOURS = [31, 32, 33, 34, 35, 36, 91, 92, 93, 94, 95, 96]
 
