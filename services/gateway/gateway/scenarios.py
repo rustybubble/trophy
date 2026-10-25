@@ -334,7 +334,8 @@ def scenario_router(st: Settings) -> APIRouter:
             code, out = await run(*probe)
             live["durations"][a["label"]] = float(out.strip() or 0) if code == 0 else float(a.get("duration_s") or 0)
         args = [
-            "--game", game_id, "--join-key", g["join_key"], "--mode", "simultaneous",
+            "--game", game_id, f"--join-key={g['join_key']}",  # "=" form: a key may start with "-"
+            "--mode", "simultaneous",
             "--speed", str(body.speed), "--start-in", str(START_IN_S), "--sport", s.get("sport", "table_tennis"),
             "--gateway", f"http://127.0.0.1:{st.port}",
         ]  # fmt: skip

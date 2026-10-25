@@ -324,7 +324,7 @@ def demo_router(st: Settings) -> APIRouter:
             metas.append({**m, "corners_norm": cl.corners_norm, "offset_s": cl.offset_s})
         mode, ordered, reason = plan(metas, body.mode)
         labels = []
-        args = ["--game", c.game_id, "--join-key", key.decode(), "--mode", mode, "--speed", str(body.speed)]
+        args = ["--game", c.game_id, f"--join-key={key.decode()}", "--mode", mode, "--speed", str(body.speed)]
         for i, m in enumerate(ordered):
             label = f"cam{i + 1}" if mode == "simultaneous" else f"take{i + 1}"
             labels.append(label)
