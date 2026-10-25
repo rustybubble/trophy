@@ -7,7 +7,7 @@
 You are **Agent 3 of 3** on Trophy (Cal Hacks 13.0): rules, AI and the Factory Droid. Read `CLAUDE.md` first ("Where things stand", "Safeguards to retain"), then `docs/plan/prompts/agent-3-droid-realtime.md` (your D-36 design brief: it stays the design reference) and the owner reviews on rustybubble/trophy#19. Work in `../trophy-a3` (or your existing worktree) on `demo/integration` until #19 lands, then on short `a3/*` branches.
 
 ## What you've built (on #19, not yet on `main`)
-- `services/engine`: CEL rule engine, scoring by call-log replay, the gate, calls, ctl commands incl. house-rule hot-load, moments + ★ best play, commentary, `decide()` (Claude ‖ Gemini ‖ Bitdeer, recorded shapes only), 3D checks API, `check-test`, `TrackEventer`/`TrackFeeder`, ask over checks. Engine tests pass (78).
+- `services/engine`: CEL rule engine, scoring by call-log replay, the gate, calls, ctl commands incl. house-rule hot-load, moments + ★ best play, commentary, `decide()` (Claude ‖ Gemini ‖ Bitdeer, recorded shapes only; cut to Claude by D-41), 3D checks API, `check-test`, `TrackEventer`/`TrackFeeder`, ask over checks. Engine tests pass (78).
 - `services/compiler`: the Factory Droid with a PreToolUse guard hook; live house rule READY in 27.5–30.6 s, gate 19/19, approve → hot-load 0.8 s; `calibrate_checks` job (tested with a scripted agent only).
 - `sports/table_tennis/`: golden module (`config.yaml`, `events.py`, `rules.yaml`) and the 7-check library; synthetic 2D and 3D fixtures.
 - `services/referee` (D-37): router, Claude phrasing with a numbers guard, rules Q&A grounded in `rules.yaml`, Cartesia server-side voice (measured first audio 174–723 ms).
@@ -21,7 +21,7 @@ You are **Agent 3 of 3** on Trophy (Cal Hacks 13.0): rules, AI and the Factory D
      - `package.json` + lockfile: workspaces `apps/dashboard`, `apps/watch` and `services/compiler`. Keep main's `dev` script, then run `npm install` to regenerate the lock.
      - `CLAUDE.md`, `README.md`, `docs/plan/three-agent-plan.md`: **take main's**. They already describe your services (D-36/D-37).
      - `docs/plan/prompts/KICKOFF.md` and `agent-3-rules-ai-droid.md` were deleted on main: keep them deleted, and **don't re-add `docs/archive/`** (git history has it). Keep `agent-3-droid-realtime.md`.
-     - `docs/plan/simplified-architecture.md` is an unadopted proposal that contradicts what shipped (Watch, Gemini/Bitdeer stay). Delete it, or keep only what you adopt as a decision.
+     - `docs/plan/simplified-architecture.md` is an unadopted proposal that contradicts what shipped (Watch stays). Delete it, or keep only what you adopt as a decision.
    - **Fix the blockers from the owner review** (each one is verified in source; add a test for each):
      1. Droid command allowlist bypass: `TEST_CMD` in `services/compiler/src/allowlist.ts` lets `\s` match a newline and doesn't deny `>`/`<`; the gate script forwards `"$@"`.
      2. `events.py` sandbox: drop `typing`/`collections`/`dataclasses`/`enum` escape hatches or prove they're safe; run Droid-written code in a subprocess with a clean env and no network. Move `DROID_RUNS_DIR` out of the repo tree.
@@ -36,11 +36,11 @@ You are **Agent 3 of 3** on Trophy (Cal Hacks 13.0): rules, AI and the Factory D
 3. **Feed the engine from live flight.** Agree with Agent 2 on the seam in `docs/status/a{2,3}.md` before either of you builds it. The one-phone path is layer-1 samples → `sports/table_tennis/events.py` → `ev:flight`; the two-phone path is `trk:ball3d` → `TrackFeeder`. The MUST is the one-phone path.
 4. **Live keys (ask the user for them; never commit them):**
    - `ANTHROPIC_API_KEY`: referee routing/phrasing, commentary, the Claude voter. Measure the phrase latency (budget 0.5–1.5 s).
-   - `GEMINI_API_KEY` + `GEMINI_MODEL`, `BITDEER_API_KEY`: **Gemini and Bitdeer are still prize tracks**, so they stay as voters. Run `--votes` on a real BETA call, and confirm all three votes land within 4 s and never delay the spoken call.
+   - **Gemini and Bitdeer are cut (D-41, the user).** Remove `GeminiVoter`, `BitdeerVoter`, their keys and tests from `decide/`, and make `--votes` need only `ANTHROPIC_API_KEY`. The `ai_vote.backend` contract is now `claude | geometry`. Run `--votes` on a real BETA call, and confirm Claude's vote lands within 4 s and never delays the spoken call.
    - `FACTORY_API_KEY`: time a live `calibrate_checks` run against the 60 s target / 90 s cap.
 5. **Portability:** compiler `ENGINE_PYTHON` defaults to `.venv/bin/python` and the guard hook runs `python3`. Make both work on Windows too, or skip with a printed reason rather than silently.
-6. **C3 (with Agents 1 and 2):** the Droid rule end to end < 90 s on the live game; 3 votes shown; voice ask → spoken answer starts ≤ 3 s after the question ends. Record the measured numbers in `docs/progress.md`.
-7. **README sections** (in the root `README.md`, honest and short): Factory Droid (trigger, sandbox, guard hook, gate, approval, measured times), Anthropic (community, how Claude is used, "where it could go wrong": Claude never makes a line call alone, uncalibrated votes, grounded answers only), Bitdeer and Gemini (each one's role as a voter, with an on-screen vote).
+6. **C3 (with Agents 1 and 2):** the Droid rule end to end < 90 s on the live game; Claude's vote shown; voice ask → spoken answer starts ≤ 3 s after the question ends. Record the measured numbers in `docs/progress.md`.
+7. **README sections** (in the root `README.md`, honest and short): Factory Droid (trigger, sandbox, guard hook, gate, approval, measured times), Anthropic (community, how Claude is used, "where it could go wrong": Claude never makes a line call alone, uncalibrated votes, grounded answers only).
 
 ## Rules
 - No keyless or stub fallbacks that pretend to be a model (D-33/D-34). A template line is labelled `template`.

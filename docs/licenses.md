@@ -13,7 +13,7 @@ This lists **candidates and adopted components**. When you adopt one, add its re
 | aiortc 1.15.0, PyAV 17.1.0 | BSD-3 / BSD-3 (FFmpeg components LGPL/GPL by build) | WebRTC ingest, only if needed | candidate |
 | SpacetimeDB 2.13 | BSL 1.1 for the server (check current terms) / client SDK license per npm | Shared world state | candidate |
 | Factory Droid SDK | Factory terms | House-rule compiler | candidate |
-| Cartesia, Anthropic, Google Gemini, Bitdeer AI Model Studio, Moss, Apify | Each provider's API terms | Voice, voters and answers, rulebook index and actor | candidate |
+| Cartesia, Anthropic | Each provider's API terms | Voice; the Claude voter and answers | candidate |
 | Rulebook text (ITTF, USA Pickleball, FIBA/NFHS, BWF, FIVB) | Each publisher's terms | Scraped only from public pages, quoted briefly with links and attribution | candidate |
 | CC BY clips (`docs/plan/clip-library.md`) | CC BY (credits in `data/clips/credits.json`) | Development, the backup demo and labels | candidate |
 | OpenTTGames | CC BY-NC | Evaluation only | optional |

@@ -1772,25 +1772,6 @@
    }
   },
   {
-   "at_ms": 15800,
-   "table": "ai_vote",
-   "row": {
-    "call_id": "01JDEMCAL00000000000000013",
-    "game_id": "g_demtt001",
-    "created_at_ms": 1792000015800,
-    "backend": "gemini",
-    "model": "gemini (synthetic)",
-    "challenge_id": null,
-    "choice": "EDGE_GOOD",
-    "probs": {
-     "EDGE_GOOD": 0.66,
-     "SIDE_FAULT": 0.34
-    },
-    "latency_ms": 2400,
-    "rationale": "Trajectory after contact suggests top edge (synthetic)."
-   }
-  },
-  {
    "at_ms": 16000,
    "table": "challenge",
    "row": {
@@ -1859,25 +1840,6 @@
      ]
     },
     "why": "Bounce 8 mm inside end A, within the edge band."
-   }
-  },
-  {
-   "at_ms": 16500,
-   "table": "ai_vote",
-   "row": {
-    "call_id": "01JDEMCAL00000000000000013",
-    "game_id": "g_demtt001",
-    "created_at_ms": 1792000016500,
-    "backend": "bitdeer",
-    "model": "Qwen/Qwen3.5-397B-A17B",
-    "challenge_id": "01JDEMCHL00000000000000014",
-    "choice": "SIDE_FAULT",
-    "probs": {
-     "EDGE_GOOD": 0.45,
-     "SIDE_FAULT": 0.55
-    },
-    "latency_ms": 3100,
-    "rationale": "Blurred crop; slight lean to side face (synthetic)."
    }
   },
   {

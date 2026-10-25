@@ -192,7 +192,7 @@ class AiVote(BaseModel):
     call_id: str
     challenge_id: str | None = None
     game_id: str | None = None
-    backend: Literal["claude", "gemini", "bitdeer", "geometry"]
+    backend: Literal["claude", "geometry"]
     model: str
     choice: str | None = None
     probs: dict[str, float]

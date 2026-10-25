@@ -436,7 +436,7 @@
           "type": "string"
         },
         "backend": {
-          "enum": ["claude", "gemini", "bitdeer", "geometry"]
+          "enum": ["claude", "geometry"]
         },
         "model": {
           "type": "string"

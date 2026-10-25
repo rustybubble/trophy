@@ -215,7 +215,7 @@ export interface AiVote {
   call_id: string;
   challenge_id?: string | null;
   game_id?: string;
-  backend: "claude" | "gemini" | "bitdeer" | "geometry";
+  backend: "claude" | "geometry";
   model: string;
   choice?: string | null;
   probs: {

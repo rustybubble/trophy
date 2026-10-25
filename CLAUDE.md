@@ -7,7 +7,7 @@ Read this file, then your brief in `docs/plan/prompts/agent-{1,2,3}.md`. Explici
 - **Phones become cameras.** Players open `https://trophy.photo/cam/`, and each phone streams 720p JPEG to the Mac.
 - **It keeps score and identifies fouls with honest confidence:** **AUTO** at p ≥ 0.90; **BETA** shows p and can be challenged; **PLAYERS DECIDE** when the sensors can't judge; judgment fouls are `foul_flag`, capped at BETA (D-17).
 - **Every call is spoken** (Cartesia Sonic; Ink-2 STT for push-to-talk).
-- **A challenge** opens an instant replay with an AI second opinion: Claude, Gemini and Bitdeer Model Studio vote in the background and never delay a call (D-23).
+- **A challenge** opens an instant replay with an AI second opinion: Claude votes in the background next to the geometry and never delays a call (D-23, D-41).
 - **Ask the ref:** a voice question goes to the referee service (D-37): judge phrases route to a geometry check over the ball track; rules questions are answered by Claude grounded only in the sport's `rules.yaml` plus approved house rules; the answer is spoken.
 - **House rules** are typed or spoken; a Factory Droid edits the rule pack in a sandbox, gates it with `replay_test`, and the engine hot-loads it after the judge approves. The Droid also specialises a golden geometry-check library to each camera setup at calibration time (D-36); it is never on the per-call path.
 
@@ -18,12 +18,12 @@ Read this file, then your brief in `docs/plan/prompts/agent-{1,2,3}.md`. Explici
 - **SHOULD:** Trophy Watch post-game for every game (built; needs a live game); recorded basketball 2s/3s on the CC BY clip (not started); the CC BY ping-pong clip as a backup demo.
 - **Coming next (labelled not built):** basketball fouls, pickleball, tennis, badminton, volleyball, two-hand touch.
 
-**Prize tracks:** Factory Droid SDK, Cartesia, Spacetime, Anthropic, Meta, Bitdeer AI Model Studio, MLH (Gemini, GoDaddy/.Tech domain, Commit Fellowship), Cal Hacks overall. **Dropped (the user, 2026-10-24):** Moss, Apify, Vultr. Not used: SubQ, Firecrawl, Deepgram, Convex.
+**Prize tracks:** Factory Droid SDK, Cartesia, Spacetime, Anthropic, Meta, MLH (GoDaddy/.Tech domain, Commit Fellowship), Cal Hacks overall. **Dropped (the user, 2026-10-24):** Moss, Apify, Vultr, Gemini, Bitdeer (D-41). Not used: SubQ, Firecrawl, Deepgram, Convex.
 
 ## Where things stand (2026-10-24, evening)
 - **On `main`:** contracts + codegen + py-trophy + state client (C0, tag `wk-c0`); Spacetime module (world, game, post-game and Droid tables, identity-checked writers); gateway (games, cam tokens, frames + clock WS, ctl, calibrate stub, voice token, ask proxy, replay/Watch APIs); recorder (HLS + source JPEGs); capture PWA (+ phone-recorded challenge clips, table crop); judges' dashboard; Trophy Watch; `make dev` / `make e2e` (transport only: calls are PENDING); `trophy.photo` HTTPS via Caddy + Porkbun DNS-01; Mac bring-up prompt.
 - **On rustybubble/trophy#19 (`demo/integration`, open, conflicts with main, changes requested):** `services/engine` (rule engine, scoring, gate, decide() voters, moments, commentary, 3D checks, ask), `services/compiler` (Factory Droid, live runs pass), `services/flight` (classical detector, 2D/3D track, events; synthetic numbers only), `services/referee` (ask the ref + server-side Cartesia), `sports/table_tennis/` (golden module + check library), a localhost clip-upload demo, `make e2e-synthetic`, decisions D-33..D-37. **Landing #19 is the critical path**; nothing referees a point on `main` until it does.
-- **Not built anywhere:** BlurBall on MPS and a live flight loop reading `frames:{cam}`; any accuracy measured on real footage; the engine's `run_check` / `request_check` handlers; live Claude / Gemini / Bitdeer calls; the README prize sections, video and writeup.
+- **Not built anywhere:** BlurBall on MPS and a live flight loop reading `frames:{cam}`; any accuracy measured on real footage; the engine's `run_check` / `request_check` handlers; live Claude calls; the README prize sections, video and writeup.
 - **Status per agent:** `docs/status/a{1,2,3}.md`. Measured numbers: `docs/progress.md`.
 
 ## Read these
@@ -56,7 +56,7 @@ Geometry-first measurable calls, the confidence gate and the AUTO / BETA / PLAYE
 Phones (PWA, https://trophy.photo → Caddy on the Mac) ─JPEG over WSS + audio onsets─▶ gateway ─▶ Redis frames:{cam}
    video stays on Redis + the local recorder; it NEVER goes into Spacetime
 flight (ball detector → track → bounce/contact/serve-toss/edge, σ) ─▶ Redis ev:* (hot path) + Spacetime observation/track_sample
-engine (sports/<sport>/rules.yaml, CEL, scoring, gate; background decide(): Claude ‖ Gemini ‖ Bitdeer + geometry) ─reducers─▶ Spacetime
+engine (sports/<sport>/rules.yaml, CEL, scoring, gate; background decide(): Claude + geometry) ─reducers─▶ Spacetime
 compiler (Factory Droid; trigger = house_rule row; calibrate_checks per camera setup) ─▶ Spacetime
 referee (router → run_check over Redis → Claude phrases → Cartesia) ◀─ gateway /api/ask
 Spacetime ─subscriptions─▶ phones (voice, banner, replay), dashboard (score, votes, Droid panel, ask transcript), Watch
@@ -95,7 +95,6 @@ These are compatibility notes from research and the weekend; check whether they 
 - **Phones send 4:2:0 JPEG** at q≈0.7: a 5–10 px ball loses colour; tune detectors on frames that went through the PWA path (`services/gateway/scripts/clip_as_phone.py`), not on the original video.
 - **iOS Safari:** about 30 fps (read back `getSettings()`); no vibration; pin the rear lens by `deviceId`; landscape only; HTTPS is required. Handheld footage breaks a one-time calibration: phones need a fixed mount.
 - **Claude API:** `temperature` is rejected, and forced `tool_choice` returns 400 on Opus/Sonnet 5.5, so use `output_config.format`. Models: `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`.
-- **Bitdeer Model Studio:** OpenAI-compatible at `https://api-inference.bitdeer.ai/v1`; vision via `image_url`; base64 images < 1 MB.
 - **Cartesia:** version `2026-08-14` verified; Sonic TTS over WebSocket (`context_id`, `cancel`, inline `<emotion value="excited"/>`); Ink-2 STT at `wss://api.cartesia.ai/stt/turns/websocket`; browsers pass `access_token` + `cartesia_version` as query params.
 - **Factory Droid SDK:** `@factory/droid-sdk` drives the `droid` CLI. Autonomy "low" edits files without consulting the permission handler, so the sandbox is enforced by a PreToolUse hook plus a `git status` audit (D-35).
 - **SpacetimeDB 2.13:** `spacetime start` has no TLS (Caddy proxies `/stdb/*`). Reducers over HTTP: `POST /v1/database/{db}/call/{reducer}` with body `["<json>"]`; unauthenticated calls get a fresh identity, so reducers check `ctx.sender`. SQL read-back wraps optional columns.
