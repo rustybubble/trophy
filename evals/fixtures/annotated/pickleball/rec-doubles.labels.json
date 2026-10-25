@@ -1,0 +1,76 @@
+{
+  "synthetic": false,
+  "label": "HAND-ANNOTATED from CC BY footage by a Trophy agent (not synthetic, not perception output)",
+  "sport": "pickleball",
+  "labeller": "Claude (Trophy sports agent), 2026-10-25, from 720p frames at 2-15 fps",
+  "bounces": [
+    {
+      "t_game_s": 52.0,
+      "side": "A",
+      "surface": "court"
+    },
+    {
+      "t_game_s": 52.6,
+      "side": "A",
+      "surface": "court"
+    }
+  ],
+  "tol_count": 1,
+  "tol_t_s": 0.5,
+  "alternate_sides": false,
+  "min_recall": 0.75,
+  "first_server": "B",
+  "initial_score": {
+    "A": 0,
+    "B": 0,
+    "server_number": 2
+  },
+  "not_annotated": [
+    {
+      "t_s": 42.1,
+      "why": "rally ends with a near-team fault (overlay: second server next) but the deciding shot is not visible"
+    }
+  ],
+  "calls": [
+    {
+      "t_s": 5.85,
+      "outcome": "fault",
+      "team_id": "B",
+      "at_fault": "A",
+      "rule_hint": "net_fault",
+      "scoring_effect": "point",
+      "server": "B",
+      "conf": 0.75
+    },
+    {
+      "t_s": 19.0,
+      "outcome": "fault",
+      "team_id": "B",
+      "at_fault": "A",
+      "rule_hint": "net_fault",
+      "scoring_effect": "point",
+      "server": "B",
+      "conf": 0.75
+    },
+    {
+      "t_s": 30.0,
+      "outcome": "fault",
+      "team_id": "A",
+      "at_fault": "B",
+      "rule_hint": "net_fault",
+      "scoring_effect": "side_out",
+      "server": "B",
+      "conf": 0.7
+    },
+    {
+      "t_s": 52.6,
+      "outcome": "fault",
+      "team_id": "B",
+      "at_fault": "A",
+      "rule_hint": "not_returned_double_bounce",
+      "scoring_effect": "side_out",
+      "server": "A",
+      "conf": 0.75
+    }
+  ]
+}

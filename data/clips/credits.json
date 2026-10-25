@@ -22,7 +22,16 @@
       "0:00-12:00"
     ],
     "use": "half court facing one hoop; score overlay = make/miss and 2/3 truth",
-    "credit_line": "\"Fun Moderate to Intense 10 games Saturday run\" by JaiArtHub, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=2NxcgKW7xFM"
+    "credit_line": "\"Fun Moderate to Intense 10 games Saturday run\" by JaiArtHub, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=2NxcgKW7xFM",
+    "scenarios": [
+      {
+        "id": "basketball-halfcourt",
+        "segment": "2:25-3:40",
+        "local_file": "data/local/scenarios/basketball-halfcourt/halfcourt.mp4",
+        "changes": "trimmed to 2:25-3:40, re-encoded to 1280x720 H.264 + AAC (from the 720p YouTube stream); no other edits; the uploader's score overlay is kept",
+        "license_checked": "2026-10-25: watch page shows 'License: Creative Commons Attribution license (reuse allowed)'; yt-dlp license field agrees"
+      }
+    ]
   },
   {
     "sport": "pickleball",
@@ -34,7 +43,16 @@
       "full"
     ],
     "use": "both kitchens + feet visible; near-line balls; score overlay",
-    "credit_line": "\"Pickleball Doubles Challenge Court in Melbourne, FL 06/09/2023 Game 1\" by BT Pickleball, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=QhLECLlXU3c"
+    "credit_line": "\"Pickleball Doubles Challenge Court in Melbourne, FL 06/09/2023 Game 1\" by BT Pickleball, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=QhLECLlXU3c",
+    "scenarios": [
+      {
+        "id": "pickleball-rec-doubles",
+        "segment": "0:14-1:14",
+        "local_file": "data/local/scenarios/pickleball-rec-doubles/corner.mp4",
+        "changes": "trimmed to 0:14-1:14, re-encoded to 1280x720 H.264 + AAC (from the 720p YouTube stream); no other edits; the uploader's score overlay is kept",
+        "license_checked": "2026-10-25: watch page shows 'License: Creative Commons Attribution license (reuse allowed)'; yt-dlp license field agrees"
+      }
+    ]
   },
   {
     "sport": "table_tennis",
@@ -166,6 +184,15 @@
       "full"
     ],
     "use": "full amateur set, static elevated; in/out, net",
-    "credit_line": "\"Handymen vs AZIAN Mixed - Mixed Moscow Volleyball League (1st set)\" by Almost Volleyball, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=kVpO4ypzPYU"
+    "credit_line": "\"Handymen vs AZIAN Mixed - Mixed Moscow Volleyball League (1st set)\" by Almost Volleyball, Creative Commons Attribution license (reuse allowed), https://www.youtube.com/watch?v=kVpO4ypzPYU",
+    "scenarios": [
+      {
+        "id": "volleyball-amateur-set",
+        "segment": "0:10-1:15",
+        "local_file": "data/local/scenarios/volleyball-amateur-set/corner.mp4",
+        "changes": "trimmed to 0:10-1:15, re-encoded to 1280x720 H.264 + AAC (from the 720p YouTube stream); no other edits; the uploader's score overlay is kept",
+        "license_checked": "2026-10-25: watch page shows 'License: Creative Commons Attribution license (reuse allowed)'; yt-dlp license field agrees"
+      }
+    ]
   }
 ]
