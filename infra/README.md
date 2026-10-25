@@ -1,6 +1,6 @@
 # Infrastructure (Cal Hacks weekend)
 
-- **Where it runs (D-30, revised 2026-10-24):** the live backend runs **natively on the M5 Pro Mac** with `make dev` (flight on MPS); bring-up steps in `docs/plan/prompts/mac-bringup.md`. No cloud box: Vultr (rate-limited) and AWS were cut. The Windows PC is a dev machine and browser only.
+- **Where it runs (D-30, revised 2026-10-24):** the live backend runs **natively on the M5 Pro Mac** with `make dev` (flight on MPS); **Agent 2 has the Mac** and brings it up with `docs/plan/prompts/mac-bringup.md`. No cloud box: Vultr (rate-limited) and AWS were cut. The Windows PC is a dev machine and browser only.
 - **Domain + HTTPS: `trophy.photo`** (registered by the user on 2026-10-24 at Porkbun; Porkbun nameservers).
   - The phones load `https://trophy.photo`, which resolves to the **LAN IP of the Mac** (the demo machine) (a public A record pointing at a private address). Caddy on that machine gets the certificate with **DNS-01 through the Porkbun API**, so nothing needs to be reachable from the internet. Config: `caddy/Caddyfile.dev` (`/cam/*` PWA, `/` dashboard, `/api/*` gateway, `/stdb/*` SpacetimeDB, `/spike/voice/*` the P0 voice test).
   - Porkbun setup (the user's account): turn on **API access** for the domain, create an API key + secret, and put them in `.env` as `PORKBUN_API_KEY` / `PORKBUN_SECRET_API_KEY`. Never commit them.
