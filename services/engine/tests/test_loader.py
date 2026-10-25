@@ -73,7 +73,27 @@ def test_missing_file_is_a_load_error(tmp_path: Path) -> None:
     (tmp_path / "config.yaml").write_text("sport: x\n")
     with pytest.raises(LoadError) as e:
         load_module(tmp_path)
-    assert any("events.py: missing" in m for m in e.value.errors)
+    # no events.py makes it an annotated module (D-44), which still needs rules.yaml
+    assert any("rules.yaml: missing" in m for m in e.value.errors)
+
+
+def test_annotated_module_loads_without_events_py(tmp_path: Path) -> None:
+    """D-44: config.yaml + rules.yaml, no events.py; config only has to name the sport, events() refuses to run."""
+    (tmp_path / "config.yaml").write_text("sport: table_tennis\nversion: 1\n")
+    (tmp_path / "rules.yaml").write_text((TT / "rules.yaml").read_text())
+    mod = load_module(tmp_path)
+    assert mod.annotated and mod.sport == "table_tennis"
+    with pytest.raises(RuntimeError, match="annotated"):
+        list(mod.events([], mod.state("g_00000000")))
+    assert not load_module(TT).annotated
+
+
+def test_rules_optional_loads_a_sport_without_an_interpreter(tmp_path: Path) -> None:
+    (tmp_path / "config.yaml").write_text("sport: badminton\n")
+    with pytest.raises(LoadError):
+        load_module(tmp_path)
+    mod = load_module(tmp_path, rules_optional=True)
+    assert mod.rules == {} and mod.annotated
 
 
 def test_schema_errors_are_collected(tmp_path: Path) -> None:

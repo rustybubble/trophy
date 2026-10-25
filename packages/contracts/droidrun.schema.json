@@ -58,6 +58,10 @@
     "finished_at_ms": { "type": ["number", "null"] },
     "duration_ms": { "type": ["number", "null"] },
     "gate_ms": { "type": "array", "items": { "type": "number" }, "description": "replay_test wall time per attempt" },
+    "decision": {
+      "anyOf": [{ "$ref": "#/$defs/DroidRunDecision" }, { "type": "null" }],
+      "description": "house_rule runs: the Droid's decision (decision.json in the sandbox, validated by the runner)"
+    },
     "token_usage": {
       "type": ["object", "null"],
       "properties": { "input": { "type": "integer" }, "output": { "type": "integer" } }
@@ -73,7 +77,14 @@
       "type": "object",
       "required": ["source"],
       "properties": {
-        "source": { "enum": ["cli", "house_rule", "session", "health_stat"] },
+        "source": {
+          "enum": ["cli", "house_rule", "session", "health_stat", "sport_module", "user"],
+          "description": "sport_module: a game started for a sport with no approved interpreter (an event: the engine's request); user: 'Regenerate interpreter' (a judge's action)"
+        },
+        "requested_by": {
+          "type": "string",
+          "description": "The service that queued the run through request_droid_run (engine)"
+        },
         "rule_version": { "type": "string", "description": "house_rule.rule_version when source = house_rule" },
         "text": { "type": "string", "description": "The house rule, or the retune reason" },
         "scene": { "type": "string", "description": "Path of the scene descriptor used" },
@@ -115,8 +126,18 @@
       "properties": {
         "rally_no": { "type": "integer" },
         "call_id": { "type": "string" },
+        "t_s": { "type": "number", "description": "Game time of the play (session replays)" },
         "before": { "type": "string" },
         "after": { "type": "string" }
+      }
+    },
+    "DroidRunDecision": {
+      "title": "DroidRunDecision",
+      "type": "object",
+      "required": ["applies", "rationale"],
+      "properties": {
+        "applies": { "type": "boolean" },
+        "rationale": { "type": "string", "maxLength": 600 }
       }
     },
     "DroidRunResults": {

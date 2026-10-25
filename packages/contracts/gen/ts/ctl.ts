@@ -28,7 +28,8 @@ export type CtlCmd =
   | "request_check"
   | "feed_schedule"
   | "viewer_status"
-  | "revert_house_rule";
+  | "revert_house_rule"
+  | "regenerate_interpreter";
 
 /**
  * trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 §9). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (§13).
@@ -167,7 +168,7 @@ export interface SubmitHouseRuleArgs {
   source: "typed" | "voice";
 }
 /**
- * approve_house_rule, reject_house_rule
+ * approve_house_rule, reject_house_rule, revert_house_rule
  *
  * This interface was referenced by `CtlCommand`'s JSON-Schema
  * via the `definition` "HouseRuleVersionArgs".
@@ -386,4 +387,13 @@ export interface ViewerStatusArgs {
   playing?: boolean;
   drift_ms?: number;
   connected?: boolean;
+}
+/**
+ * regenerate_interpreter (judge): the Droid rewrites this game's sport interpreter (a droid_run of kind interpreter, trigger user)
+ *
+ * This interface was referenced by `CtlCommand`'s JSON-Schema
+ * via the `definition` "RegenerateInterpreterArgs".
+ */
+export interface RegenerateInterpreterArgs {
+  reason?: string;
 }

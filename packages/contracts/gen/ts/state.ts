@@ -188,6 +188,22 @@ export interface HouseRule {
   created_at_ms: number;
   updated_at_ms: number;
   decision?: HouseRuleDecision | null;
+  /**
+   * The droid_run row of the run that compiled this rule
+   */
+  run_id?: string | null;
+  /**
+   * The pack version the run starts from (the last applied pack: house rules stack)
+   */
+  base_rule_version?: string | null;
+  /**
+   * The engine's copy of that pack's rules.yaml (the sandbox starts from it)
+   */
+  base_pack_path?: string | null;
+  /**
+   * The session's events so far (session.json), the gate's baseline for calls_changed
+   */
+  session_path?: string | null;
 }
 /**
  * This interface was referenced by `StateTables`'s JSON-Schema
@@ -239,6 +255,7 @@ export interface HouseRuleDecision {
   rejudged_rallies?: number;
   calls_changed?: number;
   decided_at_ms?: number;
+  reverted_at_ms?: number;
 }
 /**
  * Keyed by (call_id, backend): votes start speculatively when a close call is posted, before any challenge exists (D-23); challenge_id is filled when one is opened. Probabilities are UNCALIBRATED.

@@ -27,6 +27,11 @@
     "detectors": { "type": "object", "description": "class -> weights id" },
     "scoring": { "$ref": "#/$defs/Scoring" },
     "rules": { "type": "array", "items": { "$ref": "#/$defs/Rule" } },
+    "rally_openers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Event types that open a rally when none is open (default: bounce, contact, serve_toss, shot). Annotated sports whose plays start with another event (e.g. reach_over_net, player_contact) list them here."
+    },
     "coach": { "type": "object" },
     "calibration": {
       "type": "object",
@@ -121,6 +126,10 @@
         "p": { "type": "string", "description": "CEL expression for the probability of outcome" },
         "outcome": { "type": "string" },
         "team": { "type": "string", "description": "CEL expression for the favoured team_id" },
+        "at_fault": {
+          "type": "string",
+          "description": "CEL expression for the team_id that committed the fault (call.at_fault); default: the team opposite `team` for point/violation/line calls, none for a let. text/speech templates may use {at_fault} (that team's name)."
+        },
         "points": { "type": "integer" },
         "text": { "type": "string", "description": "Display template" },
         "speech": { "type": "string", "description": "Spoken template" },

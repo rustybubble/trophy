@@ -97,6 +97,10 @@ class Rule(BaseModel):
     p: str | None = Field(None, description="CEL expression for the probability of outcome")
     outcome: str | None = None
     team: str | None = Field(None, description="CEL expression for the favoured team_id")
+    at_fault: str | None = Field(
+        None,
+        description="CEL expression for the team_id that committed the fault (call.at_fault); default: the team opposite `team` for point/violation/line calls, none for a let. text/speech templates may use {at_fault} (that team's name).",
+    )
     points: int | None = None
     text: str | None = Field(None, description="Display template")
     speech: str | None = Field(None, description="Spoken template")
@@ -128,5 +132,9 @@ class RulePack(BaseModel):
     detectors: dict[str, Any] | None = Field(None, description="class -> weights id")
     scoring: Scoring
     rules: list[Rule]
+    rally_openers: list[str] | None = Field(
+        None,
+        description="Event types that open a rally when none is open (default: bounce, contact, serve_toss, shot). Annotated sports whose plays start with another event (e.g. reach_over_net, player_contact) list them here.",
+    )
     coach: dict[str, Any] | None = None
     calibration: Calibration | None = None
