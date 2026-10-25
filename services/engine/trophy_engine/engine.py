@@ -5,6 +5,8 @@ house rules, asks and moments out. Scores are derived by replaying the call log,
 from __future__ import annotations
 
 import logging
+import re
+import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -709,24 +711,26 @@ class Engine:
             fetched = fetch(rv)
             if fetched:
                 row = {**row, **fetched}
-        pack_path = a.get("pack_path") or row.get("pack_path")
-        if not pack_path:
+        # Only what the compiler gated counts (review blocker 7): never a pack_path from the command's args, only a
+        # row the compiler marked ready, and the file as it was at the gated commit, not the sandbox's working tree.
+        pack_path = row.get("pack_path")
+        if row.get("status") != "ready" or not pack_path:
             self.state.set_house_rule_status(
                 {
                     "rule_version": rv,
                     "status": "failed",
-                    "error": "no pack_path on the house rule (compiler never reported ready)",
+                    "error": f"not approvable: status {row.get('status')!r}, "
+                    f"pack_path {'set' if pack_path else 'missing'} (the compiler must report ready)",
                 }
             )
             return
-        path = Path(str(pack_path).split("@", 1)[0])
         try:
-            pack = yaml.safe_load(path.read_text("utf8"))
+            pack = yaml.safe_load(gated_file(str(pack_path)))
             errs = validate_against("rules", pack)
             if errs:
                 raise LoadError(errs)
             rules = compile_rules(pack)
-        except (OSError, yaml.YAMLError, LoadError, CelError) as e:
+        except (OSError, yaml.YAMLError, LoadError, CelError, ValueError) as e:
             self.state.set_house_rule_status(
                 {"rule_version": rv, "status": "failed", "error": f"hot-load failed: {e}"[:400]}
             )
@@ -880,6 +884,28 @@ class Engine:
     def feed(self, ev: dict[str, Any]) -> list[dict[str, Any]]:
         self.remember_event(ev)
         return self.handle_event(ev)
+
+
+def gated_file(pack_path: str) -> str:
+    """`<repo>/<file>@<commit>` -> the file's text at that commit (`git show`), so an edit made in the sandbox after the
+    gate passed can never be what gets approved. Raises ValueError without a commit or outside a git repository."""
+    path_s, sep, commit = pack_path.rpartition("@")
+    if not sep or not re.fullmatch(r"[0-9a-f]{7,40}", commit):
+        raise ValueError(f"pack_path has no gated commit: {pack_path!r}")
+    path = Path(path_s).resolve()
+    top = subprocess.run(
+        ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"], capture_output=True, text=True, timeout=10
+    )
+    if top.returncode != 0:
+        raise ValueError(f"not in a git repository: {path.parent}")
+    repo = Path(top.stdout.strip()).resolve()
+    rel = path.relative_to(repo).as_posix()
+    out = subprocess.run(
+        ["git", "-C", str(repo), "show", f"{commit}:{rel}"], capture_output=True, text=True, timeout=10
+    )
+    if out.returncode != 0:
+        raise ValueError(f"{rel} is not in commit {commit}: {out.stderr.strip()[:200]}")
+    return out.stdout
 
 
 def _pre_serve_floor_bounce(ev: dict[str, Any], g: GameState) -> bool:

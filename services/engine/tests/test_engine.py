@@ -324,9 +324,8 @@ def test_house_rule_submit_and_approve_hot_loads_the_pack(tmp_path: Path) -> Non
 
     pack = yaml.safe_load((TT / "rules.yaml").read_text())
     pack["scoring"]["params"].update({"points_to_win": 7, "win_by": 1})
-    p = tmp_path / "rules.yaml"
-    p.write_text(yaml.safe_dump(pack))
-    st.set_house_rule_status({"rule_version": hr["rule_version"], "status": "ready", "pack_path": f"{p}@abc123"})
+    commit, p = _gated_sandbox(tmp_path, pack)
+    st.set_house_rule_status({"rule_version": hr["rule_version"], "status": "ready", "pack_path": f"{p}@{commit}"})
     eng.handle_ctl({"cmd": "approve_house_rule", "game_id": GAME, "args": {"rule_version": hr["rule_version"]}})
     assert st.tables["house_rule"][hr["rule_version"]]["status"] == "approved"
     g = eng.games[GAME]
@@ -517,3 +516,50 @@ def test_floor_bounces_before_the_serve_are_ignored():
     eng = _fresh()
     assert eng.feed(_bounce(0.5, "A", "floor")) == [] and eng.feed(_bounce(0.8, "A", "floor")) == []
     assert eng.games[GAME].rally is None
+
+
+def _gated_sandbox(tmp_path: Path, pack: dict) -> tuple[str, Path]:
+    """A Droid-like sandbox: its own git repo with the gated rules.yaml committed (as the compiler records it)."""
+    import subprocess
+
+    import yaml
+
+    repo = tmp_path / "workspace"
+    (repo / "sports" / "table_tennis").mkdir(parents=True)
+    p = repo / "sports" / "table_tennis" / "rules.yaml"
+    p.write_text(yaml.safe_dump(pack))
+    git = ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run([*git, "init", "-q"], check=True)
+    subprocess.run([*git, "add", "-A"], check=True)
+    subprocess.run([*git, "commit", "-qm", "gated"], check=True)
+    commit = subprocess.run([*git, "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
+    return commit, p
+
+
+def test_approval_loads_the_gated_commit_and_ignores_args_and_unready_rows(tmp_path: Path) -> None:
+    """Review blocker 7."""
+    import yaml
+
+    eng, st = new_engine()
+    eng.handle_ctl({"cmd": "submit_house_rule", "game_id": GAME, "args": {"text": "first to 7"}, "by_cam_id": "c_j"})
+    rv = st.rows("house_rule")[0]["rule_version"]
+    pack = yaml.safe_load((TT / "rules.yaml").read_text())
+    pack["scoring"]["params"].update({"points_to_win": 7, "win_by": 1})
+    commit, p = _gated_sandbox(tmp_path, pack)
+    # 1. a pack_path in the command's args is ignored: the row is still pending, so nothing is approved
+    evil = tmp_path / "evil.yaml"
+    evil.write_text(yaml.safe_dump({**pack, "scoring": {**pack["scoring"], "params": {"points_to_win": 1}}}))
+    eng.handle_ctl(
+        {"cmd": "approve_house_rule", "game_id": GAME, "args": {"rule_version": rv, "pack_path": f"{evil}@{commit}"}}
+    )
+    assert st.tables["house_rule"][rv]["status"] == "failed" and eng.games[GAME].scoring.points_to_win == 11
+    # 2. no commit -> refused, even when ready
+    st.set_house_rule_status({"rule_version": rv, "status": "ready", "pack_path": str(p)})
+    eng.handle_ctl({"cmd": "approve_house_rule", "game_id": GAME, "args": {"rule_version": rv}})
+    assert st.tables["house_rule"][rv]["status"] == "failed"
+    # 3. ready + gated commit -> the COMMITTED pack loads, not the working tree edited after the gate
+    p.write_text(yaml.safe_dump({**pack, "scoring": {**pack["scoring"], "params": {"points_to_win": 1}}}))
+    st.set_house_rule_status({"rule_version": rv, "status": "ready", "pack_path": f"{p}@{commit}"})
+    eng.handle_ctl({"cmd": "approve_house_rule", "game_id": GAME, "args": {"rule_version": rv}})
+    assert st.tables["house_rule"][rv]["status"] == "approved"
+    assert eng.games[GAME].scoring.points_to_win == 7
