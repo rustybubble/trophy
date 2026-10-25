@@ -46,6 +46,8 @@ export function buildAskContext(
       for (const k of CALL_FIELDS) if (c[k] !== undefined) out[k] = c[k];
       return out;
     }),
-    house_rules: g.houseRules.filter((h) => h.status === "approved").map((h) => ({ text: h.text, status: h.status })),
+    house_rules: g.houseRules
+      .filter((h) => h.status === "approved" || h.status === "applied")
+      .map((h) => ({ text: h.text, status: h.status })),
   };
 }

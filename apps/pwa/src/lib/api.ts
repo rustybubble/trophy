@@ -57,6 +57,35 @@ export interface ClipMeta {
   duration_s?: number;
 }
 
+/** GET /api/scenarios (docs/plan/judging-demo.md: the host picks a recorded scenario). */
+export interface Scenario {
+  id: string;
+  title: string;
+  sport: string;
+  source: "team_recording" | "cc_by_online" | "synthetic";
+  credit?: string | null;
+  annotated: boolean;
+  angles: { label: string; ready?: boolean }[];
+  teams?: { team_id: string; name: string }[];
+  /** every angle's phone-playable file exists (or its source does, so Go live can prepare it) */
+  ready?: boolean;
+}
+
+/** POST /api/games/{g}/scenario (202): the run's public state. wall0_ms and the feed rows follow via Spacetime. */
+export interface LiveScenario {
+  live_id: string;
+  status?: string;
+  wall0_ms?: number;
+  feeds?: Record<string, unknown>[];
+}
+
+export interface NewGame {
+  game_id: string;
+  join_key: string;
+  join_url: string;
+  t0_ms: number;
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -82,6 +111,11 @@ async function req<T>(path: string, init: RequestInit = {}, token?: string): Pro
     throw new ApiError(res.status, detail);
   }
   return (await res.json()) as T;
+}
+
+/** POST /api/games: a new game in the lobby (no auth; the gateway returns the join key for the QR link). */
+export function createGame(sport: string): Promise<NewGame> {
+  return req("/games", { method: "POST", body: JSON.stringify({ sport }) });
 }
 
 const storeKey = (g: string) => `trophy.session.${g}`;
@@ -204,6 +238,29 @@ export class Api {
   }
   clipSrc(c: ClipMeta): string {
     return `${c.url}?token=${encodeURIComponent(this.s.token)}`;
+  }
+  scenarios(): Promise<Scenario[]> {
+    return req("/scenarios", {}, this.s.token);
+  }
+  goLive(scenarioId: string): Promise<LiveScenario> {
+    return req(
+      `/games/${this.s.gameId}/scenario`,
+      { method: "POST", body: JSON.stringify({ scenario_id: scenarioId }) },
+      this.s.token,
+    );
+  }
+  stopScenario(): Promise<unknown> {
+    return req(`/games/${this.s.gameId}/scenario/stop`, { method: "POST", body: "{}" }, this.s.token);
+  }
+  /** A gateway media path (feed video, recorder clip) with the cam token as `?token=` (a <video> can't send headers). */
+  mediaUrl(path: string): string {
+    const sep = path.includes("?") ? "&" : "?";
+    return `${path}${sep}token=${encodeURIComponent(this.s.token)}`;
+  }
+  /** The recorder clip for one angle and a game-time window (gateway replay.py; at most 30 s). */
+  replayClipUrl(camId: string, t0S: number, t1S: number): string {
+    const q = new URLSearchParams({ cam: camId, t0: t0S.toFixed(3), t1: t1S.toFixed(3) });
+    return this.mediaUrl(`/api/replay/${encodeURIComponent(this.s.gameId)}/clip?${q}`);
   }
   wsUrl(path: "frames" | "ctl"): string {
     const proto = location.protocol === "https:" ? "wss" : "ws";
