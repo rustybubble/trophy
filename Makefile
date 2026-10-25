@@ -1,4 +1,4 @@
-.PHONY: dev e2e contracts fixtures check stdb-publish stdb-provision stdb-bindings stdb-seed
+.PHONY: dev e2e e2e-synthetic contracts fixtures check stdb-publish stdb-provision stdb-bindings stdb-seed
 # macOS and most Linux ship only `python3`; Windows has `python` (and a Store stub named python3).
 ifeq ($(OS),Windows_NT)
 PYTHON ?= python
@@ -43,3 +43,5 @@ gateway-check:
 eval-live-check:
 	uv run --frozen --project packages/py-trophy ruff check tools/eval_live.py tests/test_eval_live.py
 	uv run --frozen --project packages/py-trophy python -m pytest -q tests/test_eval_live.py
+e2e-synthetic: ## headless check on the SYNTHETIC fixtures: gateway game -> trophy-play -> calls/score -> Droid house rule -> approve
+	$(PYTHON) scripts/e2e_synthetic.py
