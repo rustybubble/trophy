@@ -563,3 +563,26 @@ def test_approval_loads_the_gated_commit_and_ignores_args_and_unready_rows(tmp_p
     eng.handle_ctl({"cmd": "approve_house_rule", "game_id": GAME, "args": {"rule_version": rv}})
     assert st.tables["house_rule"][rv]["status"] == "approved"
     assert eng.games[GAME].scoring.points_to_win == 7
+
+
+def test_a_failing_moment_write_never_leaves_a_rally_open() -> None:
+    """Review blocker 3: Spacetime refusing upsert_moment / set_best_play must not wedge scoring."""
+
+    class Flaky(MemoryState):
+        def upsert_moment(self, m):  # noqa: ANN001
+            raise RuntimeError("Spacetime HTTP 530")
+
+        def set_best_play(self, *a):  # noqa: ANN002
+            raise RuntimeError("Spacetime HTTP 530")
+
+    st = Flaky()
+    eng = Engine(st, modules_dir=ROOT / "sports", dead_after_point_s=0)
+    eng.create_game(GAME, "table_tennis", t0_ms=0)
+    eng.start_game(GAME, "A")
+    for t, side in [(1.0, "A"), (1.4, "B"), (1.9, "B")]:  # B double bounce -> point A
+        eng.feed(point_call(t, side))
+    assert eng.games[GAME].rally is None
+    for t, side in [(5.0, "A"), (5.4, "B"), (5.9, "B")]:  # the next rally scores too
+        eng.feed(point_call(t, side))
+    assert dict(eng.games[GAME].score().points) == {"A": 2, "B": 0}
+    eng.handle_ctl({"cmd": "end_game", "game_id": GAME, "args": {}})  # best play write fails quietly

@@ -409,7 +409,7 @@ class Engine:
         if m is not None:
             g.moments[m["moment_id"]] = m
             g.call_moment[call["id"]] = m["moment_id"]
-            self.state.upsert_moment(m)
+            self._post_game(self.state.upsert_moment, m)
 
     def _recompute(self, g: GameState) -> GameScore:
         gs = g.score()
@@ -626,7 +626,7 @@ class Engine:
         if mid:
             m = rescore_for_challenge(g.moments[mid], result)
             g.moments[mid] = m
-            self.state.upsert_moment(m)
+            self._post_game(self.state.upsert_moment, m)
         self._recompute(g)
 
     def _ctl_undo_last_call(self, g: GameState, _a: dict[str, Any], _by: str | None) -> None:
@@ -679,7 +679,7 @@ class Engine:
         bp = best_play(list(g.moments.values()))
         if bp is not None:
             bp["is_best_play"] = True
-            self.state.set_best_play(game_id, bp["moment_id"], list(bp.get("reasons", [])))
+            self._post_game(self.state.set_best_play, game_id, bp["moment_id"], list(bp.get("reasons", [])))
 
     def _ctl_submit_house_rule(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         now = self.now_ms()
@@ -774,7 +774,7 @@ class Engine:
             "thumb_t_s": g.last_t_s,
         }
         g.moments[m["moment_id"]] = m
-        self.state.upsert_moment(m)
+        self._post_game(self.state.upsert_moment, m)
 
     def _ctl_reject_house_rule(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         self.state.set_house_rule_status({"rule_version": a["rule_version"], "status": "rejected"})
@@ -816,7 +816,7 @@ class Engine:
             "thumb_t_s": t,
         }
         g.moments[m["moment_id"]] = m
-        self.state.upsert_moment(m)
+        self._post_game(self.state.upsert_moment, m)
 
     def _ctl_clip_that(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         """Trigger-to-play: the moment that ends within [t - 8 s, t + 0.5 s] gets the `clipped` tag."""
@@ -826,7 +826,7 @@ class Engine:
             return
         m = max(cands, key=lambda m: float(m.get("t_end_s", m["t_game_s"])))
         m["tags"] = list(dict.fromkeys(list(m.get("tags", [])) + ["clipped"]))
-        self.state.upsert_moment(m)
+        self._post_game(self.state.upsert_moment, m)
 
     def _ctl_review_call(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         call = next((c for c in g.calls if c["id"] == a["call_id"]), None)
@@ -866,6 +866,14 @@ class Engine:
                     rule_id=call["rule_id"],
                 )
             self._recompute(g)
+
+    def _post_game(self, write, *args: Any) -> None:
+        """Moments and the best play are post-game data: a failed Spacetime write is logged, never raised, so it can't
+        leave a rally open or stop scoring (review blocker 3)."""
+        try:
+            write(*args)
+        except Exception:  # noqa: BLE001 - the live game must go on
+            log.exception("post-game write %s failed", getattr(write, "__name__", write))
 
     # ------------------------------------------------------------ helpers for replay / tests
 
