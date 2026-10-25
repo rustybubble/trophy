@@ -90,3 +90,43 @@ export async function joinDashboard(gameId: string, joinKey: string): Promise<Se
 export function ctl(s: Session, cmd: string, args: Record<string, unknown> = {}): Promise<{ req_id: string }> {
   return req("/ctl", { method: "POST", body: JSON.stringify({ cmd, args }) }, s.token);
 }
+
+// ---- replayed-feed scenarios (D-42, docs/plan/judging-demo.md)
+export interface ScenarioSummary {
+  id: string;
+  title: string;
+  sport: string;
+  source: string;
+  credit: string | null;
+  annotated: boolean;
+  ready: boolean;
+  angles: { label: string; ready: boolean }[];
+}
+
+export function listScenarios(s: Session): Promise<ScenarioSummary[]> {
+  return req("/scenarios", {}, s.token);
+}
+
+export function startScenario(s: Session, scenarioId: string): Promise<{ live_id: string; status: string }> {
+  return req(
+    `/games/${s.gameId}/scenario`,
+    { method: "POST", body: JSON.stringify({ scenario_id: scenarioId }) },
+    s.token,
+  );
+}
+
+export function stopScenario(s: Session): Promise<unknown> {
+  return req(`/games/${s.gameId}/scenario/stop`, { method: "POST" }, s.token);
+}
+
+/** Server clock minus local clock (ms), from the lowest-latency of a few round trips. */
+export async function serverOffsetMs(samples = 5): Promise<number> {
+  let best = { rtt: Infinity, off: 0 };
+  for (let i = 0; i < samples; i++) {
+    const t0 = Date.now();
+    const { t_ms } = await req<{ t_ms: number }>("/time");
+    const t1 = Date.now();
+    if (t1 - t0 < best.rtt) best = { rtt: t1 - t0, off: t_ms - (t0 + t1) / 2 };
+  }
+  return best.off;
+}

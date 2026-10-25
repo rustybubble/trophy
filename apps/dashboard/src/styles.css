@@ -452,3 +452,11 @@ td {
   padding: 2px 6px;
   border-radius: 4px;
 }
+
+/* replayed angles in sync (NetworkPanel, D-42) */
+.network .row.between { justify-content: space-between; align-items: center; }
+.angles { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; margin: 8px 0 12px; }
+.angle { margin: 0; background: #000; border-radius: 8px; overflow: hidden; }
+.angle video { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #000; }
+.angle figcaption { display: flex; justify-content: space-between; padding: 6px 10px; font-size: 13px; }
+.small { font-size: 12px; }

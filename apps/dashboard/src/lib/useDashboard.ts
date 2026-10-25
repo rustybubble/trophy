@@ -7,6 +7,7 @@ import {
   type Call,
   type Camera,
   type Challenge,
+  type Feed,
   type Game,
   type HouseRule,
   type MockScript,
@@ -14,6 +15,7 @@ import {
   type Score,
   type TrackSample,
   type TrophyState,
+  type Viewer,
 } from "@trophy/state-client";
 
 export interface DashboardView {
@@ -31,6 +33,8 @@ export interface DashboardView {
   cameras: Camera[];
   observations: Observation[]; // newest first, capped
   trail: TrackSample[]; // oldest first, capped
+  feeds: Feed[]; // replayed angles (D-42)
+  viewers: Viewer[]; // phones showing them
 }
 
 export type Source =
@@ -61,6 +65,8 @@ const empty: DashboardView = {
   cameras: [],
   observations: [],
   trail: [],
+  feeds: [],
+  viewers: [],
 };
 
 export function useDashboard(source: Source | undefined): DashboardView {
@@ -80,6 +86,8 @@ export function useDashboard(source: Source | undefined): DashboardView {
       state.onGame((game) => set(() => ({ game, synthetic: state.synthetic, label: state.label }))),
       state.onScore((scores) => set(() => ({ scores }))),
       state.onCameras((cameras) => set(() => ({ cameras }))),
+      state.onFeeds((feeds) => set(() => ({ feeds: [...feeds].sort((a, b) => a.label.localeCompare(b.label)) }))),
+      state.onViewers((viewers) => set(() => ({ viewers }))),
       state.onCall((c) => set((p) => ({ calls: upsert(p.calls, c, (x) => x.id).sort(byNewest) }))),
       state.onAiVote((vote) => set((p) => ({ votes: upsert(p.votes, vote, (x) => `${x.call_id}/${x.backend}`) }))),
       state.onChallenge((c) => set((p) => ({ challenges: upsert(p.challenges, c, (x) => x.challenge_id) }))),

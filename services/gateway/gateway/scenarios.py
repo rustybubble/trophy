@@ -253,6 +253,11 @@ def scenario_router(st: Settings) -> APIRouter:
         out = {k: v for k, v in live.items() if k not in ("proc", "scenario")}
         return out | {"scenario_id": live["scenario"]["id"]}
 
+    @router.get("/time")
+    async def server_time() -> dict[str, float]:
+        """The server clock, for viewers that align replayed feeds without a ctl socket (NTP-style)."""
+        return {"t_ms": time.time() * 1000}
+
     @router.get("/scenarios")
     async def list_scenarios(token: str | None = None, authorization: str | None = Header(None)) -> list[dict]:
         claims(token, authorization)
