@@ -55,6 +55,7 @@ from .event import (
 )
 from .frame import FrameMeta
 from .rulepack import RulePack, Team, Landmark, FieldTemplate, Scoring, Ensemble, Rule
+from .scene import SceneDescriptor, SceneCamera, SceneCourt, SceneBall, L1Record, BounceLabel, SampleLabels
 from .sportmodule import SportConfig, SportModuleRow
 from .state import (
     StateTables,
@@ -88,6 +89,7 @@ __all__ = [
     "BallDeadPayload",
     "BallTrackSample",
     "BookmarkArgs",
+    "BounceLabel",
     "BounceMark",
     "BouncePayload",
     "Calibration",
@@ -134,6 +136,7 @@ __all__ = [
     "HouseRuleTest",
     "HouseRuleVersionArgs",
     "ImageSize",
+    "L1Record",
     "Landmark",
     "LineCrossPayload",
     "Moment",
@@ -152,6 +155,11 @@ __all__ = [
     "ReviewCallArgs",
     "Rule",
     "RulePack",
+    "SampleLabels",
+    "SceneBall",
+    "SceneCamera",
+    "SceneCourt",
+    "SceneDescriptor",
     "Score",
     "Scoring",
     "ServeHiddenPayload",

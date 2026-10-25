@@ -1,3 +1,5 @@
+> **Superseded 2026-10-24** by `docs/plan/prompts/agent-3-droid-realtime.md` (D-31). Kept for history.
+
 # Agent 3 prompt, Part 2: the rulebook capability (Apify actor → Moss → `/ask` with citations → `rule_ref`)
 
 *Planned 2026-10-24 against `origin/main` @ `5645e75` and the open Part 1 PR [rustybubble/trophy#6](https://github.com/rustybubble/trophy/pull/6) (`a3/wk-rules-droid`). Part 1 is still being implemented, so §A below says exactly what Part 2 may and may not touch. Paste everything below the line into a fresh chat opened in the Trophy repository.*

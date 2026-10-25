@@ -14,6 +14,7 @@ Read this file for project context, then the plan docs listed below. Explicit us
 - **A challenge** opens an instant replay with an AI second opinion: Claude, Gemini and Bitdeer Model Studio vote in the background and never delay a call.
 - **Ask the ref:** a voice question gets an answer drawn from official rulebooks (an Apify actor → Moss → Claude, with citations).
 - **House rules** can be typed or spoken; a Factory Droid compiles them into the rule pack, tests them, and applies them after the judge approves.
+- **Geometry checks are written by the Droid at calibration time** (D-31, `docs/plan/prompts/agent-3-droid-realtime.md`): the input is a fused 3D map (`field` + `track3d` with σ) from two phones running BlurBall; the Droid specialises a golden check library to the setup in about a minute, the engine runs the checks in milliseconds, Claude phrases, Cartesia speaks. The Droid is never in the per-call hot path.
 
 **Scope** (the user's outline): basketball (2/3-pointers, fouls, outs); ping pong (illegal serves under the official ITTF law, D-31: the toss rises **at least 16 cm** from the open palm to its apex (ITTF Law 2.6.2), projected near vertically (**within 30° of vertical on the way up**, the ITTF review criterion), and is struck as it falls; plus a hidden serve (2.6.5), the ball above the table and behind the end line (2.6.4), and a let when the serve touches the net (2.9.1.1); the edge rule); two-hand touch football; pickleball (kitchen, outs); tennis and badminton (outs); volleyball (hand over the net, outs); the Droid; replay.
 
@@ -86,7 +87,7 @@ Everything runs **natively on the M5 Pro** (D-12) under a `Procfile` (`make dev`
 |---|---|
 | **1: platform, capture, voice and replay** (integration owner) | Contracts, py-trophy, state client, Spacetime module, gateway, recorder, PWA, dashboard, Cartesia client, domain + Caddy, `make dev`/`e2e`, CI, checkpoints, video + README |
 | **2: ball and court** | Calibration, the ping-pong vision module (ball, bounce, edge, serve toss), observations, clip tools, labels, Vultr fallback |
-| **3: rules, AI and Droid** | Engine, rule packs + scoring, `decide()` voters, Factory Droid compiler, Apify actor + Moss + ask the ref, sponsor README sections; basketball (SHOULD) |
+| **3: rules, AI and Droid** | Engine, rule packs + scoring, the 3D check library and `track3d` adapter, Factory Droid `calibrate_checks` runs, Claude second opinion + phrasing, voice transcript; brief: `docs/plan/prompts/agent-3-droid-realtime.md` (D-31) |
 
 ## Gotchas
 These are compatibility notes from research; check whether they still apply.
