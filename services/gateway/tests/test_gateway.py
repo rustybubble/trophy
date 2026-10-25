@@ -47,6 +47,10 @@ class Upstream:
                 json={
                     "answer": f"[test] {body['question']}",
                     "speech": "x",
+                    "kind": "check",
+                    "check": "in_out",
+                    "p": 0.82,
+                    "calibrated": False,
                     "citations": [{"rule_id": "T-1", "title": "t", "url": "https://example.invalid", "quote": "q"}],
                     "moss_ms": 12.0,
                     "latency_ms": 900.0,
@@ -333,6 +337,8 @@ def test_ask_proxies_and_logs(env):
     assert out.status_code == 200 and out.json()["answer"].startswith("[test]")
     logged = [c for c in ctl_cmds(client, r) if c["cmd"] == "ask_logged"][-1]
     assert logged["args"]["moss_ms"] == 12.0 and logged["args"]["citations"][0]["rule_id"] == "T-1"
+    a = logged["args"]
+    assert (a["speech"], a["kind"], a["check"], a["p"], a["calibrated"]) == ("x", "check", "in_out", 0.82, False)
 
 
 def test_healthz(env):

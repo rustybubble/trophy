@@ -528,6 +528,23 @@ function tableTennis(): MockScript {
     moss_ms: 42,
     latency_ms: 2100,
     created_at_ms: T0 + 32000,
+    kind: "rule",
+  });
+  // A judge question answered by a geometry check (D-37); the p is synthetic and uncalibrated.
+  s.add(34000, "ask", {
+    ask_id: ulid("ask"),
+    game_id: G,
+    sport: "table_tennis",
+    question: "Did that last one catch the edge?",
+    answer: "[Synthetic] Yes, the edge, but it's close: BETA.",
+    speech: "[Synthetic] Yes, the edge, but it's close. Beta.",
+    citations: [],
+    latency_ms: 1400,
+    created_at_ms: T0 + 34000,
+    kind: "check",
+    check: "edge",
+    p: 0.71,
+    calibrated: false,
   });
   return s.build();
 }

@@ -614,6 +614,9 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         }
         if isinstance(out.get("moss_ms"), int | float):
             args["moss_ms"] = float(out["moss_ms"])
+        for k in ("speech", "kind", "check", "p", "calibrated"):
+            if out.get(k) is not None:
+                args[k] = out[k]
         try:
             await publish(make_ctl("ask_logged", c.game_id, args, by_cam_id=c.cam_id))
         except ValidationError:

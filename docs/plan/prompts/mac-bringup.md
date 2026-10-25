@@ -27,7 +27,7 @@ You are bringing up Trophy's live backend **natively on this Mac** (Apple M5 Pro
    - **Delete** the three `SPACETIME_*_TOKEN` lines. Step 5 mints fresh ones for this Mac's SpacetimeDB.
    - Keep `TROPHY_DOMAIN=trophy.photo`, `SPACETIME_URI=http://127.0.0.1:3000` and `SPACETIME_MODULE=trophy`.
 5. **SpacetimeDB.** In one terminal: `spacetime start --listen-addr 127.0.0.1:3000 --non-interactive`. In another:
-   - `make stdb-publish` (it runs `spacetime publish -s local -p spacetime --yes=skip-login trophy`);
+   - `make stdb-publish` (it runs `spacetime publish -s local -p spacetime --yes=skip-login --break-clients trophy`; additive schema changes migrate in place, see `spacetime/README.md`);
    - `make stdb-provision` (writes the identity tokens into `.env`);
    - `make stdb-seed` (a labelled-synthetic smoke test of every reducer).
 

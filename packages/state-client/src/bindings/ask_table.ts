@@ -18,4 +18,9 @@ export default __t.row({
   latencyMs: __t.f64().name("latency_ms"),
   createdAtMs: __t.f64().name("created_at_ms"),
   json: __t.string(),
+  speech: __t.string(),
+  kind: __t.string(),
+  check: __t.string(),
+  p: __t.option(__t.f64()),
+  calibrated: __t.option(__t.bool()),
 });

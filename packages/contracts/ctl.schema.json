@@ -299,6 +299,30 @@
         },
         "moss_ms": {
           "type": "number"
+        },
+        "speech": {
+          "type": "string",
+          "description": "Spoken form; phones speak it when the row arrives late (a pending answer)"
+        },
+        "kind": {
+          "enum": ["check", "rule", "score", "explain", "pending", "none"],
+          "description": "How the referee answered"
+        },
+        "check": {
+          "type": "string",
+          "description": "The session check that answered, when kind = check"
+        },
+        "p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "calibrated": {
+          "type": "boolean"
+        },
+        "by_cam_id": {
+          "type": "string",
+          "description": "Who asked; set by the referee on late answers"
         }
       }
     },

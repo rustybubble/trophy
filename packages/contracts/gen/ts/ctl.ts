@@ -192,6 +192,24 @@ export interface AskLoggedArgs {
   citations: AskCitation[];
   latency_ms: number;
   moss_ms?: number;
+  /**
+   * Spoken form; phones speak it when the row arrives late (a pending answer)
+   */
+  speech?: string;
+  /**
+   * How the referee answered
+   */
+  kind?: "check" | "rule" | "score" | "explain" | "pending" | "none";
+  /**
+   * The session check that answered, when kind = check
+   */
+  check?: string;
+  p?: number;
+  calibrated?: boolean;
+  /**
+   * Who asked; set by the referee on late answers
+   */
+  by_cam_id?: string;
 }
 /**
  * Phone -> gateway on /api/ws/ctl. ping {t0} (with the previous completed sample in `prev`), health {...}, onset {t_phone_ms, peak, energy}, call_ack {call_id, t_phone_ms}
