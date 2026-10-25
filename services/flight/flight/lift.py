@@ -64,11 +64,27 @@ def fuse(
         prov = [{"cam_id": ref, "frame": s["frame"], "xy_px": s["xy_px"], "vis": 1}]
         confs = [s["conf"]]
         for c in others:
+            # Interpolate the other camera to this instant. Across a kink (bounce, hit) a linear interpolation
+            # is wrong, so if it fails the reprojection gate, fall back to that camera's nearest sample.
+            options = []
             px = interpolate_px(tracks[c], t, max_gap)
-            if px is None:
+            if px is not None:
+                options.append((px, True))
+            near = min(tracks[c], key=lambda r: abs(r["t_s"] - t), default=None)
+            if near is not None and abs(near["t_s"] - t) <= 0.6 / fps:
+                options.append((np.array(near["xy_px"], float), False))
+            chosen = None
+            for px, interp in options:
+                trial = views + [(cams[c], px)]
+                xyz = triangulate(trial)
+                if np.all(np.isfinite(xyz)) and _reproj_errors(xyz, trial).max() <= MAX_REPROJ_PX:
+                    chosen = (px, interp)
+                    break
+            if chosen is None:
                 continue
+            px, interp = chosen
             views.append((cams[c], px))
-            prov.append({"cam_id": c, "frame": None, "xy_px": px.tolist(), "vis": 1, "interpolated": True})
+            prov.append({"cam_id": c, "frame": None, "xy_px": px.tolist(), "vis": 1, "interpolated": interp})
             confs.append(0.9)
         if len(views) < 2:
             continue

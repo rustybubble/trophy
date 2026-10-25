@@ -144,38 +144,69 @@ def detect_dead(track3d: list[dict], gap_s: float = 1.5, floor_z_m: float = -0.3
     return out
 
 
-def serve_toss(track3d: list[dict], hits: list[dict]) -> dict | None:
-    """Release (ball starts rising from rest), apex, contact (first hit): toss height and angle from vertical."""
-    if not hits:
+def serve_toss(track3d: list[dict], hits: list[dict], g: float = 9.81) -> dict | None:
+    """Toss height and angle from vertical, from the free-flight parabola between release and the first contact.
+
+    release = the ball starts rising from rest (z of the rest samples is the release height; if no rest was
+    observed, the first rising sample is used and `release_observed` is false). apex = the fitted parabola's
+    vertex. contact = the first racket contact. Height is apex z minus release z.
+    """
+    if len(track3d) < 4:
         return None
-    t_hit = hits[0]["t_s"]
+    t_all = np.array([r["t_s"] for r in track3d])
+    z_all = np.array([r["xyz_m"][2] for r in track3d])
+    rising_all = np.where(np.gradient(z_all, t_all) > 0.25)[0]
+    if len(rising_all) == 0:
+        return None
+    t_rise = t_all[int(rising_all[0])]
+    # the contact is the first racket impulse after the toss starts; without one, the toss can't be closed
+    later = [h for h in hits if h["t_s"] > t_rise + 0.05]
+    if not later:
+        return None
+    t_hit = later[0]["t_s"]
     pre = [r for r in track3d if r["t_s"] <= t_hit + 1e-9]
     if len(pre) < 4:
         return None
     t = np.array([r["t_s"] for r in pre])
     P = np.array([r["xyz_m"] for r in pre])
-    vz = np.gradient(P[:, 2], t)
-    rising = np.where(vz > 0.25)[0]
-    if len(rising) == 0:
-        return None
-    i_rel = int(rising[0])
-    i_apex = int(i_rel + np.argmax(P[i_rel:, 2]))
-    rel, apex, con = P[i_rel], P[i_apex], P[-1]
-    height = float(apex[2] - rel[2])
+    i_rel = int(np.argmin(np.abs(t - t_rise)))
+    rest = P[: max(0, i_rel - 1)]
+    release_observed = len(rest) >= 2
+    z_rel = float(np.median(rest[:, 2])) if release_observed else float(P[i_rel, 2])
+    xy_rel = np.median(rest[:, :2], axis=0) if release_observed else P[i_rel, :2]
+    # free flight: from the first rising sample to the sample before the contact
+    fl = slice(i_rel, max(i_rel + 3, len(pre) - 1))
+    tf, zf = t[fl], P[fl, 2]
+    if len(tf) >= 3:
+        a, b, c = np.polyfit(tf - tf[0], zf, 2)
+        if a < 0:
+            t_apex = -b / (2 * a)
+            z_apex = float(c - b * b / (4 * a))
+            t_apex_abs = float(tf[0] + t_apex)
+        else:
+            t_apex_abs, z_apex = float(tf[int(np.argmax(zf))]), float(zf.max())
+    else:
+        t_apex_abs, z_apex = float(tf[int(np.argmax(zf))]), float(zf.max())
+    xy_apex = np.array([np.interp(t_apex_abs, t, P[:, 0]), np.interp(t_apex_abs, t, P[:, 1])])
+    rel = np.array([xy_rel[0], xy_rel[1], z_rel])
+    apex = np.array([xy_apex[0], xy_apex[1], z_apex])
+    con = P[-1]
+    height = float(z_apex - z_rel)
 
-    def angle(a, b):
-        d = b - a
+    def angle(a_, b_):
+        d = b_ - a_
         return float(np.degrees(np.arctan2(np.hypot(d[0], d[1]), abs(d[2])))) if np.linalg.norm(d) > 1e-6 else 0.0
 
     rise, fall = angle(rel, apex), angle(apex, con)
-    sig = float(np.sqrt(pre[i_rel].get("sigma_m", 0.03) ** 2 + pre[i_apex].get("sigma_m", 0.03) ** 2))
+    sig = float(np.sqrt(pre[i_rel].get("sigma_m", 0.03) ** 2 + np.mean([r.get("sigma_m", 0.03) for r in pre[fl]]) ** 2))
     return {
         "type": "serve_toss",
         "release": {"t_s": float(t[i_rel]), "xyz_m": rel.tolist()},
-        "apex": {"t_s": float(t[i_apex]), "xyz_m": apex.tolist()},
+        "apex": {"t_s": t_apex_abs, "xyz_m": apex.tolist()},
         "contact": {"t_s": float(t[-1]), "xyz_m": con.tolist()},
         "height_m": height,
         "sigma_height_m": sig,
+        "release_observed": bool(release_observed),
         "rise_angle_deg": rise,
         "fall_angle_deg": fall,
         "angle_from_vertical_deg": max(rise, fall),

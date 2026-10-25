@@ -26,6 +26,13 @@ jobs:
           uv run --frozen ruff check .
           uv run --frozen ruff format --check .
           uv run --frozen pytest -q
+      - name: flight lint + tests
+        working-directory: services/flight
+        run: |
+          uv sync --frozen
+          uv run --frozen ruff check .
+          uv run --frozen ruff format --check .
+          uv run --frozen pytest -q
       - name: py-trophy imports on 3.12
         working-directory: packages/py-trophy
         run: |

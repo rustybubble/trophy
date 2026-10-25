@@ -16,6 +16,7 @@ class TrackerParams:
     base_gate_px: float = 40.0  # accepted displacement around the prediction at zero speed
     speed_gate_frac: float = 0.6  # plus this fraction of the predicted displacement
     birth_gate_px: float = 160.0  # consecutive-frame displacement allowed while a track is still tentative
+    kink_gate_px: float = 160.0  # reach from the last position when the prediction fails (bounce, racket hit)
     birth_frames: int = 3
     max_miss: int = 6
     velocity_alpha: float = 0.4  # weight of the previous velocity estimate
@@ -87,6 +88,14 @@ class Tracker:
                 d = np.linalg.norm(np.asarray(c["xy_px"]) - pred)
                 if d <= gate and (best_d is None or d < best_d):
                     best, best_d = c, d
+            if best is None:
+                # A kink (bounce or racket hit) breaks the prediction but not the position: accept the nearest
+                # candidate within reach of the LAST position at up to the kink gate.
+                reach = max(self.p.kink_gate_px, self.p.base_gate_px + 1.2 * np.linalg.norm(tr.v) * dt)
+                for c in cands:
+                    d = np.linalg.norm(np.asarray(c["xy_px"]) - tr.xy)
+                    if d <= reach and (best_d is None or d < best_d):
+                        best, best_d = c, d
             if best is not None:
                 emitted = self._update(tr, best, t_s, frame)
                 self.out.append(emitted)

@@ -15,3 +15,9 @@ Tick items and record **measured** numbers (not estimates). The gates are in `do
 ## Measured accuracy (from labelled evals only)
 | Sport / call | n | correct | 95% CI | source clips |
 |---|---|---|---|---|
+
+## Flight MVP: clips → field-frame 3D map (branch `mvp/tt-cloud`, 2026-10-24)
+**All numbers SYNTHETIC** (`services/flight/flight/synth.py`; no real footage was on this Mac). Method: `services/flight/README.md`.
+- Two rendered 1280×720 30 fps videos, classical detector, CPU: track3d error vs truth **median 2.6 cm, p95 5.2 cm, 100 % within 3σ**; bounces **7/7 matched, xy median 3.0 cm, max 4.6 cm**; contacts 6/7; serve height 13 cm vs 20 cm true (release unobserved: a resting ball is invisible to background subtraction). 175 frames × 2 in 3.0 s wall.
+- From BlurBall-like caches (1.5 px noise, 8 % misses, 5 % false blobs): track3d **median 1.4 cm, p95 3.0 cm**; 10 seeds / 66 bounces: xy **median 1.8 cm, p90 6.3 cm, max 23 cm**; timing median 3.8 ms; 91 % within 3σ.
+- Not measured: anything on real video. The first real measurement needs two propped phones (white ball) or the tracker branch's cached BlurBall JSON copied to this machine.
