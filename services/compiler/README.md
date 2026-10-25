@@ -153,6 +153,8 @@ house rules the Spacetime `house_rule` row via `update_house_rule_progress`, whi
 | House rule "a serve that clips the net and lands in is a let"       | 30.6 s           | 1        | 19/19 in 0.5 s                                                    |
 | Derive `sports/pickleball/` from table tennis + the synthetic scene | 69.2 s           | 1        | 19/19 in 0.5 s                                                    |
 | calibrate_checks on `evals/fixtures/synthetic/table_tennis_3d`      | not yet run live | —        | 25 checks; ~1.9 s per gate run with a scripted agent (2026-10-24) |
+| compile_rules: the whole table-tennis pack from `laws.md` (2026-10-24, effort low, 600 s cap) | 531 s | 1 | 34/34 in 0.8 s (synthetic + the judge-labelled recording); a first run at effort medium read its inputs for 40 s and then produced nothing until its 480 s cap |
+| correction: "9.2-48.1 s was ONE rally, won by B" on the live stream (2026-10-24, effort low, 300 s cap) | timed out | 1 | partial fix (`ev.side_p > 0.95` on double_bounce) after a 210 s silent gap; the cap is now 600 s and the label carries per-call evidence digests |
 
 ## Approval
 

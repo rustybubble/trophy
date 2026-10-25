@@ -16,7 +16,8 @@ def test_golden_module_loads() -> None:
     mod = load_module(TT)
     assert mod.sport == "table_tennis"
     assert mod.config["court"]["length_m"] == 2.74
-    assert any(r["id"] == "edge_ball" for r in mod.rules["rules"])
+    # the shipped pack is Droid-written from the laws (D-42): every rule cites the clause it implements
+    assert mod.rules["rules"] and all(r.get("rule_ref") for r in mod.rules["rules"])
 
 
 @pytest.mark.parametrize(

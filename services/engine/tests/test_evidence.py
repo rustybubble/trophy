@@ -7,20 +7,26 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from _handwritten import handwritten_modules_dir
+
 from trophy_engine.engine import Engine
 from trophy_engine.rally import RALLY_FIELDS, RallyState
 from trophy_engine.replay_test.checks import run_replay
 from trophy_engine.state import MemoryState
 from trophy_engine.vocabulary import render
 
+MODULES = handwritten_modules_dir()
+TT = MODULES / "table_tennis"  # the hand-written pack, frozen as a fixture
+
 ROOT = Path(__file__).resolve().parents[3]
-TT = ROOT / "sports" / "table_tennis"
+SHIPPED = ROOT / "sports" / "table_tennis"  # Droid-written (D-42)
+SYNTH = ROOT / "evals" / "fixtures" / "synthetic" / "table_tennis"
 RECORDED = ROOT / "evals" / "fixtures" / "recorded" / "table_tennis"
 GAME = "g_6ghx0t5z"
 
 
 def _engine(**kw) -> Engine:
-    eng = Engine(MemoryState(), modules_dir=ROOT / "sports", dead_after_point_s=3.0, server_from_first_hit=True, **kw)
+    eng = Engine(MemoryState(), modules_dir=MODULES, dead_after_point_s=3.0, server_from_first_hit=True, **kw)
     eng.create_game(GAME, "table_tennis", t0_ms=0)
     eng.start_game(GAME, "A")
     return eng
@@ -46,7 +52,7 @@ def test_rally_fields_documented_and_timed() -> None:
 
 
 def test_vocabulary_renders_from_code() -> None:
-    md = render(TT)
+    md = render(SHIPPED)
     for key in RALLY_FIELDS:
         assert f"`rally.{key}`" in md
     assert "`ev.side_p`" in md and "`params.evidence_min_cams`" in md and "ev.type == 'bounce'" in md
@@ -122,3 +128,17 @@ def test_gate_fails_the_handwritten_pack_on_the_recorded_fixtures() -> None:
     assert rows[f"{GAME}_rally1:calls:winner"]["pass"] is False
     assert rows[f"{GAME}_rally1:ball_dead:present"]["pass"] is True  # the tracked-ball dead-ball logic on real pixels
     assert "rules:coverage" in rows and not res.passed
+
+
+def test_shipped_droid_pack_scores_the_recorded_rally_as_one_point_to_b() -> None:
+    """The acceptance test of D-42: the Droid-written pack passes the gate on the synthetic rallies and on the recorded
+    real rally, and the recorded rally is exactly one point to B."""
+    head = (SHIPPED / "rules.yaml").read_text().splitlines()[0]
+    assert "FACTORY DROID" in head
+    rec = run_replay(SHIPPED, RECORDED)
+    assert rec.passed, [t for t in rec.tests if not t["pass"]]
+    rows = {t["name"]: t for t in rec.tests}
+    assert rows[f"{GAME}_rally1_live:calls:winner"]["after"].startswith("B (1 point calls")
+    assert rows[f"{GAME}_rally1:calls:winner"]["after"].startswith("B (1 point calls")
+    syn = run_replay(SHIPPED, SYNTH)
+    assert syn.passed, [t for t in syn.tests if not t["pass"]]
