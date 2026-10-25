@@ -2,7 +2,7 @@
 The judges' screen at `/`:
 - create a game + QR;
 - the scoreboard and call feed with tiers and replays;
-- the **AI votes panel** (Claude, Gemini, Bitdeer; labelled uncalibrated);
+- the **AI votes panel** (Claude next to the geometry; labelled uncalibrated);
 - the **Factory Droid panel** (plan, steps, diff, tests, Approve);
 - the **ask-the-ref transcript** with citations;
 - the **live world-state view** (Spacetime observations + ball trail, no video);

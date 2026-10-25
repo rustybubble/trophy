@@ -23,7 +23,7 @@ Every call is **spoken**. Players can **challenge** a call and get an **instant 
 |---|---|---|
 | **MUST (the demo)** | **Live ping pong on one phone:** rally scoring, the **edge rule** (top edge good / side fault, with probability), **spoken calls** (Cartesia), live score on every phone and the dashboard (Spacetime) | Overall, Most Technically Complex, Cartesia, Spacetime, Meta |
 | **MUST** | **Illegal-serve rules (ping pong):** official ITTF law (D-31): the toss must rise **at least 16 cm (0.16 m)** from the open palm to its apex, **within 30° of vertical on the way up**, and be struck as it falls; plus hidden serves (2.6.5), position (2.6.4) and net lets (2.9.1.1). Measured in metres and degrees with σ, called AUTO when the geometry is clear and BETA when it's close, PLAYERS DECIDE when evidence is missing, and shown on the replay as a toss trace with the 16 cm line and a 30° cone | Overall, Most Technically Complex, Cartesia (spoken "Fault: toss too low") |
-| **MUST** | **Challenge → instant replay** (0.25× slow-mo, ball trail, bounce mark + ellipse) → **AI second opinion**: Claude, Gemini and Bitdeer Model Studio each vote on the crops, and the votes are shown → the judge upholds or overturns. **The votes never delay a live call:** they start in the background as soon as a close (BETA) call is spoken, so they're usually ready by the time someone taps Challenge (§2.1) | Anthropic, MLH Gemini, Bitdeer, People-First |
+| **MUST** | **Challenge → instant replay** (0.25× slow-mo, ball trail, bounce mark + ellipse) → **AI second opinion**: Claude votes on the crops next to the geometry, and the vote is shown → the judge upholds or overturns. **The vote never delays a live call:** it starts in the background as soon as a close (BETA) call is spoken, so it's usually ready by the time someone taps Challenge (§2.1) | Anthropic, People-First |
 | **MUST** | **"Add your own rule" with a Factory Droid:** the judge types or says "first to 7, win by 1" or "a serve that clips the net is a let". A Droid in a sandbox edits the pack YAML, runs replay tests, and streams its plan, diff and tests to the dashboard. The judge approves, and it is enforced on the next point | **Factory ($2000)**, Anthropic (Claude-only fallback) |
 | **MUST** | **"Trophy, what's the rule on…?"** Cartesia Ink speech-to-text → the referee service (D-37): judge phrases run a geometry check over the ball track; rules questions are answered by Claude grounded only in the sport's `rules.yaml` + approved house rules → spoken by Cartesia | Cartesia, Anthropic |
 | **MUST** | A real domain from the MLH partner (GoDaddy Registry or .Tech) on the HTTPS origin for the phones | MLH domain prizes |
@@ -46,12 +46,10 @@ Every call is **spoken**. Players can **challenge** a call and get an **instant 
 | **Spacetime** | Spacetime is **the** shared world state: vision observations from every camera, live game state, the challenge flow and AI votes, the Droid trigger, ask-the-ref transcripts; devices *and* agents coordinate through it (their "AI agent coordination" example) | A1 (module), A2/A3 (writers) |
 | **Anthropic** | A named community, a real problem, it works, **thoughtful Claude use, and where it could go wrong** (README "Limits and failure modes": Claude never makes a line call alone; it can be wrong on blurry crops; answers come only from cited rules) | A3 |
 | **Meta: Bringing People Closer Together** | Strengthens human connection; AI essential; original; a strong working demo | Writeup (all) |
-| **Bitdeer AI Model Studio** | A working project; **clearly show how Model Studio is used** (it's one of the three challenge voters, with its vote shown on screen); a brief description + demo | A3 |
-| **MLH Gemini API / Gen AI** | Gemini is a challenge voter, and is optionally given the 2–3 s clip | A3 |
 | **MLH GoDaddy Registry / .Tech domain** | Register the domain we serve the phones from | A1 (with the user) |
 | **Cal Hacks overall / Most Technically Complex / People-First / Hacker's Choice; MLH Commit Fellowship** | Opt in at submission | User |
 
-**Dropped by the user (2026-10-24):** Moss and Apify (ask the ref is grounded in the rule pack instead, D-36/D-37) and Vultr (the backend runs on the Mac, D-30). **Not sponsors, so dropped:** SubQ Snap (→ Claude, Gemini and Bitdeer voters), Firecrawl (→ Apify), Deepgram (→ Cartesia Ink STT). Langfuse, AgentMail, Greptile and Remotion are out for the weekend. **Convex** is not used: Spacetime is our backend, and running both would weaken each.
+**Dropped by the user (2026-10-24):** Moss and Apify (ask the ref is grounded in the rule pack instead, D-36/D-37), Vultr (the backend runs on the Mac, D-30), and Gemini and Bitdeer (Claude is the only model voter, D-41). **Not sponsors, so dropped:** SubQ Snap (→ the Claude voter), Firecrawl (→ Apify), Deepgram (→ Cartesia Ink STT). Langfuse, AgentMail, Greptile and Remotion are out for the weekend. **Convex** is not used: Spacetime is our backend, and running both would weaken each.
 
 ---
 
@@ -66,7 +64,7 @@ vision module ──observations (metadata only: what happened, where, when, how
                                      └─ same events on Redis ev:* (the engine's low-latency hot path)
 Spacetime world state ──subscriptions──▶ every phone, the dashboard, and every agent:
    engine (rule packs → calls, scores) · compiler (Factory Droid writes rules over the observation vocabulary) ·
-   LLM judge (Claude ‖ Gemini ‖ Bitdeer read observation rows + crops on close calls) · referee (checks + Claude phrasing + Cartesia: ask the ref)
+   LLM judge (Claude reads observation rows + crops on close calls) · referee (checks + Claude phrasing + Cartesia: ask the ref)
 ```
 This follows the team's Spacetime direction (D-21):
 - **No video frames in Spacetime.** Frames stay on the Redis frame bus and in the local recorder (for replay and crops).
@@ -74,7 +72,7 @@ This follows the team's Spacetime direction (D-21):
 - **It scales by adding rows, not schemas.** A second phone just adds observations tagged with its `cam_id`, and the engine fuses them. A new sport needs a vision module that emits the same vocabulary, plus a rule pack.
 - **"An LLM judge that adapts to any sport" works at two speeds** (see §2.1):
   - **Live calls stay deterministic and fast.** The engine applies the rule pack to observations in milliseconds.
-  - **The LLM side** (Claude, with Gemini and Bitdeer) does what needs judgment, reading observation rows as its context: it writes rules for a new sport or house rule (the Droid, grounded in the sport's rule pack), gives a second opinion on close calls, and explains verdicts.
+  - **The LLM side** (Claude) does what needs judgment, reading observation rows as its context: it writes rules for a new sport or house rule (the Droid, grounded in the sport's rule pack), gives a second opinion on close calls, and explains verdicts.
   - So the LLM adapts Trophy to a sport *once*, not on every bounce.
 - **Still open: the vision module and the exact metadata** (the "tricky part").
   - For the weekend, the module is Agent 2's ping-pong flight service, and the metadata is the interfaces-v1 §7 vocabulary.
@@ -85,20 +83,20 @@ Other runtime notes:
 - **Spacetime writers** are backend services only: the **vision module** (observations and track samples only), the **engine** (game state, calls, votes, ask log) and the **compiler** (house-rule progress). Clients read through subscriptions and write through the gateway.
 
 ### 2.1 Latency: the AI votes never sit on the live path
-Asking three hosted models does cost time: roughly 1–4 s each with images (estimated; measure it in P0). So:
+Asking a hosted model does cost time: roughly 1–4 s with images (estimated; measure it in P0). So:
 1. **Live calls are geometry plus rules only.** The bounce → spoken call target is ≤ 1.5 s, and no model is called on this path.
-2. **The votes are speculative and run in the background.** When the engine posts a close (BETA) call, it starts all three voters **in parallel** without waiting. Total time is the *slowest* voter (capped by a 4 s timeout), not the sum. Results land in `ai_vote` rows, usually before anyone taps Challenge.
+2. **The votes are speculative and run in the background.** When the engine posts a close (BETA) call, it starts the Claude voter without waiting, capped by a 4 s timeout. Results land in `ai_vote` rows, usually before anyone taps Challenge.
 3. **A challenge never waits on the votes.** The replay starts immediately (≤ 4 s). Votes that are already in are shown; any that are still pending appear as they arrive. A voter that times out shows "no answer", and the judge decides anyway.
 4. **The AI votes only when it's worth it:** close calls (0.35 < p < 0.75) or challenged calls. Clear calls never trigger it. This also keeps API spend down.
-5. **If a voter is consistently slow** (P0 measurement), drop it to a faster model (for example Claude Haiku or a smaller Bitdeer model) or keep only two voters. Bitdeer must stay in, because it's a prize track.
+5. **If the voter is consistently slow** (measure it), drop it to a faster model (for example Claude Haiku).
 
 ## 3. Phases (relative to DEADLINE; times are budgets, not promises)
 
 | Phase | Window | Exit check |
 |---|---|---|
-| **P0: contracts + spikes** | First ~3 h | **C0** contracts merged. Spikes report: tracker FPS on the Mac (classical vs. BlurBall MPS); Spacetime reducer → subscription latency; a Droid SDK hello-world in the sandbox; one Claude, one Gemini and one Bitdeer vision call; a Cartesia TTS line + an Ink STT transcript from the phone; the domain registered |
+| **P0: contracts + spikes** | First ~3 h | **C0** contracts merged. Spikes report: tracker FPS on the Mac (classical vs. BlurBall MPS); Spacetime reducer → subscription latency; a Droid SDK hello-world in the sandbox; one Claude vision call; a Cartesia TTS line + an Ink STT transcript from the phone; the domain registered |
 | **P1: clip vertical slice** | Next ~6 h | **C2** `make e2e`: the CC BY ping-pong segment → flight → engine → Spacetime → PWA shows and speaks point calls. Replay of a call works. `/ask` returns a grounded answer |
-| **P2: live + features** | Next ~6 h | **C3**: live phone ping pong with scoring + edge calls + **illegal-serve calls** + Cartesia voice; challenge → replay → three AI votes → uphold/overturn; the Droid adds a rule end to end; ask-the-ref by voice |
+| **P2: live + features** | Next ~6 h | **C3**: live phone ping pong with scoring + edge calls + **illegal-serve calls** + Cartesia voice; challenge → replay → Claude's vote → uphold/overturn; the Droid adds a rule end to end; ask-the-ref by voice |
 | **P2b: post-game core** | After C3, before freeze | **C3b:** recap + moments + highlights/★ Play of the game + condensed + replay + stats + moment search work on the live ping-pong game **and** the basketball clip (if basketball shipped) |
 | **P3: freeze + submit** | Last ~4 h | **C4**: feature freeze; three full rehearsals; the **2-minute demo-first video** (Cartesia format: flow first); READMEs (root + Factory + Cartesia sections, plus limits); the Devpost writeup listing each track + evidence; measured numbers in `docs/progress.md` |
 
@@ -109,7 +107,7 @@ SHOULD items (basketball, the clip backup) happen only once their owner's MUST i
 | | **Agent 1: platform, capture, voice and replay** (integration owner) | **Agent 2: ball and court** | **Agent 3: rules, AI and Droid** |
 |---|---|---|---|
 | Dirs | `apps/*`, `services/gateway`, `services/recorder`, `spacetime/`, `packages/*`, `infra/`, root build/CI | `services/flight`, `services/courtcam-adapter`, `tools/`, `evals/` (ball) | `services/engine` (incl. `decide`), `services/compiler`, `services/referee` (ask the ref), `sports/` (sport modules, rules, checks), basketball people stack (SHOULD) |
-| MUST | C0 contracts + codegen + py-trophy (incl. the `trophy.world` observation writer) + state client; Spacetime module (incl. `observation`/`track_sample`); gateway (frames, clock, ctl, calibrate proxy, **Cartesia token**, `/ask` proxy, replay); PWA (join, 720p capture, onsets, calibration taps, call banner + **Cartesia TTS**, **Ink STT push-to-talk** for "challenge"/"ask"/"add rule", replay viewer, challenge UI); dashboard (score, calls, **Droid panel**, **AI votes panel**, **ask-the-ref transcript with citations**); the domain + Caddy; `make dev`/`e2e`; **integration, checkpoints, the video and README assembly** | Calibration (`/calibrate`, table template); tracker spike (classical vs. BlurBall MPS → OPEN-3); flight service: bounces fused with phone onsets, **edge vs. side probabilities**, **`serve_toss` (release → apex → hit: height in m, angle from vertical, σ)**, net/dead ball, `trk:ball`; **observations + track samples written to Spacetime**; CC BY clip prep (after the user's OK) + labels; staged edge hits | Engine + table-tennis pack (**incl. the 6 in / 30° serve rules**) + scoring + gate + challenge flow; **`decide()`: Claude ‖ Gemini ‖ Bitdeer voters on crops** + geometry; **Droid compiler** + Claude-only fallback; **the referee service** (`/ask`: checks + Claude grounded in `rules.yaml`); README sections for the Factory, Anthropic, Bitdeer and Gemini tracks |
+| MUST | C0 contracts + codegen + py-trophy (incl. the `trophy.world` observation writer) + state client; Spacetime module (incl. `observation`/`track_sample`); gateway (frames, clock, ctl, calibrate proxy, **Cartesia token**, `/ask` proxy, replay); PWA (join, 720p capture, onsets, calibration taps, call banner + **Cartesia TTS**, **Ink STT push-to-talk** for "challenge"/"ask"/"add rule", replay viewer, challenge UI); dashboard (score, calls, **Droid panel**, **AI votes panel**, **ask-the-ref transcript with citations**); the domain + Caddy; `make dev`/`e2e`; **integration, checkpoints, the video and README assembly** | Calibration (`/calibrate`, table template); tracker spike (classical vs. BlurBall MPS → OPEN-3); flight service: bounces fused with phone onsets, **edge vs. side probabilities**, **`serve_toss` (release → apex → hit: height in m, angle from vertical, σ)**, net/dead ball, `trk:ball`; **observations + track samples written to Spacetime**; CC BY clip prep (after the user's OK) + labels; staged edge hits | Engine + table-tennis pack (**incl. the 6 in / 30° serve rules**) + scoring + gate + challenge flow; **`decide()`: the Claude voter on crops** + geometry; **Droid compiler** + Claude-only fallback; **the referee service** (`/ask`: checks + Claude grounded in `rules.yaml`); README sections for the Factory and Anthropic tracks |
 | SHOULD / STRETCH | **Trophy Watch** (`apps/watch`): recap, seek bar + sprite, moments, highlights, condensed, replay, stats, search UI; then broadcast mode, watch party, clip + share, follow a player, reconstructed views; recorder HLS + sprite + watch API. Also the clip-backup demo mode and the sport wall | Pickleball outs on the CC BY clip | **Post-game data:** live `moment` rows + highlight scoring + ★ best play, moment search, grounded coach tips + commentary lines, `review_call`; player tracks for follow-cam. Basketball 2/3 on the CC BY clip (people stack + courtcam make/miss); pickleball kitchen |
 
 **Dependencies:**
@@ -126,7 +124,7 @@ SHOULD items (basketball, the clip backup) happen only once their owner's MUST i
 | **C0** | Schemas + codegen + py-trophy + `MockState` (labelled synthetic) + CI merged; A2 and A3 acknowledge |
 | **C1** | A phone streams 720p at ≥ 25 fps via the domain origin; onsets arrive; a Cartesia line plays on the phone |
 | **C2** | `make e2e` passes on the CC BY ping-pong segment; the replay API works; `/ask` returns a cited answer |
-| **C3** | Live: ≥ 20 labelled rallies scored with the accuracy reported; ≥ 10 staged edge hits with the accuracy reported; **≥ 12 staged serves** (4 legal, 4 tossed < 6 in, 4 tossed > 30° off vertical) with the accuracy reported; call spoken ≤ 1.5 s after the rally ends (p50); challenge → replay ≤ 4 s; three votes shown; the Droid rule applied end to end in < 90 s; voice ask → spoken cited answer starts ≤ 3 s after the question ends |
+| **C3** | Live: ≥ 20 labelled rallies scored with the accuracy reported; ≥ 10 staged edge hits with the accuracy reported; **≥ 12 staged serves** (4 legal, 4 tossed < 6 in, 4 tossed > 30° off vertical) with the accuracy reported; call spoken ≤ 1.5 s after the rally ends (p50); challenge → replay ≤ 4 s; Claude's vote shown; the Droid rule applied end to end in < 90 s; voice ask → spoken cited answer starts ≤ 3 s after the question ends |
 | **C3b** | Trophy Watch core on the live ping-pong game (and the basketball clip if shipped): recap, moments, highlights ending on ★ Play of the game with reasons, condensed, replay with overlays, stats, moment search (5 prepared queries per game) |
 | **C4** | Frozen, rehearsed 3×, video + READMEs + writeup done; numbers measured or marked "not measured" |
 

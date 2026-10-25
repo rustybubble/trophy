@@ -1,7 +1,7 @@
 import type { AiVote, Call, Commentary, Moment, Observation } from "@trophy/state-client";
 
 const TIER = { AUTO: "AUTO", BETA: "BETA", PLAYERS: "PLAYERS DECIDE" } as const;
-const BACKENDS: AiVote["backend"][] = ["geometry", "claude", "gemini", "bitdeer"];
+const BACKENDS: AiVote["backend"][] = ["geometry", "claude"];
 
 /** The call behind the moment being replayed: tier, p, why, the AI second opinion (uncalibrated), the serve-toss
  *  trace for serve calls, and any commentary lines. */

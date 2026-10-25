@@ -43,7 +43,7 @@ You are **Agent 1 of 3** on Trophy (Cal Hacks 13.0), and the **integration owner
 6. **C3 (live on the Mac, run by Agent 2, with Agent 3)**. You define the measurements and collect them in `docs/progress.md`:
    - the call spoken ≤ 1.5 s after the rally ends (p50);
    - challenge → replay ≤ 4 s;
-   - three votes shown and never delaying a call;
+   - Claude's vote shown and never delaying a call;
    - the Droid rule end to end < 90 s;
    - voice ask → answer starts ≤ 3 s.
 
@@ -53,7 +53,7 @@ You are **Agent 1 of 3** on Trophy (Cal Hacks 13.0), and the **integration owner
    - feature freeze;
    - three full rehearsals;
    - the **2-minute demo-first video** (Cartesia's format: one complete flow first, then the problem and how it's built);
-   - the root `README.md`: setup, plus the Cartesia (features used + known limits), Spacetime and Meta sections, and Agent 3's Factory/Anthropic/Bitdeer/Gemini sections;
+   - the root `README.md`: setup, plus the Cartesia (features used + known limits), Spacetime and Meta sections, and Agent 3's Factory and Anthropic sections;
    - the Devpost writeup listing each track with its evidence, and real player quotes (OPEN-8; never invented).
    - Ask the user whether `trophy.photo` (Porkbun) qualifies for the MLH GoDaddy Registry/.Tech prize. Registering another domain is the user's purchase.
 9. **Repo hygiene:** keep `CLAUDE.md` → "Where things stand" current as PRs land. If the stale remote branches still exist, give the user the cleanup command from the cleanup PR. Delete merged branches after each merge.
