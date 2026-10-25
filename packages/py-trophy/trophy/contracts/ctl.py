@@ -147,7 +147,7 @@ class HouseRuleVersionArgs(BaseModel):
 
 class CheckResult(BaseModel):
     """
-    What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-31 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.
+    What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-36 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.
     """
 
     model_config = ConfigDict(
@@ -173,7 +173,7 @@ class CheckResult(BaseModel):
 
 class RunCheckArgs(BaseModel):
     """
-    Referee -> engine: run one session check and XADD a CheckResult to the Redis stream `reply_to` (D-31 §5).
+    Referee -> engine: run one session check and XADD a CheckResult to the Redis stream `reply_to` (D-36 §5).
     """
 
     model_config = ConfigDict(

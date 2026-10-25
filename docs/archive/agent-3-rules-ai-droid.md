@@ -1,4 +1,4 @@
-> **Superseded 2026-10-24** by `docs/plan/prompts/agent-3-droid-realtime.md` (D-31). Kept for history.
+> **Superseded 2026-10-24** by `docs/plan/prompts/agent-3-droid-realtime.md` (D-36). Kept for history.
 
 # Agent 3 prompt: rules, AI and Droid
 

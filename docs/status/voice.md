@@ -3,7 +3,7 @@
 *Branch `voice/referee` in `../trophy-voice`, based on `a3/droid-realtime` @ `8c6711d`. Built 2026-10-24 alongside the
 3D-map agent and the Droid agent, touching none of their files; merge all three together at the end.*
 
-## What's built (D-32, interfaces-v1 §20)
+## What's built (D-37, interfaces-v1 §20)
 | Piece | Where | Checked by |
 |---|---|---|
 | `services/referee`: router (regex → fast Claude), Redis `run_check`/`request_check` client with reply streams, Claude phrasing with a numbers guard and labelled template fallback, rule-pack Q&A grounded in `rules.yaml` + house rules, score/explain from the phone's context, the pending ("give me a moment") path that logs the late answer with `ask_logged` and speaks it, JSONL transcript log | `services/referee/referee/{router,checks,phrase,rules_qa,service}.py` | 37 pytest tests with a fake Claude, a fake engine on fakeredis and a fake Cartesia websocket server |

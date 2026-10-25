@@ -1,6 +1,6 @@
 # Agent 3 brief: the Factory Droid writes this calibration's geometry checks; the engine runs them live
 
-*Status: adopted 2026-10-24 (D-31). Replaces `agent-3-rules-ai-droid.md` and `agent-3-part-2-rulebook.md` (now in `docs/archive/`). PRs #6 and #8 are closed; their branches `a3/wk-rules-droid` and `claude/distracted-davinci-69e418` are kept for salvage (map in §8). Work on `a3/droid-realtime`.*
+*Status: adopted 2026-10-24 (D-36). Replaces `agent-3-rules-ai-droid.md` and `agent-3-part-2-rulebook.md` (now in `docs/archive/`). PRs #6 and #8 are closed; their branches `a3/wk-rules-droid` and `claude/distracted-davinci-69e418` are kept for salvage (map in §8). Work on `a3/droid-realtime`.*
 
 ## 1. The idea in one paragraph
 

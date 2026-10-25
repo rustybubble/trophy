@@ -415,9 +415,9 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 
 ---
 
-## 20. The referee voice service (`services/referee`, :8100; D-32)
+## 20. The referee voice service (`services/referee`, :8100; D-37)
 
-*Added 2026-10-24 on branch `voice/referee`. Replaces §17's `rules` service on :8100 (D-31 dropped Moss and Apify): the gateway's `POST /api/ask` proxy is unchanged, the target is now the referee.*
+*Added 2026-10-24 on branch `voice/referee`. Replaces §17's `rules` service on :8100 (D-36 dropped Moss and Apify): the gateway's `POST /api/ask` proxy is unchanged, the target is now the referee.*
 
 - **`POST /api/ask`** (gateway, cam token) body is `{question, sport?, context?}`. The gateway adds `game_id` and `by_cam_id` and forwards to **`POST :8100/ask`**. `context` is the phone's view of the game (`t_game_s`, `rally_no`, `server_team_id`, `teams`, `scores`, the three newest `last_calls` with `id, kind, outcome, text, why, p, tier, t_game_s, rally_no, status, rule_id`, approved `house_rules`), built by `apps/pwa/src/lib/askContext.ts`. The referee resolves "that" to the newest call's `t_game_s`, answers the score from it, and grounds rule answers in the approved house rules, with no Spacetime read of its own.
 - **Response:** `{kind, answer, speech, citations, latency_ms, …}` with `kind ∈ check | rule | score | explain | pending | none`. For `check`: `check, verdict, p, calibrated, tier, evidence, inputs, check_ms`; `citations` carries one row `{rule_id: "check:<name>", title: "<name>(args)", quote: "<margin, σ, p, uncalibrated>"}` so the dashboard's transcript shows the evidence in its existing columns. `phrased_by ∈ claude | template` says who wrote the line (a Claude line that says a number it was not given is replaced by the template). `route_source ∈ regex | claude`.

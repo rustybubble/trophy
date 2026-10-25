@@ -19,6 +19,7 @@ replay-test = "trophy_engine.replay_test.cli:main"
 trophy-synth = "trophy_engine.synth.generate:main"
 trophy-engine = "trophy_engine.loop:main"
 trophy-ctl = "trophy_engine.ctl_cli:main"
+trophy-play = "trophy_engine.play:main"
 
 [dependency-groups]
 dev = [

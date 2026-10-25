@@ -1,7 +1,7 @@
 # Referee voice service (`services/referee`, py3.11, :8100)
 
 **The referee that talks to the players.** Calls are spoken on every phone the moment the engine posts them (the PWA
-speaks `call.speech` through Cartesia). This service is the *conversation* on top of that, D-31 §5 stage 3:
+speaks `call.speech` through Cartesia). This service is the *conversation* on top of that, D-36 §5 stage 3:
 
 ```
 judge holds the mic ─Ink-2 STT (phone)─▶ gateway POST /api/ask {question, context} ─▶ referee POST /ask

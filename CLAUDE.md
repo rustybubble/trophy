@@ -12,9 +12,9 @@ Read this file for project context, then the plan docs listed below. Explicit us
   - judgment fouls are flagged as `foul_flag`, capped at BETA (D-17).
 - **Every call is spoken** (Cartesia).
 - **A challenge** opens an instant replay with an AI second opinion: Claude, Gemini and Bitdeer Model Studio vote in the background and never delay a call.
-- **Ask the ref:** a voice question gets an answer drawn from official rulebooks (an Apify actor → Moss → Claude, with citations).
+- **Ask the ref:** a voice question goes to the referee service (`services/referee`, D-37): judge phrases route to a geometry check over the 3D track, rules questions are answered by Claude grounded only in the sport's `rules.yaml` plus approved house rules, and the answer is spoken (Cartesia). Moss and Apify were dropped (D-36).
 - **House rules** can be typed or spoken; a Factory Droid compiles them into the rule pack, tests them, and applies them after the judge approves.
-- **Geometry checks are written by the Droid at calibration time** (D-31, `docs/plan/prompts/agent-3-droid-realtime.md`): the input is a fused 3D map (`field` + `track3d` with σ) from two phones running BlurBall; the Droid specialises a golden check library to the setup in about a minute, the engine runs the checks in milliseconds, Claude phrases, Cartesia speaks. The Droid is never in the per-call hot path.
+- **Geometry checks are written by the Droid at calibration time** (D-36, `docs/plan/prompts/agent-3-droid-realtime.md`): the input is a fused 3D map (`field` + `track3d` with σ) from two phones running BlurBall; the Droid specialises a golden check library to the setup in about a minute, the engine runs the checks in milliseconds, Claude phrases, Cartesia speaks. The Droid is never in the per-call hot path.
 
 **Scope** (the user's outline): basketball (2/3-pointers, fouls, outs); ping pong (illegal serves under the official ITTF law, D-31: the toss rises **at least 16 cm** from the open palm to its apex (ITTF Law 2.6.2), projected near vertically (**within 30° of vertical on the way up**, the ITTF review criterion), and is struck as it falls; plus a hidden serve (2.6.5), the ball above the table and behind the end line (2.6.4), and a let when the serve touches the net (2.9.1.1); the edge rule); two-hand touch football; pickleball (kitchen, outs); tennis and badminton (outs); volleyball (hand over the net, outs); the Droid; replay.
 
@@ -58,7 +58,7 @@ Phones (PWA, HTTPS via the MLH domain → Caddy on the Mac) ─JPEG over WSS + a
    video stays on Redis + the local recorder; it NEVER goes into Spacetime
 vision module (flight: ball tracker, bounce, edge, serve toss) ─▶ observations ─▶ Spacetime observation/track_sample  (+ Redis ev:* hot path)
 engine (rule packs, CEL, scoring, gate; background decide(): Claude ‖ Gemini ‖ Bitdeer + geometry) ─reducers─▶ Spacetime
-compiler (Factory Droid; trigger = house_rule row) ─▶ Spacetime ; rules (Apify actor → Moss → Claude) ◀─ gateway /api/ask
+compiler (Factory Droid; trigger = house_rule row) ─▶ Spacetime ; referee (router → run_check over Redis → Claude phrases → Cartesia) ◀─ gateway /api/ask
 Spacetime ─subscriptions─▶ phones (Cartesia voice, banner, replay), dashboard (score, votes, Droid panel, ask transcript, world view)
 ```
 - **Spacetime is the shared world state:** metadata from every camera plus game state, synced to every device and agent (D-21).
@@ -74,7 +74,7 @@ Spacetime ─subscriptions─▶ phones (Cartesia voice, banner, replay), dashbo
 | flight (vision module, ping pong) | `services/flight` | — | py3.11, numpy 1.26.4, opencv-contrib 4.10.0.84, torch (MPS) |
 | engine (+ `decide/`) | `services/engine` | — | py3.11, cel-python |
 | compiler | `services/compiler` | 8200 | Node 20, `@factory/droid-sdk` |
-| rules (+ `actors/rulebook-scraper`) | `services/rules` | 8100 | py3.11, Apify SDK, Moss SDK |
+| referee (ask the ref: router, checks over Redis, Claude phrasing, Cartesia server-side voice; replaces `rules`, D-37) | `services/referee` | 8100 | py3.11 FastAPI, needs `ANTHROPIC_API_KEY` + `CARTESIA_API_KEY` |
 | players / possession (SHOULD: basketball) | `services/players`, `services/possession` | — | py3.11, rfdetr 1.11.2 (CoreML), trackers 2.6.1, supervision 0.30.9, rtmlib 0.0.16 |
 | spacetimedb | `spacetime/` (TS module) | 3000 | SpacetimeDB 2.13 (`spacetime start`) |
 | redis | — | 6379 | redis 7 |
@@ -87,7 +87,7 @@ Everything runs **natively on the M5 Pro** (D-12) under a `Procfile` (`make dev`
 |---|---|
 | **1: platform, capture, voice and replay** (integration owner) | Contracts, py-trophy, state client, Spacetime module, gateway, recorder, PWA, dashboard, Cartesia client, domain + Caddy, `make dev`/`e2e`, CI, checkpoints, video + README |
 | **2: ball and court** | Calibration, the ping-pong vision module (ball, bounce, edge, serve toss), observations, clip tools, labels, Vultr fallback |
-| **3: rules, AI and Droid** | Engine, rule packs + scoring, the 3D check library and `track3d` adapter, Factory Droid `calibrate_checks` runs, Claude second opinion + phrasing, voice transcript; brief: `docs/plan/prompts/agent-3-droid-realtime.md` (D-31) |
+| **3: rules, AI and Droid** | Engine, rule packs + scoring, the 3D check library and `track3d` adapter, Factory Droid `calibrate_checks` runs, Claude second opinion + phrasing, voice transcript; brief: `docs/plan/prompts/agent-3-droid-realtime.md` (D-36) |
 
 ## Gotchas
 These are compatibility notes from research; check whether they still apply.

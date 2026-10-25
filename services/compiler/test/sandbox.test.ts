@@ -59,8 +59,9 @@ describe("sandbox", () => {
         kind: "compile",
         sport: "pickleball",
         baseSport: "table_tennis",
-        scene: join(REPO_ROOT, "evals/fixtures/synthetic/pickleball/scene.json"),
-        samplesDir: join(REPO_ROOT, "evals/fixtures/synthetic/pickleball"),
+        // the pickleball fixtures were dropped with D-36; a compile job's sandbox shape is the same for any scene
+        scene: join(REPO_ROOT, "evals/fixtures/synthetic/table_tennis/scene.json"),
+        samplesDir: join(REPO_ROOT, "evals/fixtures/synthetic/table_tennis"),
       },
       tmp(),
       "/usr/bin/false",

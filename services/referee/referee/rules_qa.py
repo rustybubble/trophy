@@ -1,6 +1,6 @@
 """General rules questions, answered only from this game's rule pack (the sport's rules.yaml plus approved house rules).
 
-D-31 dropped Moss and the Apify rulebook index, so the grounding corpus is the pack the engine is actually enforcing.
+D-36 dropped Moss and the Apify rulebook index, so the grounding corpus is the pack the engine is actually enforcing.
 Claude cites rule ids it was given; a citation to anything else is dropped, and a weak answer becomes
 "I couldn't find that in this game's rule pack."
 """

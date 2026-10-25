@@ -2,7 +2,7 @@
 
     python scripts/dev.py              # make dev / npm run dev
     python scripts/dev.py gateway pwa  # only these Procfile entries
-    python scripts/dev.py --stop       # stop what a previous run started, and free the stack's ports
+    python3 scripts/dev.py --stop       # stop what a previous run started, and free the stack's ports
 
 Restart semantics: first stops what the last run started (data/local/dev.pids), anything still listening on the
 stack's ports, any leftover `python -m flight`, and the `trophy-redis` container (Redis has no persistence). Then
@@ -28,9 +28,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PIDS = ROOT / "data" / "local" / "dev.pids"
-DEFAULTS = {"SPACETIME": "spacetime"}
-PORTS = {"spacetime": 3000, "gateway": 8000, "voice": 8765, "pwa": 5173, "caddy": 443}
-WAITS = {"gateway": [6379, 3000], "recorder": [6379, 3000], "caddy": [8000, 5173], "flight": [6379, 3000, 8000]}
+DEFAULTS = {"SPACETIME": "spacetime", "PYTHON": sys.executable}  # this Mac has python3 only; Windows has python
+PORTS = {"redis": 6379, "spacetime": 3000, "gateway": 8000, "referee": 8100, "voice": 8765, "pwa": 5173, "caddy": 443}
+WAITS = {
+    "gateway": [6379, 3000],
+    "recorder": [6379, 3000],
+    "engine": [6379, 3000],
+    "referee": [6379],
+    "compiler": [3000],
+    "caddy": [8000, 5173],
+    "flight": [6379, 3000, 8000],
+}
 WIN = os.name == "nt"
 COLOURS = [31, 32, 33, 34, 35, 36, 91, 92, 93, 94, 95, 96]
 
@@ -71,7 +79,7 @@ def kill_tree(pid: int) -> None:
             os.killpg(pid, signal.SIGTERM)
 
 
-OURS = ("caddy", "python", "node", "uv", "spacetime")  # only these may be stopped for holding a stack port
+OURS = ("caddy", "python", "node", "uv", "spacetime", "redis-server")  # only these may be stopped for a stack port
 
 
 def image_name(pid: int) -> str:
@@ -125,8 +133,9 @@ def stop_all(names: set[str]) -> None:
                 kill_tree(int(pid))
         else:
             subprocess.run(["pkill", "-f", "[ ]-m flight"], capture_output=True)
-    if "redis" in names:
-        subprocess.run(["docker", "rm", "-f", "trophy-redis"], capture_output=True)
+    if "redis" in names:  # the Windows setup's Docker container; brew's redis-server is caught by its port above
+        with contextlib.suppress(FileNotFoundError):
+            subprocess.run(["docker", "rm", "-f", "trophy-redis"], capture_output=True)
 
 
 def pump(name: str, colour: int, proc: subprocess.Popen) -> None:
@@ -168,7 +177,7 @@ def main() -> int:
             cwd=ROOT,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            env={**os.environ, "PYTHONUNBUFFERED": "1"},
+            env={**env_file(), **os.environ, "PYTHONUNBUFFERED": "1"},  # .env reaches every entry; the shell wins
             **kw,
         )
         procs.append((name, proc))

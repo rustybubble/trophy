@@ -69,7 +69,7 @@ def run(argv: list[str] | None = None) -> int:
             return 3
     r = redis.Redis.from_url(a.redis or env.get("REDIS_URL") or "redis://127.0.0.1:6379/0")
     consumer = EventConsumer(r, group="engine", consumer=f"engine-{os.getpid()}", streams=list(EVENT_STREAMS))
-    ctl_last = "$"
+    ctl_last = _stream_tail(r, CTL_ENGINE)  # start after what is there; never re-arm at "$", which drops commands
     log.info(json.dumps({"svc": "engine", "msg": "started", "state": a.state, "votes": a.votes}))
     while True:
         for stream, entry_id, ev in consumer.read(block_ms=50):
@@ -100,6 +100,16 @@ def run(argv: list[str] | None = None) -> int:
                 engine.handle_ctl(cmd.model_dump(by_alias=True, exclude_none=True, mode="json"))
             except Exception:  # noqa: BLE001
                 log.exception("ctl failed")
+
+
+def _stream_tail(r: redis.Redis, stream: str) -> str:
+    """The newest entry id of ``stream`` (``0-0`` when empty): XREAD from it returns only what arrives later. Passing
+    ``$`` on every call instead loses every entry added while the loop was busy elsewhere (e.g. in the event read)."""
+    tail = r.xrevrange(stream, count=1)
+    if not tail:
+        return "0-0"
+    entry_id = tail[0][0]
+    return entry_id.decode() if isinstance(entry_id, bytes) else entry_id
 
 
 def _read_ctl(r: redis.Redis, last: str) -> list[tuple[str, dict[bytes, bytes]]]:

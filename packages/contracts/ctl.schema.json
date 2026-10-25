@@ -261,7 +261,7 @@
     },
     "CheckResult": {
       "title": "CheckResult",
-      "description": "What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-31 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.",
+      "description": "What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-36 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.",
       "type": "object",
       "required": ["check", "calibrated", "latency_ms"],
       "properties": {
@@ -306,7 +306,7 @@
     },
     "RunCheckArgs": {
       "title": "RunCheckArgs",
-      "description": "Referee -> engine: run one session check and XADD a CheckResult to the Redis stream `reply_to` (D-31 §5).",
+      "description": "Referee -> engine: run one session check and XADD a CheckResult to the Redis stream `reply_to` (D-36 §5).",
       "type": "object",
       "required": ["check", "args", "reply_to"],
       "properties": {

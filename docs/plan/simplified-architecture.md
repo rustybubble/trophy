@@ -1,6 +1,6 @@
 # Trophy: the simplified architecture (proposal, 2026-10-24)
 
-*Status: **proposal, not yet adopted.** Written after a review of what is built on `origin/main`, PR #6 (Droid, engine, rules) and PR #8 (rulebook). Adopting it means a new decision (D-32; D-31 is taken by the Agent 3 restart), a rewrite of `three-agent-plan.md`, `interfaces-v1.md` and `CLAUDE.md`, and closing or trimming PRs #6 and #8.*
+*Status: **proposal, not yet adopted.** Written after a review of what is built on `origin/main`, PR #6 (Droid, engine, rules) and PR #8 (rulebook). Adopting it means a new decision (D-32; D-36 is taken by the Agent 3 restart), a rewrite of `three-agent-plan.md`, `interfaces-v1.md` and `CLAUDE.md`, and closing or trimming PRs #6 and #8.*
 
 ## Why
 

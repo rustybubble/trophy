@@ -19,7 +19,7 @@ Point a phone at a ping-pong table and Trophy referees the game:
 | `apps/dashboard` | Judges' screen: score, calls, AI votes, Droid panel, ask-the-ref, live world state |
 | `services/gateway`, `services/recorder`, `services/ingest` | Phone API, replay recording, optional WebRTC |
 | `services/courtcam-adapter`, `services/flight` | Calibration and the ping-pong vision module |
-| `services/engine`, `services/compiler`, `services/rules` | Rule engine + AI votes, Factory Droid house rules, ask the ref (Apify → Moss → Claude) |
+| `services/engine`, `services/compiler`, `services/referee` | Rule engine + AI votes, Factory Droid house rules, the referee voice (ask the ref: checks → Claude phrasing → Cartesia) |
 | `services/players`, `services/possession` | Basketball (if time allows) |
 | `spacetime/` | SpacetimeDB module: the shared world state (metadata only, no video) |
 | `packages/` | Contracts (JSON Schema), generated types, shared Python lib, state client |
@@ -27,7 +27,7 @@ Point a phone at a ping-pong table and Trophy referees the game:
 | `docs/` | Plan, interfaces, decisions, progress, research; `docs/archive/` is superseded |
 
 ## Run it (macOS, M5 Pro)
-`make dev` starts everything natively. Phones connect to `https://$TROPHY_DOMAIN/cam/`. Copy `.env.example` to `.env` and fill in the keys; never commit `.env`. Full setup instructions will land here once the services exist.
+`make dev` starts everything natively. Phones connect to `https://$TROPHY_DOMAIN/cam/`. Copy `.env.example` to `.env` and fill in the keys; never commit `.env`. **The step-by-step demo (stack, a live synthetic game, a Droid house rule, the voice, the 3D map) is [`docs/demo.md`](docs/demo.md).**
 
 ## Prize-track sections (filled in at submission)
 - **Factory Droid:** where Droid runs, its trigger, its sandbox and what it can touch, and what the dashboard shows.
@@ -35,7 +35,7 @@ Point a phone at a ping-pong table and Trophy referees the game:
 - **Spacetime:** the shared world state (vision observations, game state, votes, house rules, ask log).
 - **Anthropic:** our community and their problem, how Claude is used, and **where it could go wrong** and how we contain it.
 - **Bitdeer AI Model Studio, Gemini:** each one's role as a challenge voter.
-- **Moss, Apify:** the rulebook actor → Moss index → cited answers.
+- **Moss, Apify:** dropped (D-36); rules answers are grounded in the sport's own rule pack instead.
 - **Meta:** how Trophy brings people closer.
 
 ## License

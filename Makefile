@@ -1,8 +1,9 @@
+PYTHON ?= python3
 .PHONY: dev e2e contracts fixtures check smoke stdb-publish stdb-provision stdb-bindings stdb-seed
 dev:        ## (re)start the whole stack natively from the Procfile (also: npm run dev; stop: python scripts/dev.py --stop)
-	python scripts/dev.py
-e2e:        ## headless clip -> calls -> Spacetime check (Agent 1, checkpoint C2)
-	@echo "not implemented yet (Agent 1, checkpoint C2)"; exit 1
+	$(PYTHON) scripts/dev.py
+e2e:        ## headless demo check (C2): gateway game -> synthetic replay -> calls/score in Spacetime -> Droid house rule -> approve
+	$(PYTHON) scripts/e2e.py
 contracts:  ## regenerate TS (@trophy/contracts) + Pydantic (py-trophy) from packages/contracts/*.schema.json
 	node scripts/gen-contracts.mjs
 fixtures:   ## rebuild the labelled-synthetic MockState scripts
@@ -17,11 +18,11 @@ SPACETIME ?= spacetime
 stdb-publish:   ## publish the module to the local server as `trophy` (spacetime start must be running)
 	$(SPACETIME) publish -s local -p spacetime --yes=skip-login trophy
 stdb-provision: ## engine/vision/compiler identities -> .env, registered with the module
-	python spacetime/scripts/provision.py
+	$(PYTHON) spacetime/scripts/provision.py
 stdb-bindings:  ## regenerate the TS client bindings after module changes
 	$(SPACETIME) generate --lang typescript -p spacetime -o packages/state-client/src/bindings --no-config -y
 stdb-seed:      ## replay the labelled-synthetic demo into a new game and check it
-	python spacetime/scripts/seed_demo.py --check
+	$(PYTHON) spacetime/scripts/seed_demo.py --check
 smoke:      ## P0 spikes
 	bash scripts/smoke.sh
 

@@ -115,6 +115,18 @@ class MemoryState:
         self._put("commentary", f"{row['moment_id']}:{row['voice']}", row)
 
 
+def sql_column_names(schema: dict[str, Any]) -> list[str]:
+    """Column names of a Spacetime SQL result. 2.13 returns each name as an option (`{"some": "col"}`), 2.10 as a
+    plain string; an unnamed column (`{"none": []}`) gets its index."""
+    names: list[str] = []
+    for i, col in enumerate(schema.get("elements", [])):
+        name = col.get("name")
+        if isinstance(name, dict):
+            name = name.get("some")
+        names.append(str(name) if name else f"col{i}")
+    return names
+
+
 class SpacetimeState:
     """Writes through the module's reducers with the engine identity (one JSON-string argument each, D-25)."""
 
@@ -187,7 +199,7 @@ class SpacetimeState:
         rows = data[0].get("rows") if isinstance(data, list) and data else None
         if not rows:
             return None
-        schema = [c.get("name") for c in data[0].get("schema", {}).get("elements", [])]
+        schema = sql_column_names(data[0].get("schema", {}))
         row = dict(zip(schema, rows[0], strict=False)) if schema else {}
         js = row.get("json")
         return json.loads(js) if isinstance(js, str) else row or None
