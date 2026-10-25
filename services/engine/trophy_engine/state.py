@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from collections import defaultdict
 from typing import Any, Protocol
 
@@ -32,6 +33,12 @@ class StateWriter(Protocol):
     def post_commentary(self, row: dict[str, Any]) -> None: ...
     def upsert_feed(self, feed: dict[str, Any]) -> None: ...
     def upsert_viewer(self, viewer: dict[str, Any]) -> None: ...
+    # the Factory Droid (D-43): queue an interpreter run, read results back, approve a run, record a module
+    def get_house_rule(self, rule_version: str) -> dict[str, Any] | None: ...
+    def request_droid_run(self, run: dict[str, Any]) -> None: ...
+    def get_droid_run(self, run_id: str) -> dict[str, Any] | None: ...
+    def set_droid_run_status(self, patch: dict[str, Any]) -> None: ...
+    def upsert_sport_module(self, row: dict[str, Any]) -> None: ...
 
 
 class MemoryState:
@@ -122,6 +129,23 @@ class MemoryState:
     def upsert_viewer(self, viewer: dict[str, Any]) -> None:
         self._put("viewer", viewer["viewer_id"], viewer)
 
+    def request_droid_run(self, run: dict[str, Any]) -> None:
+        if run["run_id"] in self.tables["droid_run"]:
+            raise ValueError("run exists")
+        self._put("droid_run", run["run_id"], run)
+
+    def get_droid_run(self, run_id: str) -> dict[str, Any] | None:
+        row = self.tables["droid_run"].get(run_id)
+        return dict(row) if row else None
+
+    def set_droid_run_status(self, patch: dict[str, Any]) -> None:
+        row = dict(self.tables["droid_run"].get(patch["run_id"]) or {})
+        row.update(patch)
+        self._put("droid_run", patch["run_id"], row)
+
+    def upsert_sport_module(self, row: dict[str, Any]) -> None:
+        self._put("sport_module", f"{row.get('game_id')}:{row['sport']}", row)
+
 
 def sql_column_names(schema: dict[str, Any]) -> list[str]:
     """Column names of a Spacetime SQL result. 2.13 returns each name as an option (`{"some": "col"}`), 2.10 as a
@@ -193,12 +217,28 @@ class SpacetimeState:
 
     def get_house_rule(self, rule_version: str) -> dict[str, Any] | None:
         """Read the row back (the compiler wrote plan/diff/results/pack_path into it) through Spacetime's SQL API."""
+        return self._sql_row("house_rule", "rule_version", rule_version)
+
+    def get_droid_run(self, run_id: str) -> dict[str, Any] | None:
+        """The compiler's latest DroidRun snapshot (status, results, commit, workspace)."""
+        return self._sql_row("droid_run", "run_id", run_id)
+
+    def request_droid_run(self, run: dict[str, Any]) -> None:
+        self._call("request_droid_run", run)
+
+    def set_droid_run_status(self, patch: dict[str, Any]) -> None:
+        self._call("set_droid_run_status", patch)
+
+    def upsert_sport_module(self, row: dict[str, Any]) -> None:
+        self._call("upsert_sport_module", row)
+
+    def _sql_row(self, table: str, key: str, value: str) -> dict[str, Any] | None:
         import urllib.request
 
-        safe = rule_version.replace("'", "")
+        safe = re.sub(r"[^0-9A-Za-z_-]", "", value)
         req = urllib.request.Request(
             f"{self.client.uri}/v1/database/{self.client.module}/sql",
-            data=f"SELECT * FROM house_rule WHERE rule_version = '{safe}'".encode(),
+            data=f"SELECT * FROM {table} WHERE {key} = '{safe}'".encode(),
             method="POST",
             headers={"Content-Type": "text/plain", "Authorization": f"Bearer {self.client.token}"},
         )

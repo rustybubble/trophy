@@ -34,6 +34,8 @@ describe("sandbox", () => {
       ".gitignore",
       ".trophy",
       "TASK.md",
+      "fixtures", // the SYNTHETIC annotated table-tennis plays (shown, not gated, for a house rule)
+      "reference", // reference/base: the pack in force, the gate's baseline (D-43)
       "replay_test",
       "samples",
       "schema",
@@ -46,7 +48,7 @@ describe("sandbox", () => {
     expect(JSON.parse(readFileSync(join(sb.dir, ".trophy/allowlist.json"), "utf8")).files).toEqual(sb.allowlist);
     expect(readdirSync(join(sb.dir, "sports/table_tennis")).sort()).toEqual(["config.yaml", "events.py", "rules.yaml"]);
     expect(readdirSync(join(sb.dir, "samples")).filter((f) => f.endsWith(".l1.jsonl")).length).toBeGreaterThan(0);
-    expect(sb.allowlist).toEqual(["sports/table_tennis/rules.yaml"]);
+    expect(sb.allowlist).toEqual(["sports/table_tennis/rules.yaml", "decision.json"]);
     const task = readFileSync(join(sb.dir, "TASK.md"), "utf8");
     expect(task).toContain("first to 7");
     expect(task).toContain("`sports/table_tennis/rules.yaml`");

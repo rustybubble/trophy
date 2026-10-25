@@ -55,6 +55,9 @@ FORBIDDEN_CALLS: frozenset[str] = frozenset(
     | {"getattr", "setattr", "delattr", "breakpoint", "exit", "quit"}
 )
 MODULE_FILES = ("config.yaml", "events.py", "rules.yaml")
+# An annotated sport (D-44) has no perception: hand-marked events arrive as trophy.event.v1 with source "annotated",
+# so its module is config.yaml + rules.yaml (+ RULES.md, the rulebook summary the Droid reads) and no events.py.
+ANNOTATED_FILES = ("config.yaml", "rules.yaml")
 
 CONTRACTS = Path(__file__).resolve().parents[4] / "packages" / "contracts"
 
@@ -74,6 +77,8 @@ class SportModule:
     config: dict[str, Any]
     rules: dict[str, Any]
     events: Callable[[Iterable[Observation], ModuleState], Iterable[dict[str, Any]]]
+    # True when the module has no events.py: its events are hand-annotated (D-44), never computed from layer 1
+    annotated: bool = False
 
     def state(self, game_id: str, *, calib_trusted: bool = True) -> ModuleState:
         return ModuleState(
@@ -216,11 +221,19 @@ def _import_events(path: Path, sport: str) -> Callable[..., Any]:
     return fn
 
 
-def load_module(path: str | Path, *, import_code: bool = True) -> SportModule:
-    """Load and validate ``sports/<sport>/``. Raises ``LoadError`` with every problem found."""
+def load_module(path: str | Path, *, import_code: bool = True, rules_optional: bool = False) -> SportModule:
+    """Load and validate ``sports/<sport>/``. Raises ``LoadError`` with every problem found.
+
+    Without ``events.py`` the module is *annotated* (D-44): config.yaml only has to name the sport (no detector runs,
+    so the detector parameters the schema requires are not needed) and ``events`` refuses to run. With
+    ``rules_optional`` a missing rules.yaml loads as ``{}`` (a sport whose interpreter the Droid has not written yet).
+    """
     p = Path(path)
+    annotated = not (p / "events.py").is_file()
     errors: list[str] = []
-    for f in MODULE_FILES:
+    for f in ANNOTATED_FILES if annotated else MODULE_FILES:
+        if f == "rules.yaml" and rules_optional:
+            continue
         if not (p / f).is_file():
             errors.append(f"{p / f}: missing")
     if errors:
@@ -229,20 +242,34 @@ def load_module(path: str | Path, *, import_code: bool = True) -> SportModule:
         config = yaml.safe_load((p / "config.yaml").read_text("utf8")) or {}
     except yaml.YAMLError as e:
         raise LoadError([f"config.yaml: {e}"]) from e
-    try:
-        rules = yaml.safe_load((p / "rules.yaml").read_text("utf8")) or {}
-    except yaml.YAMLError as e:
-        raise LoadError([f"rules.yaml: {e}"]) from e
-    errors += [f"config.yaml: {e}" for e in validate_against("config", config)]
-    errors += [f"rules.yaml: {e}" for e in validate_against("rules", rules)]
-    if isinstance(config, dict) and isinstance(rules, dict) and config.get("sport") != rules.get("sport"):
+    rules: Any = {}
+    if (p / "rules.yaml").is_file():
+        try:
+            rules = yaml.safe_load((p / "rules.yaml").read_text("utf8")) or {}
+        except yaml.YAMLError as e:
+            raise LoadError([f"rules.yaml: {e}"]) from e
+        errors += [f"rules.yaml: {e}" for e in validate_against("rules", rules)]
+    if annotated:
+        if not isinstance(config, dict) or not isinstance(config.get("sport"), str):
+            errors.append("config.yaml: must be a mapping with `sport`")
+    else:
+        errors += [f"config.yaml: {e}" for e in validate_against("config", config)]
+    if isinstance(config, dict) and isinstance(rules, dict) and rules and config.get("sport") != rules.get("sport"):
         errors.append(f"config.yaml sport {config.get('sport')!r} != rules.yaml sport {rules.get('sport')!r}")
-    errors += check_events_source((p / "events.py").read_text("utf8"), str(p / "events.py"))
+    if not annotated:
+        errors += check_events_source((p / "events.py").read_text("utf8"), str(p / "events.py"))
     if errors:
         raise LoadError(errors)
     sport = str(config["sport"])
-    fn = _import_events(p / "events.py", sport) if import_code else _not_imported
-    return SportModule(sport=sport, path=p, config=config, rules=rules, events=fn)
+    if annotated:
+        fn: Callable[..., Any] = _annotated_events
+    else:
+        fn = _import_events(p / "events.py", sport) if import_code else _not_imported
+    return SportModule(sport=sport, path=p, config=config, rules=rules, events=fn, annotated=annotated)
+
+
+def _annotated_events(*_a: Any, **_k: Any) -> Iterable[dict[str, Any]]:
+    raise RuntimeError("an annotated module has no events.py: its events are hand-marked (source: annotated)")
 
 
 def _not_imported(*_a: Any, **_k: Any) -> Iterable[dict[str, Any]]:

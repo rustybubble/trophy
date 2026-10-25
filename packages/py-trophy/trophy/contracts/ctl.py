@@ -136,7 +136,7 @@ class SubmitHouseRuleArgs(BaseModel):
 
 class HouseRuleVersionArgs(BaseModel):
     """
-    approve_house_rule, reject_house_rule
+    approve_house_rule, reject_house_rule, revert_house_rule
     """
 
     model_config = ConfigDict(
@@ -321,6 +321,18 @@ class ViewerStatusArgs(BaseModel):
     connected: bool | None = None
 
 
+class RegenerateInterpreterArgs(BaseModel):
+    """
+    regenerate_interpreter (judge): the Droid rewrites this game's sport interpreter (a droid_run of kind interpreter, trigger user)
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    reason: str | None = Field(None, max_length=200)
+
+
 class CtlCommand(BaseModel):
     """
     trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 §9). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (§13).
@@ -357,6 +369,7 @@ class CtlCommand(BaseModel):
         "feed_schedule",
         "viewer_status",
         "revert_house_rule",
+        "regenerate_interpreter",
     ] = Field(..., title="CtlCmd")
     game_id: str
     t_srv_ms: float

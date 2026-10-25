@@ -19,10 +19,19 @@ jobs, each from a trigger we designed:
 | a health metric crossing a threshold (ball lost > 40 % of frames, reprojection error rising)                          | **retune**: adjust thresholds, or the detector logic if a parameter can't fix it                                                                       | `config.yaml`, `events.py`                                           |
 | the judge finishes camera setup: corners, clap sync, a warm-up recording (`field.json` + labelled `track3d` fixtures) | **calibrate_checks**: specialise the golden check library to this calibration (sigma model, surface/floor bands, serve zone, dead-ball gap, edge band) | every `checks/<name>.py` of the copied library; never `library.json` |
 
-Today the house-rule trigger is live through the Spacetime subscription (`trophy-droid watch`); compile, retune and
-calibrate run from the CLI until Agent 1 adds the `droid_run` and `sport_module` tables (row shapes in
-`packages/contracts/droidrun.schema.json` and `sportmodule.schema.json`; `calibrate_checks` is already in the
-`kind` enum, with `trigger.source = "session"`).
+**D-43 (judging demo): two more jobs, and the Droid decides.**
+
+| Trigger                                                                                                                                                                                                                                                                                          | Job                                                                                                                                                                                                                                                                                                                                                                                   | What the Droid may edit          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| a game starts for a sport with no approved interpreter: the engine inserts a queued `droid_run` (`request_droid_run`, `trigger.source = "sport_module"`); or the judge's **Regenerate interpreter** (ctl `regenerate_interpreter`, `source = "user"`); or `trophy-droid interpreter --sport <s>` | **interpreter**: write the sport's let/out/fault rules (`rules.yaml`) from `RULES.md`, `config.yaml`, the event vocabulary and the golden table-tennis pack; gate: replay `evals/fixtures/annotated/<sport>/*.events.jsonl` and reproduce every labelled call (outcome, team, at fault), no unlabelled decisive call; plus the layer-1 golden fixtures when the sport has `events.py` | `sports/<sport>/rules.yaml` only |
+| a pending `house_rule` row                                                                                                                                                                                                                                                                       | **house_rule**, now decided by the Droid: it starts from the pack in force (rules stack), writes the rule and `decision.json` `{applies, rationale}`; the gate re-judges this game's events (`session.json` from the engine) against the pack in force, so `calls_changed` is real                                                                                                    | `rules.yaml`, `decision.json`    |
+
+`trophy-droid watch` subscribes to both triggers (`house_rule WHERE status='pending'`, `droid_run WHERE
+status='queued'`) and writes **every run of every kind** to `droid_run` (`update_droid_run`: trigger, plan, steps,
+diff, results, blocked calls, attempts, timings, tokens, decision), plus the house_rule row's progress. The engine
+reads the results back: a ready interpreter is loaded from its gated commit, re-judges the session and is promoted to
+`data/local/modules/<sport>/v<n>`; a ready house rule with a passing gate and `applies: true` is applied without a
+judge tap (re-judge, superseding calls, score, announcement), and `revert_house_rule` undoes it in one tap.
 
 ## Scoped access: what the Droid can touch
 

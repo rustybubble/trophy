@@ -46,6 +46,7 @@ import PostObservationsReducer from "./post_observations_reducer";
 import PostTrackSamplesReducer from "./post_track_samples_reducer";
 import PruneTrackSamplesReducer from "./prune_track_samples_reducer";
 import RegisterServiceReducer from "./register_service_reducer";
+import RequestDroidRunReducer from "./request_droid_run_reducer";
 import ResolveChallengeReducer from "./resolve_challenge_reducer";
 import SetBestPlayReducer from "./set_best_play_reducer";
 import SetDroidRunStatusReducer from "./set_droid_run_status_reducer";
@@ -362,6 +363,7 @@ const reducersSchema = __reducers(
   __reducerSchema("post_track_samples", PostTrackSamplesReducer),
   __reducerSchema("prune_track_samples", PruneTrackSamplesReducer),
   __reducerSchema("register_service", RegisterServiceReducer),
+  __reducerSchema("request_droid_run", RequestDroidRunReducer),
   __reducerSchema("resolve_challenge", ResolveChallengeReducer),
   __reducerSchema("set_best_play", SetBestPlayReducer),
   __reducerSchema("set_droid_run_status", SetDroidRunStatusReducer),

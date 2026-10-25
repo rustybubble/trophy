@@ -16,12 +16,13 @@ The three files:
 - `events.py`: `events(observations, state)` turning camera calibrations + ball samples into `bounce`, `contact`,
   `net`, `ball_dead` events. It is generic over `config.yaml` (it reads the court size, `surface`, thresholds) and
   normally needs **no change** for a court sport. Only touch it if `./replay_test` shows the events are wrong. It may
-  import only `math`, `statistics`, `collections`, `collections.abc`, `dataclasses`, `typing`, `itertools`,
-  `functools`, `bisect`, `heapq`, `enum`, `operator` and `trophy_engine.sportmod.api`.
+  import only `math`, `statistics`, `itertools`, `functools`, `bisect` and `heapq` (as `import math`, used as
+  `math.x`), and names from `trophy_engine.sportmod.api` (`from trophy_engine.sportmod.api import ...`, only names in
+  its `__all__`); no `typing`, `collections`, `dataclasses`, `enum` or `operator`, no dunder attributes.
 - `rules.yaml`: the rule pack. Change `sport`, `name`, `field` (dims, landmarks at the court corners, `lines`,
   `zones` incl. the non-volley zone / kitchen 2.13 m from the net on each side, as polygons of `[x, y]` metres with
   the origin at the court centre, +x toward end B, net plane x = 0), `scoring.params` (pickleball: to 11, win by 2,
-  `serves_per_turn: 1`, `deuce_serves_per_turn: 1`), the rules (the serve must bounce on the **receiver's** side
+  `serves_per_turn: 1`, `deuce_serves_per_turn: 1`; for another sport, its own), the rules (for pickleball: the serve must bounce on the **receiver's** side
   first: fix `serve_own_side_miss`'s `when` to `ev.side == rally.server_side`; keep `double_bounce`, `off_table` →
   rename the outcome to `out`, `net_into_own_side`, `ball_dead_after_last_bounce`; replace the table-tennis edge
   and serve-toss rules with a `kitchen_volley` violation rule, `tier: BETA`, `check: ensemble`, over a

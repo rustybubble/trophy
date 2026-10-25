@@ -360,6 +360,7 @@ class HouseRuleDecision(BaseModel):
     rejudged_rallies: int | None = None
     calls_changed: int | None = None
     decided_at_ms: float | None = None
+    reverted_at_ms: float | None = None
 
 
 class HouseRule(BaseModel):
@@ -385,6 +386,16 @@ class HouseRule(BaseModel):
     created_at_ms: float
     updated_at_ms: float
     decision: HouseRuleDecision | None = None
+    run_id: str | None = Field(None, description="The droid_run row of the run that compiled this rule")
+    base_rule_version: str | None = Field(
+        None, description="The pack version the run starts from (the last applied pack: house rules stack)"
+    )
+    base_pack_path: str | None = Field(
+        None, description="The engine's copy of that pack's rules.yaml (the sandbox starts from it)"
+    )
+    session_path: str | None = Field(
+        None, description="The session's events so far (session.json), the gate's baseline for calls_changed"
+    )
 
 
 class StateTables(BaseModel):

@@ -221,6 +221,13 @@ td {
 .votes {
   margin-bottom: 10px;
 }
+details.droid {
+  border-top: 1px solid var(--line);
+  padding: 6px 0;
+}
+details.droid > summary {
+  cursor: pointer;
+}
 .droid pre {
   background: #0b0d11;
   border: 1px solid var(--line);
@@ -238,12 +245,14 @@ td {
   border: 1px solid var(--line);
 }
 .status.ready,
-.status.approved {
+.status.approved,
+.status.applied {
   color: var(--ok);
   border-color: var(--ok);
 }
 .status.failed,
-.status.rejected {
+.status.rejected,
+.status.reverted {
   color: var(--bad);
   border-color: var(--bad);
 }

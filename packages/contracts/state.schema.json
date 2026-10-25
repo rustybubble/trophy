@@ -439,6 +439,22 @@
               "type": "null"
             }
           ]
+        },
+        "run_id": {
+          "type": ["string", "null"],
+          "description": "The droid_run row of the run that compiled this rule"
+        },
+        "base_rule_version": {
+          "type": ["string", "null"],
+          "description": "The pack version the run starts from (the last applied pack: house rules stack)"
+        },
+        "base_pack_path": {
+          "type": ["string", "null"],
+          "description": "The engine's copy of that pack's rules.yaml (the sandbox starts from it)"
+        },
+        "session_path": {
+          "type": ["string", "null"],
+          "description": "The session's events so far (session.json), the gate's baseline for calls_changed"
         }
       }
     },
@@ -863,6 +879,9 @@
           "type": "integer"
         },
         "decided_at_ms": {
+          "type": "number"
+        },
+        "reverted_at_ms": {
           "type": "number"
         }
       }

@@ -57,7 +57,8 @@
         "request_check",
         "feed_schedule",
         "viewer_status",
-        "revert_house_rule"
+        "revert_house_rule",
+        "regenerate_interpreter"
       ]
     },
     "TeamSpec": {
@@ -256,7 +257,7 @@
     },
     "HouseRuleVersionArgs": {
       "title": "HouseRuleVersionArgs",
-      "description": "approve_house_rule, reject_house_rule",
+      "description": "approve_house_rule, reject_house_rule, revert_house_rule",
       "type": "object",
       "required": ["rule_version"],
       "properties": {
@@ -597,6 +598,17 @@
         },
         "connected": {
           "type": "boolean"
+        }
+      }
+    },
+    "RegenerateInterpreterArgs": {
+      "title": "RegenerateInterpreterArgs",
+      "description": "regenerate_interpreter (judge): the Droid rewrites this game's sport interpreter (a droid_run of kind interpreter, trigger user)",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "maxLength": 200
         }
       }
     }

@@ -4,9 +4,12 @@
  */
 import { isAbsolute, normalize, relative, sep } from "node:path";
 
-export type JobKind = "compile" | "house_rule" | "retune" | "calibrate_checks" | "new_check";
+export type JobKind = "compile" | "house_rule" | "retune" | "calibrate_checks" | "new_check" | "interpreter";
 
 export const MODULE_FILES = ["config.yaml", "events.py", "rules.yaml"] as const;
+
+/** house_rule: the Droid's decision {applies, rationale}, written at the sandbox root and parsed by the runner (D-43) */
+export const DECISION_FILE = "decision.json";
 
 /** The gate script each job kind runs (and the only command the Droid may run in that sandbox). */
 export const GATE_SCRIPTS = ["replay_test", "check_test"] as const;
@@ -26,6 +29,10 @@ export function editableFiles(kind: JobKind, sport: string, checkFiles: readonly
     case "compile":
       return MODULE_FILES.map((f) => `${dir}/${f}`);
     case "house_rule":
+      return [`${dir}/rules.yaml`, DECISION_FILE];
+    case "interpreter":
+      // D-43: the sport's let/out/fault interpreter is its rule pack; config.yaml, events.py, RULES.md, the fixtures
+      // and the reference stay read-only. (The rule engine has no hook to run per-event Python, so no checks/*.py.)
       return [`${dir}/rules.yaml`];
     case "retune":
       return [`${dir}/config.yaml`, `${dir}/events.py`];

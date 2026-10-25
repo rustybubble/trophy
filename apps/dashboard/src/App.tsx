@@ -140,7 +140,7 @@ export function App() {
         <div className="col">
           {session && <JoinCard session={session} />}
           <CameraHealth cameras={v.cameras} />
-          <DroidPanel rules={v.houseRules} session={session} />
+          <DroidPanel runs={v.droidRuns} rules={v.houseRules} session={session} />
         </div>
       </section>
     </div>

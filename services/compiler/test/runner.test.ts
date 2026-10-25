@@ -69,6 +69,8 @@ class Collect implements RunSink {
 }
 
 const rulesPath = (dir: string) => join(dir, "sports/table_tennis/rules.yaml");
+const decide = (dir: string, applies = true, rationale = "a scoring change the referee can apply") =>
+  writeFileSync(join(dir, "decision.json"), JSON.stringify({ applies, rationale }));
 
 if (!existsSync(ENGINE_PY))
   console.warn(
@@ -89,6 +91,7 @@ describe.skipIf(!existsSync(ENGINE_PY))("runJob (real sandbox + real gate, scrip
               .replace("family: flight", "family: bouncy")
               .replace("points_to_win: 11", "points_to_win: 7");
             writeFileSync(rulesPath(dir), y);
+            decide(dir);
             emit({ kind: "edit", path: rulesPath(dir), text: "Edit rules.yaml" });
           },
           (dir, emit) => {
@@ -144,7 +147,10 @@ describe.skipIf(!existsSync(ENGINE_PY))("runJob (real sandbox + real gate, scrip
         config: config({ maxAttempts: 2 }),
         sink: new Collect(),
         agentFactory: scripted([
-          (dir) => writeFileSync(rulesPath(dir), "sport: table_tennis\n"),
+          (dir) => {
+            writeFileSync(rulesPath(dir), "sport: table_tennis\n");
+            decide(dir);
+          },
           (dir) => writeFileSync(rulesPath(dir), "sport: table_tennis\nfamily: flight\n"),
         ]),
       },

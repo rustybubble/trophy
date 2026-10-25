@@ -15,6 +15,7 @@ from typing import Any
 from ..sportmod.api import Observation
 from ..sportmod.l1 import read_l1, read_labels
 from ..sportmod.loader import LoadError, SportModule, load_module, validate_against, validate_event
+from .annotated import annotated_rows, session_rows
 
 ALLOWED_TYPES = frozenset({"bounce", "net", "ball_dead", "contact"})
 
@@ -123,12 +124,19 @@ def _recall_str(events: list[dict[str, Any]] | None, labels: dict[str, Any]) -> 
 
 def run_replay(
     module_dir: Path,
-    samples_dir: Path,
+    samples_dir: Path | None,
     *,
     baseline_dir: Path | None = None,
     game_id: str = "g_synth001",
+    annotated_dir: Path | None = None,
+    session: Path | None = None,
+    house_rule: bool = False,
 ) -> ReplayResult:
-    """Replay every sample through the candidate module (and the baseline, when given)."""
+    """Replay every sample through the candidate module (and the baseline, when given).
+
+    ``annotated_dir``: hand-annotated fixtures whose labelled calls the pack must reproduce (an interpreter's gate).
+    ``session``: the live session the engine dumped; with a baseline, its changed plays are ``calls_changed`` (D-43).
+    ``house_rule``: labelled outcomes are shown but not gated (a house rule may change them on purpose)."""
     t0 = time.perf_counter()
     tests: list[dict[str, Any]] = []
     counts: dict[str, dict[str, int]] = {}
@@ -154,11 +162,24 @@ def run_replay(
         except LoadError as e:
             row("baseline:load", False, "fail", detail="; ".join(e.errors))
 
+    if session is not None:
+        s_tests, s_changed = session_rows(mod, base, session)
+        tests += s_tests
+        calls_changed += s_changed
+    if annotated_dir is not None:
+        a_tests, a_changed = annotated_rows(mod, base, annotated_dir, informational=house_rule)
+        tests += a_tests
+        calls_changed += a_changed
+    if samples_dir is None:
+        return _finish(tests, counts, cand_events, t0, calls_changed)
+    if mod.annotated:
+        row("samples:load", False, "fail", detail="an annotated module (no events.py) can't run layer-1 samples")
+        return _finish(tests, counts, cand_events, t0, calls_changed)
     try:
         samples = load_samples(samples_dir)
     except (FileNotFoundError, ValueError) as e:
         row("samples:load", False, "fail", detail=str(e))
-        return _finish(tests, counts, cand_events, t0)
+        return _finish(tests, counts, cand_events, t0, calls_changed)
 
     for s in samples:
         labels = s.labels
@@ -253,6 +274,8 @@ def run_replay(
                 pts = [c for c in cand_calls if c.get("points")]
                 won = pts[0].get("team_id") if pts else None
                 ok = len(pts) == 1 and won == labels["rally_winner"]
+                if house_rule and not ok:
+                    ok = True  # a house rule may change who wins a labelled rally: shown, not gated
                 row(
                     f"{pre}calls:winner",
                     ok,

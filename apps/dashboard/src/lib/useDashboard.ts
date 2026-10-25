@@ -7,6 +7,7 @@ import {
   type Call,
   type Camera,
   type Challenge,
+  type DroidRun,
   type Feed,
   type Game,
   type HouseRule,
@@ -29,6 +30,7 @@ export interface DashboardView {
   votes: AiVote[];
   challenges: Challenge[];
   houseRules: HouseRule[]; // newest first
+  droidRuns: DroidRun[]; // newest first, every kind (D-43)
   asks: Ask[]; // newest first
   cameras: Camera[];
   observations: Observation[]; // newest first, capped
@@ -61,6 +63,7 @@ const empty: DashboardView = {
   votes: [],
   challenges: [],
   houseRules: [],
+  droidRuns: [],
   asks: [],
   cameras: [],
   observations: [],
@@ -93,6 +96,11 @@ export function useDashboard(source: Source | undefined): DashboardView {
       state.onChallenge((c) => set((p) => ({ challenges: upsert(p.challenges, c, (x) => x.challenge_id) }))),
       state.onHouseRule((h) =>
         set((p) => ({ houseRules: upsert(p.houseRules, h, (x) => x.rule_version).sort(byNewest) })),
+      ),
+      state.onDroidRun((r) =>
+        set((p) => ({
+          droidRuns: upsert(p.droidRuns, r, (x) => x.run_id).sort((a, b) => b.started_at_ms - a.started_at_ms),
+        })),
       ),
       state.onAsk((a) => set((p) => ({ asks: upsert(p.asks, a, (x) => x.ask_id).sort(byNewest) }))),
       state.onObservation((o) =>

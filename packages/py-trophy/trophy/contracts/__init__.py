@@ -31,9 +31,18 @@ from .ctl import (
     ReviewCallArgs,
     FeedScheduleArgs,
     ViewerStatusArgs,
+    RegenerateInterpreterArgs,
 )
 from .decide import Decide, DecideRequest, Vote, DecideResult
-from .droidrun import DroidRun, DroidRunTrigger, DroidRunStep, DroidRunTest, DroidRunCallChange, DroidRunResults
+from .droidrun import (
+    DroidRun,
+    DroidRunTrigger,
+    DroidRunStep,
+    DroidRunTest,
+    DroidRunCallChange,
+    DroidRunDecision,
+    DroidRunResults,
+)
 from .event import (
     Event,
     PosM,
@@ -124,6 +133,7 @@ __all__ = [
     "DecideResult",
     "DroidRun",
     "DroidRunCallChange",
+    "DroidRunDecision",
     "DroidRunResults",
     "DroidRunStep",
     "DroidRunTest",
@@ -163,6 +173,7 @@ __all__ = [
     "PosM",
     "Rally",
     "ReachOverNetPayload",
+    "RegenerateInterpreterArgs",
     "RegisterCameraArgs",
     "Replacement",
     "RequestCheckArgs",
