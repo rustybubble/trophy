@@ -38,7 +38,7 @@ Read this file for project context, then the plan docs listed below. Explicit us
 ## Agent autonomy
 - **Build on prior work.** Agents may learn from, extend, adapt, copy or vendor compatible licensed code from `subatomic-hamster/replay` and `courtcam`. Preserve required notices and record the source and revision; see `docs/rules-compliance.md`.
 - **Choose the implementation.** Change architecture, dependencies and boundaries when that helps the task. Owners are coordination hints. Explain substantial departures in `docs/decisions.md` and update the affected consumers.
-- **Choose where to run.** The M5 Pro Mac is the default. Vultr is the GPU fallback. Any cloud spend needs the user's per-resource approval.
+- **Choose where to run.** The live backend runs natively on the M5 Pro Mac with `make dev` (D-30 revised: no cloud box; `docs/plan/prompts/mac-bringup.md`). Any cloud spend needs the user's per-resource approval.
 - **Proceed with routine work.** Make reversible choices and run checks without asking. Ask only when information is missing and blocks progress, or for actions outside your authorization: spend, account actions, publishing, downloading third-party media, or filming people.
 - **Treat research as dated evidence.** Verify APIs and license terms when adopting them.
 
