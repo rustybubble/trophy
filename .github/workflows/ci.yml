@@ -26,6 +26,16 @@ jobs:
           uv run --frozen ruff check .
           uv run --frozen ruff format --check .
           uv run --frozen pytest -q
+      - name: live evaluation lint + tests
+        run: |
+          uv run --project packages/py-trophy --frozen ruff check tools/eval_live.py tests/test_eval_live.py
+          uv run --project packages/py-trophy --frozen python -m pytest -q tests/test_eval_live.py
+      - name: recorder lint + tests
+        run: |
+          uv sync --frozen --project services/recorder
+          uv run --project services/recorder --frozen ruff check services/recorder
+          uv run --project services/recorder --frozen ruff format --check services/recorder
+          uv run --project services/recorder --frozen pytest -q services/recorder/tests
       - name: py-trophy imports on 3.12
         working-directory: packages/py-trophy
         run: |

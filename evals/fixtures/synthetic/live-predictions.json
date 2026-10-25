@@ -1,0 +1,48 @@
+{
+  "schema": "trophy.eval_predictions.v1",
+  "game_id": "g1",
+  "rule_profile": "synthetic-v1",
+  "source": "synthetic",
+  "rallies": [
+    {
+      "rally_no": 1,
+      "t_start_s": 1,
+      "t_end_s": 5,
+      "winner_team_id": "A"
+    }
+  ],
+  "calls": [
+    {
+      "id": "edge1",
+      "kind": "edge_call",
+      "t_game_s": 3,
+      "outcome": "edge_good",
+      "evidence": [
+        {
+          "cam_id": "c1"
+        }
+      ]
+    },
+    {
+      "id": "serve1",
+      "rule_id": "serve_toss_too_low",
+      "t_game_s": 1,
+      "outcome": "illegal_toss_height"
+    }
+  ],
+  "tracks": [
+    {
+      "cam_id": "c1",
+      "seq": 1,
+      "px": null
+    },
+    {
+      "cam_id": "c1",
+      "seq": 2,
+      "px": [
+        40,
+        50
+      ]
+    }
+  ]
+}

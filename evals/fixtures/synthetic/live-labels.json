@@ -1,0 +1,57 @@
+{
+  "schema": "trophy.eval_labels.v1",
+  "game_id": "g1",
+  "rule_profile": "synthetic-v1",
+  "split": "synthetic",
+  "coverage": [
+    {
+      "t0_s": 0,
+      "t1_s": 20,
+      "tasks": [
+        "rally",
+        "edge",
+        "serve"
+      ],
+      "complete": true
+    }
+  ],
+  "rallies": [
+    {
+      "id": "r1",
+      "t_start_s": 1,
+      "t_end_s": 5,
+      "winner_team_id": "A"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "t_game_s": 3,
+      "cam_id": "c1",
+      "outcome": "edge_good"
+    }
+  ],
+  "serves": [
+    {
+      "id": "s1",
+      "t_game_s": 1,
+      "outcome": "illegal_toss_height"
+    }
+  ],
+  "no_ball_frames": [
+    {
+      "cam_id": "c1",
+      "seq": 1
+    },
+    {
+      "cam_id": "c1",
+      "seq": 2
+    },
+    {
+      "cam_id": "c1",
+      "seq": 3
+    }
+  ],
+  "labeller": "synthetic fixture",
+  "reviewer": "synthetic fixture"
+}

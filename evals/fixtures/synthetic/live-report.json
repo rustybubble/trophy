@@ -1,0 +1,94 @@
+{
+  "schema": "trophy.eval_report.v1",
+  "game_id": "g1",
+  "rule_profile": "synthetic-v1",
+  "split": "synthetic",
+  "synthetic": true,
+  "prediction_source": "synthetic",
+  "rally_outcomes": {
+    "n": 1,
+    "correct": 1,
+    "accuracy": 1.0,
+    "wilson_95": [
+      0.20654931437723745,
+      1
+    ],
+    "excluded_unknown": 0,
+    "boundaries": {
+      "n": 1,
+      "correct": 1,
+      "accuracy": 1.0,
+      "wilson_95": [
+        0.20654931437723745,
+        1
+      ],
+      "wrong_matched": 0,
+      "missed": 0,
+      "spurious": 0,
+      "unscored_predictions": 0,
+      "errors": []
+    },
+    "spurious_rally_numbers": []
+  },
+  "edge_vs_side": {
+    "n": 1,
+    "correct": 1,
+    "accuracy": 1.0,
+    "wilson_95": [
+      0.20654931437723745,
+      1
+    ],
+    "excluded_unknown": 0,
+    "missed": 0,
+    "false_positive_calls": 0,
+    "unscored_predictions": 0,
+    "errors": [],
+    "confusion": {
+      "edge_good": {
+        "edge_good": 1
+      }
+    },
+    "false_positive_ids": []
+  },
+  "serve_faults": {
+    "n": 1,
+    "correct": 1,
+    "accuracy": 1.0,
+    "wilson_95": [
+      0.20654931437723745,
+      1
+    ],
+    "excluded_unknown": 0,
+    "missed": 0,
+    "false_positive_calls": 0,
+    "unscored_predictions": 0,
+    "errors": [],
+    "confusion": {
+      "illegal_toss_height": {
+        "illegal_toss_height": 1
+      }
+    },
+    "false_fault_calls_on_legal_serves": 0,
+    "false_positive_ids": []
+  },
+  "no_ball_false_positives": {
+    "labelled_n": 3,
+    "evaluated_n": 2,
+    "missing_samples": 1,
+    "false_positives": 1,
+    "rate": 0.5,
+    "wilson_95": [
+      0.09453120573423074,
+      0.9054687942657693
+    ],
+    "frames": [
+      {
+        "cam_id": "c1",
+        "seq": 2
+      }
+    ]
+  },
+  "manual_calls_excluded": 0,
+  "reviewed_calls": 0,
+  "warnings": []
+}
