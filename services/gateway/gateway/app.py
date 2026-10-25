@@ -772,6 +772,23 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         return FileResponse(path, media_type=mime, headers={"Cache-Control": "private, max-age=3600"})
 
     # ------------------------------------------------------------ health
+    @app.post("/api/client_log", status_code=204)
+    async def client_log(request: Request) -> Response:
+        """A phone's startup error (apps/pwa/index.html), so a blank page on a device we can't inspect is
+        diagnosable from the stack log. Unauthenticated, size-capped, never stored."""
+        raw = (await request.body())[:4000]
+        try:
+            d = json.loads(raw)
+        except ValueError:
+            d = {"msg": raw.decode("utf8", "replace")}
+        jlog(
+            "client error",
+            error=str(d.get("msg", ""))[:2000],
+            ua=str(d.get("ua", ""))[:300],
+            url=str(d.get("url", ""))[:200],
+        )
+        return Response(status_code=204)
+
     @app.get("/api/healthz")
     async def healthz() -> JSONResponse:
         async def probe(url: str) -> bool:

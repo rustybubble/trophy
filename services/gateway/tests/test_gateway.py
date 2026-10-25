@@ -358,6 +358,15 @@ def test_healthz(env):
     assert body["redis"] is True and body["recorder"] is False
 
 
+def test_client_log_accepts_a_phone_error_and_bad_bodies(env, caplog):
+    client, _, _ = env
+    with caplog.at_level("INFO", logger="trophy.gateway"):
+        r = client.post("/api/client_log", json={"msg": "SyntaxError: x", "ua": "iPhone", "url": "/cam/"})
+        assert r.status_code == 204
+        assert client.post("/api/client_log", content=b"not json").status_code == 204
+    assert any('"error": "SyntaxError: x"' in m for m in caplog.messages)
+
+
 # ---------------------------------------------------------------- challenge clips
 def sync_clock(client, token, offset=0.0):
     with client.websocket_connect(f"/api/ws/ctl?token={token}") as ws:
