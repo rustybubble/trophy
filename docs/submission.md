@@ -23,15 +23,15 @@ Rules for both:
 | 0:10–0:15 | Title card | — | **Trophy.** A network of phones that referees your pickup games and settles the close calls. |
 | 0:15–0:30 | Dashboard QR → a phone scans it → camera live; a second phone joins | Table corners found automatically | "Any phone is a camera. Scan, point, play." |
 | 0:30–0:50 | A controlled rally (moderate pace) → point | **Trophy speaks the call and the score**; the banner shows the tier; the dashboard score ticks; the world view shows both cameras' ball dots | No voice-over: let the call speak |
-| 0:50–1:05 | A close call → **Challenge** | Replay with the ball track and its σ ellipse; the geometry vote; **Claude's vote** next to it (only if it ran live, see gaps) | Lower third: "Claude is a second opinion: uncalibrated, never delays a call" |
+| 0:50–1:05 | A close call → **Challenge** | Replay with the ball track and its σ ellipse; the geometry vote; **Claude's vote** next to it; the verdict is spoken with a plain explanation (live in #39: challenge → verdict 4.2 s) | Lower third: "Claude is a second opinion: uncalibrated, never delays a call" |
 | 1:05–1:25 | Trophy gets a rally wrong → judge taps **"one rally, won by A"** | Score fixed and spoken in < 3 s; a Droid `correction` run streams its plan, diff and gate on the dashboard → Approve → hot-load | Lower third: "Sped up [[n]]×; the real run took [[s]]" ("ready in 328 s, gate 52/52" if this is that run) |
 | 1:25–1:40 | A player asks by voice: "Was that last one on the edge?" | Spoken answer from the geometry check, with BETA when close | Only if `referee serve` runs live (needs the Anthropic key); otherwise cut and lengthen 1:05 |
 | 1:40–2:00 | **The problem + how it's built** | Quick cuts: the table, the dashboard | "Pickup games don't have referees, so every close call is an argument. Phones stream to a Mac; BlurBall tracks the ball at 30 fps; a rule engine decides; Cartesia speaks every call; SpacetimeDB keeps every screen in sync." |
 | **2:00** | ——— end of the Cartesia cut ——— | | |
-| 2:00–2:20 | **Spacetime** | Two phones and the dashboard side by side, updating on the same call | "Spacetime is the referee's memory: every camera's measurements and the game state, synced to every device and agent. Video never goes in; only facts do." |
-| 2:20–2:40 | **The Droid writes the rules from the laws** | The `compile-rules` run: empty `rules:` → a pack where every rule cites an ITTF clause and lists what it couldn't encode; gate result | "We didn't hand-write the referee. A Factory Droid wrote it from the ITTF laws, and it repairs it from the judge's corrections." (Measured: 531 s, 34/34) |
+| 2:00–2:15 | **Spacetime** | Phones and the dashboard side by side: each phone plays its angle on the Spacetime schedule; the "Cameras in sync" panel; one call lands on every screen | "Spacetime is the referee's memory: every camera's measurements and the game state, synced to every device and agent. Video never goes in; only facts do." (Measured: playback within ±2–13 ms of schedule) |
+| 2:15–2:40 | **Every sport: the Droid writes the referee** | The Droid panel writes the pickleball interpreter (plan, diff, gate 9/9) → quick cuts of pickleball, volleyball and basketball scenarios, each call spoken with who's at fault | "We didn't hand-write the referee. For each sport, a Factory Droid writes it from the rulebook in about a minute." Label on the cuts: **"CC BY footage · events marked by hand · tracking for this sport is next"** |
 | 2:40–2:50 | **Serves** (Mu Du's recorded serve analysis) | Toss height and angle traced on a recorded serve vs ITTF 2.6.2 (16 cm) | Label: **"Recorded analysis: live serve calls are next"** |
-| 2:50–3:00 | **Trophy Watch** recap → ★ Play of the game → close | | "Trophy. Settle it, keep playing." Small "coming next" sport row (basketball, pickleball, volleyball…) labelled as not built |
+| 2:50–3:00 | **Trophy Watch** recap → ★ Play of the game → close | | "Trophy. Settle it, keep playing." |
 
 **Numbers that may appear on screen** (all measured on the Mac, Apple M5, single runs, unless noted):
 - BlurBall on MPS: **30 fps, 0 frames skipped, lag p50 ~100 ms** on the team's two recorded takes; two simultaneous cameras at 29–30 fps each (#19).
@@ -40,6 +40,7 @@ Rules for both:
 - Droid house rule (synthetic fixtures): pending → **ready in 27.5–30.6 s**, gate 19/19; approve → hot-load **0.5–0.8 s**.
 - iPhone 720p through `trophy.photo`: **29.9 fps received**, capture → Redis p50 145 ms (last 10 s only; demo PC, not the Mac).
 - Spacetime reducer → subscriber: **p50 3.4–5.0 ms** (Windows localhost, not the Mac).
+- From #39 (`demo/judging`, M5 Pro, 2026-10-25): challenge → verdict with a **live Claude vote, 4.2 s**; Droid interpreters **65.9 s / 43.7 s / 66.0 s** (pickleball 9/9, volleyball 9/9, basketball 11/11); a house rule from the phone applied in **~31 s**, 4 rallies re-judged, 3 calls changed, and Undo restored them; phone playback **±2–13 ms** of schedule. Not yet tried on real iPhones.
 - **Never on screen:** "ball found in 97 % of frames" as accuracy (it's detection presence on unlabelled footage), or any synthetic 3D error figure without "synthetic".
 
 ---
@@ -55,9 +56,11 @@ A network of phones that referees your pickup games: it calls every point out lo
 ### Inspiration
 Our teammate Mu Du is an internationally ranked table-tennis player, and even he can't always tell whether a ball clipped the edge or a serve toss was legal. In a tournament an umpire settles it. In a pickup game at [[the named community: e.g. "the [[club]] at Berkeley's RSF"]], nobody does: close calls become arguments, and arguments end games. [[One real player quote, with permission.]]
 
-We wanted a referee anyone could set up with the phones already in their pocket, one that's honest about what a camera can and can't see.
+We wanted a referee system that could work out of the box for any casual pickup game, from the phones already in your pocket, and that's honest about what a camera can and can't see. We started with ping pong because it's the hardest test: the smallest, fastest ball, with calls decided by millimetres at the table's edge.
 
 ### What it does
+Trophy is built to referee any pickup sport. The cameras and vision turn video into sport-agnostic measurements (bounces, contacts, positions in court metres, each with its uncertainty), and each sport is a rule pack that a Factory Droid writes from that sport's official rulebook. **Four sports are refereed today.** Ping pong is called end to end from the cameras. Pickleball, volleyball and basketball are called by Droid-written rule packs on real CC BY game footage, from events we marked by hand; ball and player tracking for those sports is next.
+
 - **Phones become cameras.** Scan a QR code and your phone streams to the referee; the table's corners are found automatically. Several phones can watch one game.
 - **Live ping-pong refereeing.** Trophy tracks the ball, scores rallies and applies the edge rule, and **speaks every call and the score** in a referee voice (Cartesia).
 - **Honest confidence.** Every call is **AUTO** (p ≥ 0.90), **BETA** (shows p, can be challenged) or **PLAYERS DECIDE** (the cameras can't judge it). Judgment fouls are never forced.
@@ -67,7 +70,8 @@ We wanted a referee anyone could set up with the phones already in their pocket,
 - **Ask the ref** by voice: "was that on the edge?" gets an answer from the geometry; rules questions are answered only from the rules Trophy actually enforces. [[Keep only if it ran live.]]
 - **Trophy Watch** after the game: recap, ★ Play of the game, highlights, condensed game, moments, stats and search.
 - **Serve analysis (recorded):** toss height and angle under ITTF law 2.6.2, measured on recorded serves. Live serve calls are next.
-- **Coming next (not built):** basketball, pickleball, tennis, badminton, volleyball, two-hand touch.
+- **A new sport in about a minute.** When a new sport comes into play, a Factory Droid writes its referee from the rulebook and gates it on labelled plays: pickleball in 65.9 s (gate 9/9), volleyball in 43.7 s (9/9), basketball in 66.0 s (11/11). Each call is spoken with who's at fault. Those three run on hand-marked events from real CC BY games; their ball and player tracking is next.
+- **Coming next:** vision for pickleball, volleyball and basketball; badminton (rulebook in, rule pack not yet), tennis, two-hand touch.
 
 ### How we built it
 - **Capture:** a PWA (Vite + React 19, strict TS) streams 720p JPEG over WSS to a FastAPI gateway on an M5 Mac, through Caddy at `https://trophy.photo`. Frames ride a Redis frame bus to a recorder (2 s fMP4 HLS for replay) and the vision module. **Video never leaves the Mac.**
