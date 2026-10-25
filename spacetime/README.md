@@ -44,12 +44,16 @@ Vision modules use `trophy.world.ObservationWriter` / `TrackSampleWriter` instea
 ```bash
 S="$HOME/.spacetimedb/spacetime.exe --root-dir=$HOME/.spacetimedb"   # Windows: the CLI lives under ~/.spacetimedb
 $S start --listen-addr 127.0.0.1:3000 --non-interactive               # keep running
-$S publish -s local -p spacetime --yes=skip-login trophy               # add --delete-data=on-conflict for breaking changes
+$S publish -s local -p spacetime --yes=skip-login --break-clients trophy  # see "Schema changes" below
 python spacetime/scripts/provision.py                                  # engine/vision/compiler identities -> .env
 $S generate --lang typescript -p spacetime -o packages/state-client/src/bindings --no-config -y
 python spacetime/scripts/seed_demo.py --check                          # labelled-synthetic demo game + smoke test
 ```
 Caddy forwards only `/stdb/v1/{ping, identity, database/<db>/subscribe}` from the LAN; reducer calls, SQL and publishing are reachable only on 127.0.0.1.
+
+## Schema changes
+- **Add columns at the end of a table with a `.default(...)`** (optional columns: `.optional().default(undefined)`), e.g. the `ask` columns `speech, kind, check, p, calibrated`. SpacetimeDB 2.13 then migrates a live database in place and keeps its rows; the publish only warns that already-built clients will break, which `--break-clients` accepts (it still refuses anything that would delete data). Every client is built from this repo, so regenerate the bindings and restart the stack (`make dev`); open pages must reload.
+- Anything else (removing, renaming or retyping a column) needs `--delete-data=on-conflict`, which wipes the database: re-run `provision.py` afterwards.
 
 ## Tests
 - `python spacetime/scripts/seed_demo.py --check`: every reducer through the right role, row counts and statuses, vote linking, scores, and six rejected calls (wrong role, anonymous, compiler approving, engine posting observations, engine registering a service, missing fields).

@@ -20,8 +20,8 @@ check:      ## what CI runs: lint, types, tests, fixture validation, codegen sta
 	npm run typecheck && npm run lint && npm test
 	$(MAKE) contracts fixtures && git diff --exit-code -- packages/contracts/gen packages/py-trophy/trophy/contracts packages/state-client/fixtures
 SPACETIME ?= spacetime
-stdb-publish:   ## publish the module to the local server as `trophy` (spacetime start must be running)
-	$(SPACETIME) publish -s local -p spacetime --yes=skip-login trophy
+stdb-publish:   ## publish the module to the local server as `trophy` (spacetime start must be running; additive migrations only, see spacetime/README.md)
+	$(SPACETIME) publish -s local -p spacetime --yes=skip-login --break-clients trophy
 stdb-provision: ## engine/vision/compiler identities -> .env, registered with the module
 	$(PYTHON) spacetime/scripts/provision.py
 stdb-bindings:  ## regenerate the TS client bindings after module changes

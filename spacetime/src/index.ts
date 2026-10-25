@@ -171,6 +171,12 @@ const ask = table(
     latency_ms: t.f64(),
     created_at_ms: t.f64(),
     json: t.string(),
+    // Added after first publish, so each has a default (existing databases migrate without --delete-data).
+    speech: t.string().default(""), // spoken form; phones speak it when the row arrives late
+    kind: t.string().default(""), // check | rule | score | explain | pending | none ("" from older referees)
+    check: t.string().default(""), // the session check that answered, when kind = check
+    p: t.f64().optional().default(undefined), // the check's probability; uncalibrated unless `calibrated`
+    calibrated: t.bool().optional().default(undefined),
   },
 );
 
@@ -299,6 +305,20 @@ function num(o: Obj, k: string, required = true, dflt = 0): number {
 
 function bool(o: Obj, k: string): boolean {
   return o[k] === true;
+}
+
+function optNum(o: Obj, k: string): number | undefined {
+  const v = o[k];
+  if (v === undefined || v === null) return undefined;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  throw new SenderError(`field ${k} must be a finite number`);
+}
+
+function optBool(o: Obj, k: string): boolean | undefined {
+  const v = o[k];
+  if (v === undefined || v === null) return undefined;
+  if (typeof v === "boolean") return v;
+  throw new SenderError(`field ${k} must be a boolean`);
 }
 
 function obj(json: string): Obj {
@@ -629,7 +649,13 @@ export const post_ask = spacetimedb.reducer({ json: t.string() }, (ctx, { json }
     latency_ms: num(a, "latency_ms"),
     created_at_ms: num(a, "created_at_ms"),
     json: JSON.stringify(a),
+    speech: str(a, "speech", false),
+    kind: str(a, "kind", false),
+    check: str(a, "check", false),
+    p: optNum(a, "p"),
+    calibrated: optBool(a, "calibrated"),
   };
+  if (row.p !== undefined && (row.p < 0 || row.p > 1)) throw new SenderError("p must be in [0, 1]");
   if (ctx.db.ask.ask_id.find(row.ask_id)) ctx.db.ask.ask_id.update(row);
   else ctx.db.ask.insert(row);
 });

@@ -2297,7 +2297,27 @@
     ],
     "moss_ms": 42,
     "latency_ms": 2100,
-    "created_at_ms": 1792000032000
+    "created_at_ms": 1792000032000,
+    "kind": "rule"
+   }
+  },
+  {
+   "at_ms": 34000,
+   "table": "ask",
+   "row": {
+    "ask_id": "01JDEMASK00000000000000022",
+    "game_id": "g_demtt001",
+    "sport": "table_tennis",
+    "question": "Did that last one catch the edge?",
+    "answer": "[Synthetic] Yes, the edge, but it's close: BETA.",
+    "speech": "[Synthetic] Yes, the edge, but it's close. Beta.",
+    "citations": [],
+    "latency_ms": 1400,
+    "created_at_ms": 1792000034000,
+    "kind": "check",
+    "check": "edge",
+    "p": 0.71,
+    "calibrated": false
    }
   }
  ]

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("spacetimedb/server", () => {
   const col = () => {
     const c: any = {};
-    for (const k of ["primaryKey", "index", "autoInc"]) c[k] = () => c;
+    for (const k of ["primaryKey", "index", "autoInc", "default", "optional"]) c[k] = () => c;
     return c;
   };
   return {
@@ -73,6 +73,7 @@ beforeEach(() => {
     commentary: "commentary_key",
     droid_run: "run_id",
     sport_module: "module_key",
+    ask: "ask_id",
   }))
     ctx.db[t] = table(k);
   for (const role of ["engine", "compiler", "vision"]) ctx.db.service.insert({ identity_hex: role, role });
@@ -177,5 +178,32 @@ describe("platform reducer boundaries", () => {
     call("upsert_sport_module", { ...m, version: 2 });
     call("upsert_sport_module", { ...m, game_id: "g1", backend: "handwritten" });
     expect([...ctx.db.sport_module.iter()]).toHaveLength(2);
+  });
+  it("fills the ask columns from the referee's fields and keeps older asks readable", () => {
+    const ask = {
+      ask_id: "a1",
+      game_id: "g1",
+      sport: "table_tennis",
+      question: "Was that on the edge?",
+      answer: "Edge, BETA.",
+      citations: [],
+      latency_ms: 900,
+      created_at_ms: 5,
+    };
+    call("post_ask", { ...ask, speech: "Edge. Beta.", kind: "check", check: "edge", p: 0.71, calibrated: false });
+    const row = ctx.db.ask.ask_id.find("a1");
+    expect([row.speech, row.kind, row.check, row.p, row.calibrated]).toEqual([
+      "Edge. Beta.",
+      "check",
+      "edge",
+      0.71,
+      false,
+    ]);
+    call("post_ask", { ...ask, ask_id: "a2" });
+    const old = ctx.db.ask.ask_id.find("a2");
+    expect([old.speech, old.kind, old.check, old.p, old.calibrated]).toEqual(["", "", "", undefined, undefined]);
+    for (const patch of [{ p: 1.5 }, { p: "high" }, { calibrated: "yes" }, { kind: 3 }])
+      expect(() => call("post_ask", { ...ask, ask_id: "a3", ...patch })).toThrow();
+    expect(() => call("post_ask", ask, "vision")).toThrow("unauthorized");
   });
 });
