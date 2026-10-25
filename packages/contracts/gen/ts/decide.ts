@@ -4,7 +4,7 @@
  * This interface was referenced by `Decide`'s JSON-Schema
  * via the `definition` "Backend".
  */
-export type Backend = "claude" | "gemini" | "bitdeer" | "geometry";
+export type Backend = "claude" | "geometry";
 
 /**
  * trophy.decide.v1: the background AI second opinion (interfaces-v1 §15). Never on the live path (D-23). Blend weights are uncalibrated heuristics until >= 60 labelled challenges exist.

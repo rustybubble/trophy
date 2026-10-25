@@ -16,7 +16,7 @@ exactly what the Droid's gate replays. No accuracy on real footage is claimed an
 | Tools | `brew install redis ffmpeg`; `spacetime version upgrade` (2.13.0); `uv`, Node 24, the `droid` CLI |
 | Env | `cp .env.local .env`; `TROPHY_TOKEN_SECRET` ≥ 16 chars (`python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`); `SPACETIME_PUBLIC_URI=ws://127.0.0.1:5173/stdb` for a localhost demo (phones on `trophy.photo` need Caddy + the Porkbun keys instead) |
 | Keys present | `CARTESIA_API_KEY` (calls are spoken), `FACTORY_API_KEY` (house rules compile) |
-| Keys missing | `ANTHROPIC_API_KEY`: the referee service (`services/referee`, ask the ref) refuses to start without it, by design (no keyless mode); `GEMINI_API_KEY`, `BITDEER_API_KEY`: no AI votes (`trophy-engine --votes` refuses) |
+| Keys missing | `ANTHROPIC_API_KEY`: the referee service (`services/referee`, ask the ref) refuses to start without it, by design (no keyless mode), and without it there is no AI vote (`trophy-engine --votes` refuses). Gemini and Bitdeer are cut (D-41) |
 | Deps | `npm ci`; `uv sync --frozen` in `packages/py-trophy`, `services/{gateway,recorder,engine,referee,flight}` |
 
 ## 1. Bring the stack up

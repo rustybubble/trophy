@@ -1,11 +1,9 @@
 import type { AiVote, Call } from "@trophy/state-client";
 
-const BACKENDS: AiVote["backend"][] = ["geometry", "claude", "gemini", "bitdeer"];
+const BACKENDS: AiVote["backend"][] = ["geometry", "claude"];
 const NAMES: Record<AiVote["backend"], string> = {
   geometry: "Geometry",
   claude: "Claude",
-  gemini: "Gemini",
-  bitdeer: "Bitdeer",
 };
 
 /** The background second opinion on close calls (D-23). The AI probabilities are uncalibrated and say so. */
@@ -16,7 +14,7 @@ export function VotesPanel({ calls, votes }: { calls: Call[]; votes: AiVote[] })
       <h2>
         AI second opinion <span className="badge">uncalibrated</span>
       </h2>
-      {!voted.length && <p className="muted">Close calls get votes from Claude, Gemini and Bitdeer here.</p>}
+      {!voted.length && <p className="muted">Close calls get Claude's vote here, next to the geometry.</p>}
       {voted.map((c) => (
         <div key={c.id} className="votes">
           <div className="small">

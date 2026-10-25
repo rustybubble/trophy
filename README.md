@@ -7,7 +7,7 @@ Point a phone at a ping-pong table and Trophy referees the game:
 - It **calls the edge rule and illegal serves**. Under the official ITTF law, the toss must rise at least 16 cm off the open palm, go up within 30° of vertical and be struck on the way down. Hidden serves and net-touch lets are called too.
 - It **speaks every call** in a referee voice.
 - Every call shows how sure it is: **AUTO** at p ≥ 0.90, **BETA** with its probability and open to challenge, or **PLAYERS DECIDE** when the cameras can't judge it.
-- A **challenge** brings up an **instant replay** with a second opinion from three AI models. The votes run in the background and never hold up a call.
+- A **challenge** brings up an **instant replay** with a second opinion from Claude next to the geometry. The vote runs in the background and never holds up a call.
 - Players can **ask the ref** by voice. Judgement questions ("was that on the edge?") are answered by a geometry check on the ball track; rules questions are answered from the sport's rule pack and the group's approved house rules.
 - Players can **add their own house rule** in plain English, and a Factory Droid writes, tests and applies it.
 
@@ -136,7 +136,7 @@ Pickup games are how strangers become regulars: a table in a dorm basement, a co
 - **Anyone can join.** A phone on a mount is the camera; the next player scans a QR code to join the same game. Nobody needs an app, an account or special hardware.
 - **Everyone hears the same call at the same moment.** The call is spoken aloud, not whispered to one player's screen.
 - **It says when it isn't sure.** BETA calls show their probability and can be challenged. When the cameras can't see a call, Trophy says PLAYERS DECIDE and hands it back to the people at the table instead of pretending.
-- **A challenge is a shared moment, not a fight:** the replay plays for everyone, and three AI models give a second opinion. The players (or the judge) decide.
+- **A challenge is a shared moment, not a fight:** the replay plays for everyone, and Claude gives a second opinion next to the geometry. The players (or the judge) decide.
 - **Every group keeps its own rules.** "First to 7, win by 1", or "a serve that clips the net and lands in is good": say it, and the Droid writes it into the rule pack, tests it and applies it once the group approves.
 - **Trophy Watch** turns the game into something to share afterwards: the recap, the moments, the ★ Play of the game.
 
@@ -179,19 +179,6 @@ measure and lets the players decide the rest, honestly labelled.
   - *A house rule that does something else.* The Droid's sandbox, gate and the judge's approval of a visible diff.
 - **Not yet measured:** no `ANTHROPIC_API_KEY` has been available on the demo Mac, so phrasing latency (budget
   0.5–1.5 s) and live votes have only been tested against recorded API response shapes.
-
-## Bitdeer AI Model Studio
-One of the three challenge voters (`trophy_engine/decide`). When a BETA call is challenged, it gets the evidence
-crops and the call's facts through Bitdeer's OpenAI-compatible endpoint (`https://api-inference.bitdeer.ai/v1`, vision
-via `image_url`, model `BITDEER_VISION_MODEL`, default `Qwen/Qwen3.5-397B-A17B`) and votes on shuffled options with a
-4 s timeout that never delays the spoken call. The dashboard's AI panel shows its vote beside Claude's and Gemini's,
-labelled uncalibrated. **Not yet run live:** no `BITDEER_API_KEY` on the demo Mac; tested with recorded response shapes.
-
-## Gemini
-One of the three challenge voters (`trophy_engine/decide`): the same evidence and options as the others, a JSON
-response schema, `GEMINI_MODEL` from the environment, and the same 4 s budget that never delays a call. Its vote is
-shown in the dashboard's AI panel, labelled uncalibrated. **Not yet run live:** no `GEMINI_API_KEY` on the demo Mac;
-tested with recorded response shapes.
 
 ## License
 MIT (see [LICENSE](LICENSE)). Third-party code, models and media keep their own terms: see [docs/licenses.md](docs/licenses.md).

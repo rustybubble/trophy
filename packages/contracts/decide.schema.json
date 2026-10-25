@@ -10,7 +10,7 @@
     "result": { "$ref": "#/$defs/DecideResult" }
   },
   "$defs": {
-    "Backend": { "title": "Backend", "enum": ["claude", "gemini", "bitdeer", "geometry"] },
+    "Backend": { "title": "Backend", "enum": ["claude", "geometry"] },
     "DecideRequest": {
       "title": "DecideRequest",
       "type": "object",

@@ -309,15 +309,6 @@ function tableTennis(): MockScript {
     latency_ms: 1800,
     rationale: "Ball deflects upward off the top edge (synthetic).",
   });
-  vote(15800, {
-    backend: "gemini",
-    model: "gemini (synthetic)",
-    challenge_id: null,
-    choice: "EDGE_GOOD",
-    probs: { EDGE_GOOD: 0.66, SIDE_FAULT: 0.34 },
-    latency_ms: 2400,
-    rationale: "Trajectory after contact suggests top edge (synthetic).",
-  });
   const CH = ulid("chl");
   s.add(16000, "challenge", {
     challenge_id: CH,
@@ -330,15 +321,6 @@ function tableTennis(): MockScript {
     resolved_at_ms: null,
   });
   s.add(16000, "call", { ...edge, status: "challenged" });
-  vote(16500, {
-    backend: "bitdeer",
-    model: "Qwen/Qwen3.5-397B-A17B",
-    challenge_id: CH,
-    choice: "SIDE_FAULT",
-    probs: { EDGE_GOOD: 0.45, SIDE_FAULT: 0.55 },
-    latency_ms: 3100,
-    rationale: "Blurred crop; slight lean to side face (synthetic).",
-  });
   s.add(20000, "challenge", {
     challenge_id: CH,
     game_id: G,

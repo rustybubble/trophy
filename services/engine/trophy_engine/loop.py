@@ -27,7 +27,7 @@ from trophy.streams import CTL_ENGINE, EVENT_STREAMS, EventConsumer, parse_ctl
 from .ask import AskConfigError, Phraser, TrackStore, make_app, serve
 from .checks.events import TrackEventer
 from .checks.library import load_field, load_library
-from .decide import BackgroundDecider, BitdeerVoter, ClaudeVoter, GeminiVoter, VoterConfigError
+from .decide import BackgroundDecider, ClaudeVoter, VoterConfigError
 from .engine import Engine
 from .state import MemoryState, SpacetimeState, StateWriter
 from .track_source import RedisTrackSource, replay_file
@@ -48,8 +48,8 @@ def _dotenv(root: Path = ROOT) -> dict[str, str]:
 
 
 def build_decider(env: dict[str, str], state: StateWriter, engine: Engine) -> BackgroundDecider:
-    """All three voters, each requiring its own key. A missing key is a configuration error, not a silent skip."""
-    voters = [ClaudeVoter.from_env(env), GeminiVoter.from_env(env), BitdeerVoter.from_env(env)]
+    """Claude, the one model voter (D-41). A missing key is a configuration error, not a silent skip."""
+    voters = [ClaudeVoter.from_env(env)]
 
     def on_result(req: dict[str, Any], res: dict[str, Any]) -> None:
         g = engine.games.get(req["game_id"])
@@ -272,7 +272,7 @@ def run(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="trophy-engine", description="Trophy rule engine: events + ctl in, calls out")
     ap.add_argument("--redis", default=None, help="REDIS_URL (default from env/.env)")
     ap.add_argument("--state", choices=["spacetime", "memory"], default="spacetime")
-    ap.add_argument("--votes", action="store_true", help="run decide() voters (needs ANTHROPIC/GEMINI/BITDEER keys)")
+    ap.add_argument("--votes", action="store_true", help="run decide() with the Claude voter (needs ANTHROPIC_API_KEY)")
     ap.add_argument("--modules", type=Path, default=ROOT / "sports")
     ap.add_argument("--log-json", action="store_true")
     ap.add_argument(
