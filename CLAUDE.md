@@ -78,13 +78,13 @@ Spacetime ─subscriptions─▶ phones (voice, banner, replay), dashboard (scor
 
 Basketball (SHOULD, not started) would add a people stack: rfdetr 1.11.2 (CoreML fp32), trackers 2.6.1, supervision 0.30.9, rtmlib 0.0.16; see `docs/research/build-cards-possession-and-resting.md`.
 
-Everything runs **natively on the M5 Pro** (D-12, D-30) under the `Procfile` (`make dev`; `python3 scripts/dev.py --stop`). The Windows PC is a dev machine and browser only.
+Everything runs **natively on the M5 Pro** (D-12, D-30) under the `Procfile` (`make dev`; `python3 scripts/dev.py --stop`). **Agent 2 has the Mac**: it runs the live demo stack there (bring-up: `docs/plan/prompts/mac-bringup.md`) and every live measurement happens on it. Agent 1 works on the Windows PC, a dev machine and browser only; anything that must be checked on the Mac goes to Agent 2.
 
 ## Owners (this weekend)
 | Agent | Area | Brief |
 |---|---|---|
-| **1: platform, capture, voice and replay** (integration owner) | Contracts, py-trophy, state client, Spacetime module, gateway, recorder, PWA, dashboard, Watch, domain + Caddy, `make dev`/`e2e`, CI, checkpoints, merging, video + README | `docs/plan/prompts/agent-1.md` |
-| **2: ball and court** | The live ball tracker (BlurBall on MPS), the live flight loop, calibration, events + observations, labelled footage and accuracy | `docs/plan/prompts/agent-2.md` |
+| **1: platform, capture, voice and replay** (integration owner; Windows PC) | Contracts, py-trophy, state client, Spacetime module, gateway, recorder, PWA, dashboard, Watch, domain + Caddy config, `make dev`/`e2e`, CI, checkpoints, merging, video + README | `docs/plan/prompts/agent-1.md` |
+| **2: ball and court** (has the Mac) | The live stack on the Mac (bring-up, Caddy, live runs), the live ball tracker (BlurBall on MPS), the live flight loop, calibration, events + observations, labelled footage and accuracy | `docs/plan/prompts/agent-2.md` |
 | **3: rules, AI and Droid** | Engine, sport modules + scoring, check library, `decide()` voters, Factory Droid compiler, referee service, sponsor README sections | `docs/plan/prompts/agent-3.md` |
 
 ## Gotchas

@@ -155,4 +155,4 @@ Accuracy numbers come **only from labelled clips or staged hits**, with n and a 
 | OPEN-8 | The community named in the writeup | "Berkeley pickup ping pong and basketball players" | User (with real quotes) |
 | OPEN-10 | Vision module per sport family and the metadata vocabulary beyond ping pong | §7 vocabulary for the weekend | Team, after the weekend |
 | OPEN-9 | Which demo house rule | "First to 7, win by 1" (a scoring change) + "a serve that clips the net is a let" (a rule change) | A3 + user |
-| A-1 | Agents run on the M5 Pro; one live game at a time; recordings stay local | | |
+| A-1 | The live stack runs on the M5 Pro, which Agent 2 has; Agent 1 develops on the Windows PC; one live game at a time; recordings stay local | | |

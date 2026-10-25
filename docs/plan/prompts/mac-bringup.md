@@ -1,6 +1,6 @@
 # Prompt: run Trophy's live backend on the M5 Pro Mac (D-30, revised: the Mac, no cloud)
 
-*Written by Agent 1 for an agent running on the user's Mac. Paste everything below the line.*
+*For **Agent 2**, who has the Mac (the demo machine). Agent 2's brief (`agent-2.md`) starts with this; it can also be pasted on its own into any agent on the Mac.*
 
 ---
 
@@ -40,7 +40,7 @@ You are bringing up Trophy's live backend **natively on this Mac** (Apple M5 Pro
 8. **macOS firewall.** If it's on, allow incoming connections for `caddy` (the user approves the prompt). Only Caddy listens beyond 127.0.0.1; every other service binds localhost.
 9. **Flight (Agent 2's BlurBall on MPS).** Not part of this setup: Agent 2 adds the `flight:` Procfile line when `services/flight` lands. The BlurBall weights stay in a local ignored path, never in git.
 
-## Report back (paste this to the user; it goes to Agent 1)
+## Report back (in `docs/status/a2.md`, and tell the user; Agent 1 reads it)
 - the macOS version, plus the `spacetime --version`, `uv --version`, `node --version`, `ffmpeg -version | head -1` and `caddy version` lines;
 - the `make dev` result, the healthz JSON, the `seed_demo.py --check` result and the `make e2e` lines;
 - the Mac's LAN IP, and whether DNS was changed (only with the user's OK) and the certificate obtained;
