@@ -11,7 +11,7 @@
     "apps/watch"
   ],
   "scripts": {
-    "dev": "python scripts/dev.py",
+    "dev": "uv run --project packages/py-trophy --frozen python scripts/dev.py",
     "contracts": "node scripts/gen-contracts.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint packages apps",

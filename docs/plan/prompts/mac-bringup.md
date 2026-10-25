@@ -28,15 +28,15 @@ You are bringing up Trophy's live backend **natively on this Mac** (Apple M5 Pro
    - Keep `TROPHY_DOMAIN=trophy.photo`, `SPACETIME_URI=http://127.0.0.1:3000` and `SPACETIME_MODULE=trophy`.
 5. **SpacetimeDB.** In one terminal: `spacetime start --listen-addr 127.0.0.1:3000 --non-interactive`. In another:
    - `make stdb-publish` (it runs `spacetime publish -s local -p spacetime --yes=skip-login trophy`);
-   - `python spacetime/scripts/provision.py` (writes the identity tokens into `.env`);
-   - `python spacetime/scripts/seed_demo.py --check` (a labelled-synthetic smoke test of every reducer).
+   - `make stdb-provision` (writes the identity tokens into `.env`);
+   - `make stdb-seed` (a labelled-synthetic smoke test of every reducer).
 
    Then stop that spacetime: `make dev` starts its own.
-6. **Run everything:** `make dev`. It (re)starts redis, spacetime, gateway, recorder, voice, PWA, dashboard and Caddy from the `Procfile`; `python scripts/dev.py --stop` stops them all. Then check:
+6. **Run everything:** `make dev`. It (re)starts redis, spacetime, gateway, recorder, voice, PWA, dashboard, Watch and Caddy from the `Procfile`; `python3 scripts/dev.py --stop` stops them all. Then check:
    - `curl -s http://127.0.0.1:8000/api/healthz` reports redis, spacetime and recorder true;
    - `http://127.0.0.1:5174/?demo=table_tennis` shows the synthetic dashboard;
-   - `make e2e` (it needs `data/local/clips/table_tennis/7maQFqJ3XQ0.mp4`; if it's missing, run `python tools/fetch_clips.py --sport table_tennis`, which checks the CC BY license, after the user says OK to the download). Expect PASS for stack health, frame bus and recorder + replay, and PENDING for calls until flight and the engine exist.
-7. **DNS (user OK first).** `python infra/dns/porkbun_set_ip.py` points `trophy.photo` at this Mac's LAN IP (rerun if DHCP changes it). Caddy gets the certificate via Porkbun DNS-01. Then from a phone on the **same Wi-Fi**, open `https://trophy.photo/cam/`. Watch for client isolation and DNS-rebind protection on campus or guest Wi-Fi; a travel router avoids both.
+   - `make e2e` (it needs `data/local/clips/table_tennis/7maQFqJ3XQ0.mp4`; if it's missing, run `python3 tools/fetch_clips.py --sport table_tennis`, which checks the CC BY license, after the user says OK to the download). Expect PASS for stack health, frame bus and recorder + replay, and PENDING for calls until flight and the engine exist.
+7. **DNS (user OK first).** `python3 infra/dns/porkbun_set_ip.py` points `trophy.photo` at this Mac's LAN IP (rerun if DHCP changes it). Caddy gets the certificate via Porkbun DNS-01. Then from a phone on the **same Wi-Fi**, open `https://trophy.photo/cam/`. Watch for client isolation and DNS-rebind protection on campus or guest Wi-Fi; a travel router avoids both.
 8. **macOS firewall.** If it's on, allow incoming connections for `caddy` (the user approves the prompt). Only Caddy listens beyond 127.0.0.1; every other service binds localhost.
 9. **Flight (Agent 2's BlurBall on MPS).** Not part of this setup: Agent 2 adds the `flight:` Procfile line when `services/flight` lands. The BlurBall weights stay in a local ignored path, never in git.
 
