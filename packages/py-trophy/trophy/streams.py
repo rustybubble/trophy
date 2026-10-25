@@ -125,6 +125,9 @@ CTL_CLIENT_ROLES: Mapping[str, frozenset[str]] = {
     "submit_house_rule": frozenset({"judge"}),
     "approve_house_rule": frozenset({"judge"}),
     "reject_house_rule": frozenset({"judge"}),
+    "bookmark": frozenset({"cam", "display", "judge"}),
+    "clip_that": frozenset({"cam", "display", "judge"}),
+    "review_call": frozenset({"judge"}),
 }
 
 

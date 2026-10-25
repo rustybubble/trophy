@@ -10,6 +10,7 @@ after re-publishing with --delete-data (the registrations live in the database).
 
 from __future__ import annotations
 
+import argparse
 import base64
 import json
 import os
@@ -77,6 +78,14 @@ def post(url: str, body: object | None = None, token: str | None = None) -> byte
 
 
 def main() -> int:
+    global ENV_PATH
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--env-file", type=Path, default=ENV_PATH)
+    parser.add_argument(
+        "--check-platform", action="store_true", help="exercise the platform reducers with real role tokens"
+    )
+    args = parser.parse_args()
+    ENV_PATH = args.env_file
     env = read_env()
     uri = (env.get("SPACETIME_URI") or "http://127.0.0.1:3000").rstrip("/")
     module = env.get("SPACETIME_MODULE") or "trophy"
@@ -91,9 +100,13 @@ def main() -> int:
         else:
             minted = "reused"
         ident = identity_of(token)
-        args = json.dumps({"identity_hex": ident, "role": role, "label": f"trophy-{role}"})
-        post(f"{uri}/v1/database/{module}/call/register_service", [args], owner)
+        payload = json.dumps({"identity_hex": ident, "role": role, "label": f"trophy-{role}"})
+        post(f"{uri}/v1/database/{module}/call/register_service", [payload], owner)
         print(f"{role}: {minted} identity {ident[:16]}…, registered in {module}")
+    if args.check_platform:
+        from check_platform import check_platform
+
+        check_platform(read_env())
     return 0
 
 
