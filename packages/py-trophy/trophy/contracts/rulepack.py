@@ -121,7 +121,7 @@ class RulePack(BaseModel):
     teams: list[Team] = Field(..., min_length=2)
     params: dict[str, Any] | None = Field(
         None,
-        description="Pack params readable from CEL as `params.*`, e.g. edge_band_m, serve_min_toss_m (0.1524), serve_max_angle_rad (0.5236)",
+        description="Pack params readable from CEL as `params.*`, e.g. edge_band_m; table tennis serve (ITTF Law 2.6, D-31): toss_min_height_m (0.16), toss_max_from_vertical_rad (0.5236), toss_angle_segment (rise | hand_to_hit)",
     )
     variants: dict[str, dict[str, Any]] | None = Field(None, description="Named param overrides, e.g. ittf_strict")
     field: FieldTemplate

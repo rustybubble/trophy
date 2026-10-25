@@ -8,7 +8,7 @@ You are **Agent 1 (platform, capture, voice and replay)**, one of three implemen
 
 **Trophy** is a universal AI referee for pickup games. Phones become cameras. Trophy keeps score and identifies fouls with honest confidence (AUTO ≥ 0.90; BETA shows p and can be challenged; judgment fouls are flagged, never forced). Calls are **spoken** (Cartesia). Players can **challenge** a call and get an **instant replay** plus an AI second opinion (Claude, Gemini and Bitdeer Model Studio votes). They can **ask the ref** rules questions by voice (Moss over rulebooks scraped by our Apify actor, answered by Claude), and **add house rules** that a Factory Droid compiles live.
 
-**The weekend demo is live ping pong on one phone**: rally scoring, the edge rule, and **illegal serves** (the toss must rise more than 6 in off the open palm, and the path from the hand to the hit must stay within 30° of vertical). Basketball 2s/3s on a CC BY clip is a SHOULD.
+**The weekend demo is live ping pong on one phone**: rally scoring, the edge rule, and **illegal serves** (official ITTF law, D-31: the toss rises **at least 16 cm** from the open palm to its apex (ITTF Law 2.6.2), projected near vertically (**within 30° of vertical on the way up**, the ITTF review criterion), and is struck as it falls; plus a hidden serve (2.6.5), the ball above the table and behind the end line (2.6.4), and a let when the serve touches the net (2.9.1.1)). Basketball 2s/3s on a CC BY clip is a SHOULD.
 
 **Spacetime is the shared world state, and video never goes into it.** Frames stay on Redis and the local recorder. Vision modules write **metadata observations** (`observation`, `track_sample`) to Spacetime, and every phone, the dashboard and every agent read the same facts (plan §2, interfaces §7.1).
 
@@ -85,7 +85,7 @@ The other agents: **Agent 2 (ball and court perception)** and **Agent 3 (rules, 
    - The **scoreboard**.
    - A **push-to-talk** mic button → Ink STT → intent (`challenge`, `ask:`, `house_rule:`, `undo`) → `/api/ctl` or `/api/ask` → the answer is spoken in the "ref" voice.
    - The judge's Uphold/Overturn/Undo/Score± buttons.
-   - The **replay viewer:** 1×, 0.5× and 0.25×, frame-step, overlays synced by rVFC. For serve calls it draws the **toss trace with a 6 in line and a 30° cone** from the `serve_toss` observation.
+   - The **replay viewer:** 1×, 0.5× and 0.25×, frame-step, overlays synced by rVFC. For serve calls it draws the **toss trace with a 16 cm line and a 30° cone on the rise** from the `serve_toss` observation.
    - A "read everything" accessibility toggle.
 9. **Dashboard** (`apps/dashboard`, at `/`; it is the judges' screen):
    - create game + QR, the big scoreboard, the call feed + replay;

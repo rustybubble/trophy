@@ -31,10 +31,16 @@
     "game_id": { "type": "string" },
     "t_game_s": { "type": "number" },
     "rule_id": { "type": "string" },
-    "rule_version": { "type": "string", "description": "Pack version the rule came from (house rules: the house_rule rule_version)" },
+    "rule_version": {
+      "type": "string",
+      "description": "Pack version the rule came from (house rules: the house_rule rule_version)"
+    },
     "rally_no": { "type": "integer", "minimum": 1 },
     "kind": { "$ref": "#/$defs/CallKind" },
-    "outcome": { "type": "string", "description": "e.g. point_A, in, out, edge_good, side_fault, made_3, illegal_toss_height" },
+    "outcome": {
+      "type": "string",
+      "description": "e.g. point_A, in, out, edge_good, side_fault, made_3, illegal_toss_height"
+    },
     "team_id": { "type": "string", "description": "Who the call favours" },
     "points": { "type": "integer" },
     "p": { "type": "number", "minimum": 0, "maximum": 1, "description": "Probability of outcome" },
@@ -113,7 +119,7 @@
         "highlight_track_ids": { "type": "array", "items": { "type": "string" } },
         "serve_toss_event_id": {
           "type": "string",
-          "description": "For serve calls: the serve_toss observation the viewer draws (trace, 6 in line, 30 deg cone)"
+          "description": "For serve calls: the serve_toss observation the viewer draws (trace, 16 cm line, 30 deg cone on the rise)"
         }
       }
     }

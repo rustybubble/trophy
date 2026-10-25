@@ -8,7 +8,7 @@ You are **Agent 2 (ball and court)**, one of three implementation agents buildin
 
 **Trophy** is a universal AI referee for pickup games. Phones become cameras. Trophy keeps score and identifies fouls with honest confidence: AUTO at ≥ 0.90; BETA shows p and can be challenged. Calls are spoken. A challenge opens an instant replay with the ball trail and the bounce's uncertainty ellipse, plus AI votes.
 
-**The weekend demo is live ping pong on one phone: rally scoring, the edge rule (top edge good / side fault), and illegal serves** (house rules from the user: **the toss must rise more than 6 in = 0.1524 m off the open palm**, and **the ball's path from the hand to the hit must stay within 30° of vertical**). Your perception is the foundation the whole demo stands on.
+**The weekend demo is live ping pong on one phone: rally scoring, the edge rule (top edge good / side fault), and illegal serves** (official ITTF law, D-31: the toss rises **at least 16 cm** from the open palm to its apex (ITTF Law 2.6.2), projected near vertically (**within 30° of vertical on the way up**, the ITTF review criterion), and is struck as it falls; plus a hidden serve (2.6.5), the ball above the table and behind the end line (2.6.4), and a let when the serve touches the net (2.9.1.1); the `serve_toss`, `serve_hidden` and `serve_position` payloads are in interfaces §7). Your perception is the foundation the whole demo stands on.
 
 You are the **vision module** in the team's Spacetime design: **video never goes into Spacetime**. You turn frames into metadata observations, and those are what get synced to every device and agent (plan §2, interfaces §7.1).
 
@@ -82,7 +82,7 @@ The other agents: **Agent 1 (platform, capture, voice and replay; integration ow
 6. Get the CC BY clip segments through the pipeline (after the user OKs the download). Label the rallies and the 8:36 edge ball. Export the `ev:flight` logs to `evals/fixtures/recorded/` for Agent 3, plus a segment for Agent 1's `make e2e` (**C2**).
 
 **P2 (live)**
-7. Tune on the live phone stream through Agent 1's gateway. Record **≥ 20 rallies** (with players' consent), **≥ 10 staged edge/side hits** (drop or push the ball onto the edge or side; mark the ground truth) and **≥ 12 staged serves**: 4 legal, 4 tossed under 6 in, 4 tossed more than 30° off vertical. Put a tape mark or ruler at 6 in on a stand behind the end line for ground truth. Keep tuning and test splits separate. Measure everything in §5.
+7. Tune on the live phone stream through Agent 1's gateway. Record **≥ 20 rallies** (with players' consent), **≥ 10 staged edge/side hits** (drop or push the ball onto the edge or side; mark the ground truth) and **≥ 12 staged serves**: 4 legal, 4 tossed under 16 cm, 4 tossed more than 30° off vertical on the rise (plus hidden serves and net lets from the re-recordings). Put a tape mark or ruler at 16 cm on a stand behind the end line for ground truth. Keep tuning and test splits separate. Measure everything in §5.
 
 **STRETCH (only after C3, stopping at feature freeze)**
 8. Pickleball outs on the CC BY clip, and the Vultr GPU path if it's in use.

@@ -49,7 +49,8 @@ class Overlay(BaseModel):
     lines: list[str] | None = None
     highlight_track_ids: list[str] | None = None
     serve_toss_event_id: str | None = Field(
-        None, description="For serve calls: the serve_toss observation the viewer draws (trace, 6 in line, 30 deg cone)"
+        None,
+        description="For serve calls: the serve_toss observation the viewer draws (trace, 16 cm line, 30 deg cone on the rise)",
     )
 
 

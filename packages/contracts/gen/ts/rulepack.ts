@@ -16,7 +16,7 @@ export interface RulePack {
    */
   teams: [Team, Team, ...Team[]];
   /**
-   * Pack params readable from CEL as `params.*`, e.g. edge_band_m, serve_min_toss_m (0.1524), serve_max_angle_rad (0.5236)
+   * Pack params readable from CEL as `params.*`, e.g. edge_band_m; table tennis serve (ITTF Law 2.6, D-31): toss_min_height_m (0.16), toss_max_from_vertical_rad (0.5236), toss_angle_segment (rise | hand_to_hit)
    */
   params?: {};
   /**

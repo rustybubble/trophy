@@ -15,7 +15,7 @@ Read this file for project context, then the plan docs listed below. Explicit us
 - **Ask the ref:** a voice question gets an answer drawn from official rulebooks (an Apify actor → Moss → Claude, with citations).
 - **House rules** can be typed or spoken; a Factory Droid compiles them into the rule pack, tests them, and applies them after the judge approves.
 
-**Scope** (the user's outline): basketball (2/3-pointers, fouls, outs); ping pong (illegal serves: the toss rises **more than 6 in** off the open palm, and the path **from the hand to the hit stays within 30° of vertical**; the edge rule); two-hand touch football; pickleball (kitchen, outs); tennis and badminton (outs); volleyball (hand over the net, outs); the Droid; replay.
+**Scope** (the user's outline): basketball (2/3-pointers, fouls, outs); ping pong (illegal serves under the official ITTF law, D-31: the toss rises **at least 16 cm** from the open palm to its apex (ITTF Law 2.6.2), projected near vertically (**within 30° of vertical on the way up**, the ITTF review criterion), and is struck as it falls; plus a hidden serve (2.6.5), the ball above the table and behind the end line (2.6.4), and a let when the serve touches the net (2.9.1.1); the edge rule); two-hand touch football; pickleball (kitchen, outs); tennis and badminton (outs); volleyball (hand over the net, outs); the Droid; replay.
 
 **The weekend cut** (`docs/plan/three-agent-plan.md`):
 - **MUST:** live ping pong (scoring, the edge rule, illegal serves), spoken calls, challenge → replay → AI votes, Droid house rules, voice ask-the-ref.

@@ -84,6 +84,10 @@ class ContactPayload(BaseModel):
 
 
 class NetPayload(BaseModel):
+    """
+    kind=touch: the ball touched the net assembly and went over; into: it stopped at the net; over: a clean crossing.
+    """
+
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -91,6 +95,10 @@ class NetPayload(BaseModel):
     kind: Literal["touch", "into", "over"]
     from_side: Literal["A", "B"] = Field(..., title="Side")
     calib_untrusted: bool | None = None
+    serve: bool | None = Field(
+        None,
+        description="true for the served ball's first crossing. A serve with kind=touch that then lands correctly is a let (ITTF Law 2.9.1.1); the rule pack decides, not perception.",
+    )
 
 
 class BallDeadPayload(BaseModel):
@@ -106,18 +114,39 @@ class BallDeadPayload(BaseModel):
     last_side: Literal["A", "B"] | None = Field(None, title="Side")
 
 
-class TossPoint(BaseModel):
+class TossMark(BaseModel):
+    """
+    An instant of the toss in time and space with uncertainty. t0_s..t1_s brackets the frames it can be in (e.g. release lies between the last frame on the palm and the first frame clearly off it).
+    """
+
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
     )
-    t_s: float = Field(..., description="Game time, s")
+    t_s: float = Field(..., description="Best estimate, game time, s")
+    t0_s: float
+    t1_s: float
+    sigma_t_s: float = Field(..., ge=0.0)
     pos_m: PosM
+    sigma_m: float = Field(..., description="1-sigma position uncertainty, metres (largest axis)", ge=0.0)
+
+
+class Estimator(BaseModel):
+    """
+    Which estimator produced the measurement, for audit and labelled evaluation
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    name: str = Field(..., description="e.g. blurball-toss")
+    version: str = Field(..., description="semver or git sha")
 
 
 class ServeTossPayload(BaseModel):
     """
-    Weekend MUST (D-22). height_m = apex.z - release.z; angle_from_vertical_rad = max(rise_angle_rad, fall_angle_rad).
+    ITTF Law 2.6.2 (D-31): the ball is projected near vertically upwards from the open palm, without spin, rises at least 16 cm after leaving the palm, and falls without touching anything before it is struck. height_m = apex.pos_m.z - release.pos_m.z (palm release to apex). angle_from_vertical_rad is the angle of the UPWARD segment release -> apex from vertical. The optional house variant's hand-to-hit angle is house_hand_to_hit_angle_rad.
     """
 
     model_config = ConfigDict(
@@ -125,17 +154,112 @@ class ServeTossPayload(BaseModel):
         populate_by_name=True,
     )
     server_side: Literal["A", "B"] = Field(..., title="Side")
-    release: TossPoint
-    apex: TossPoint
-    contact: TossPoint
-    height_m: float
+    release: TossMark = Field(..., description="The ball leaves the open palm")
+    apex: TossMark = Field(..., description="Top of the toss")
+    contact: TossMark | None = Field(None, description="Racket strike (onset + reversal), if seen")
+    height_m: float = Field(..., description="apex.z - release.z, metres")
     sigma_height_m: float = Field(..., ge=0.0)
-    rise_angle_rad: float
-    fall_angle_rad: float
-    angle_from_vertical_rad: float
+    angle_from_vertical_rad: float = Field(..., description="release -> apex, from vertical", ge=0.0)
     sigma_angle_rad: float = Field(..., ge=0.0)
-    palm_still_s: float | None = Field(None, ge=0.0)
-    observable_plane: Literal["xz", "yz", "mixed"] | None = None
+    angle_segment: Literal["rise"] = Field(
+        ..., description="The segment the angle is measured on (Law 2.6.2: projected near vertically upwards)"
+    )
+    struck_on_descent: bool | None = Field(
+        ..., description="Struck while falling (after the apex); null = not observed"
+    )
+    struck_on_descent_p: float = Field(..., ge=0.0, le=1.0)
+    touched_before_strike_p: float | None = Field(
+        None, description="P(the ball touched anything between release and strike)", ge=0.0, le=1.0
+    )
+    palm_still_s: float | None = Field(
+        None, description="Law 2.6.1: how long the ball rested still on the open palm before release", ge=0.0
+    )
+    observable_plane: Literal["xz", "yz", "mixed"] | None = Field(
+        None, description="Which plane the cameras measure well; one side-on camera at the net line sees xz"
+    )
+    house_hand_to_hit_angle_rad: float | None = Field(
+        None, description="Optional house variant only: max angle from vertical over release -> apex -> contact", ge=0.0
+    )
+    evidence_missing: list[
+        Literal[
+            "release",
+            "apex",
+            "contact",
+            "descent",
+            "palm",
+            "spin",
+            "depth",
+            "calibration",
+            "receiver_view",
+            "free_arm",
+            "end_line",
+            "playing_surface",
+            "second_camera",
+        ]
+    ] = Field(
+        ...,
+        description="What the estimator could not observe. A rule whose evidence is missing is undecided (PLAYERS DECIDE), never legal or illegal by default.",
+        title="EvidenceMissing",
+    )
+    estimator: Estimator
+    calib_untrusted: bool | None = None
+
+
+class HiddenCamView(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    cam_id: str
+    view: Literal["receiver_side", "side_on", "server_side", "overhead"] = Field(
+        ..., description="Where the camera looks from, relative to the receiver"
+    )
+    visible_fraction: float = Field(..., ge=0.0, le=1.0)
+
+
+class ServePositionPayload(BaseModel):
+    """
+    ITTF Law 2.6.4: from the start of service until it is struck, the ball is above the level of the playing surface and behind the server's end line. Distances are signed (+ = legal side) and minimised over the window start of service -> strike.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    server_side: Literal["A", "B"] = Field(..., title="Side")
+    t0_s: float = Field(..., description="Start of service (ball still on the palm), game time")
+    t1_s: float = Field(..., description="Strike, game time")
+    min_above_surface_m: float = Field(..., description="min(ball z - surface z); + = above the surface")
+    min_behind_end_line_m: float = Field(
+        ..., description="min distance behind the server's end line (or its extension); + = behind"
+    )
+    worst_above_t_s: float | None = None
+    worst_behind_t_s: float | None = None
+    sigma_m: float = Field(..., ge=0.0)
+    p_above: float = Field(..., description="P(above the surface throughout)", ge=0.0, le=1.0)
+    p_behind: float = Field(..., description="P(behind the end line throughout)", ge=0.0, le=1.0)
+    evidence_missing: list[
+        Literal[
+            "release",
+            "apex",
+            "contact",
+            "descent",
+            "palm",
+            "spin",
+            "depth",
+            "calibration",
+            "receiver_view",
+            "free_arm",
+            "end_line",
+            "playing_surface",
+            "second_camera",
+        ]
+    ] = Field(
+        ...,
+        description="What the estimator could not observe. A rule whose evidence is missing is undecided (PLAYERS DECIDE), never legal or illegal by default.",
+        title="EvidenceMissing",
+    )
+    estimator: Estimator
     calib_untrusted: bool | None = None
 
 
@@ -261,6 +385,8 @@ class Event(BaseModel):
         "net",
         "ball_dead",
         "serve_toss",
+        "serve_hidden",
+        "serve_position",
         "person_feet",
         "shot",
         "line_cross",
@@ -288,3 +414,45 @@ class Event(BaseModel):
     payload: dict[str, Any] | None = Field(
         None, description="Type-specific payload; see the *Payload $defs. Any payload may carry calib_untrusted=true."
     )
+
+
+class ServeHiddenPayload(BaseModel):
+    """
+    ITTF Law 2.6.5: from the start of service until it is struck, the ball must not be hidden from the receiver by the server or their doubles partner or anything they wear or carry, and the free arm is removed from between the ball and the net once the ball is projected. visible_fraction is the minimum over release -> strike of the fraction of the ball visible from the receiver's side.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    server_side: Literal["A", "B"] = Field(..., title="Side")
+    t0_s: float = Field(..., description="Window start (release), game time")
+    t1_s: float = Field(..., description="Window end (strike), game time")
+    visible_fraction: float = Field(..., ge=0.0, le=1.0)
+    sigma_visible_fraction: float = Field(..., ge=0.0)
+    min_visible_t_s: float | None = Field(None, description="When the ball was least visible")
+    occluder: Literal["none", "server_body", "server_clothing", "free_arm", "partner", "racket", "other", "unknown"]
+    cams_used: list[HiddenCamView] = Field(..., min_length=1)
+    evidence_missing: list[
+        Literal[
+            "release",
+            "apex",
+            "contact",
+            "descent",
+            "palm",
+            "spin",
+            "depth",
+            "calibration",
+            "receiver_view",
+            "free_arm",
+            "end_line",
+            "playing_surface",
+            "second_camera",
+        ]
+    ] = Field(
+        ...,
+        description="What the estimator could not observe. A rule whose evidence is missing is undecided (PLAYERS DECIDE), never legal or illegal by default.",
+        title="EvidenceMissing",
+    )
+    estimator: Estimator
+    calib_untrusted: bool | None = None
