@@ -16,7 +16,8 @@ import sys
 
 EDIT_TOOLS = {"Edit", "Create", "ApplyPatch", "MultiEdit", "Write"}
 EXEC_TOOLS = {"Execute"}
-TEST_CMD = re.compile(r"^(\./)?replay_test(\s+--?[a-z-]+(=\S+|\s+\S+)?)*\s*$")
+TEST_CMD = re.compile(r"^(\./)?(replay_test|check_test)(\s+--?[a-z-]+(=\S+|\s+\S+)?)*\s*$")
+DEFAULT_COMMANDS = ["./replay_test"]  # sandboxes written before `commands` existed in allowlist.json
 SHELL_META = ("&&", "||", ";", "|", "`", "$(")
 
 
@@ -29,7 +30,8 @@ def norm(p: str) -> str:
     return os.path.realpath(p)
 
 
-def allowed_command(cmd: str, sandbox: str) -> bool:
+def allowed_command(cmd: str, sandbox: str, commands: list[str]) -> bool:
+    """The job's gate script (`./replay_test` or `./check_test`, per `commands`), optionally with flags."""
     c = cmd.strip()
     d = sandbox.rstrip("/")
     for q in ('"', "'", ""):
@@ -44,7 +46,8 @@ def allowed_command(cmd: str, sandbox: str) -> bool:
             break
     if any(m in c for m in SHELL_META):
         return False
-    return bool(TEST_CMD.match(c))
+    m = TEST_CMD.match(c)
+    return bool(m) and m.group(2) in {str(x).removeprefix("./") for x in commands}
 
 
 def main() -> None:
@@ -82,8 +85,9 @@ def main() -> None:
         return
     if tool in EXEC_TOOLS:
         cmd = str(inp.get("command") or inp.get("fullCommand") or "")
-        if not allowed_command(cmd, sandbox):
-            block(f"command refused: only ./replay_test may run (got: {cmd[:120]!r})")
+        commands = list(allow.get("commands") or DEFAULT_COMMANDS)
+        if not allowed_command(cmd, sandbox, commands):
+            block(f"command refused: only {' or '.join(commands)} may run (got: {cmd[:120]!r})")
         return
     # read-only tools pass
 

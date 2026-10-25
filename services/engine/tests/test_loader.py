@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from trophy_engine.sportmod.loader import LoadError, check_events_source, load_module
 
 ROOT = Path(__file__).resolve().parents[3]

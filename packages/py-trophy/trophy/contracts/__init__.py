@@ -70,6 +70,7 @@ from .state import (
     Moment,
     Commentary,
 )
+from .track3d import Track3DSample, Track3DView, CheckResult, Track3DLabels
 from .tracks import BallTrackSample, PlayerBox, PlayersTrackSample
 
 __all__ = [
@@ -92,6 +93,7 @@ __all__ = [
     "CameraHealthArgs",
     "Challenge",
     "ChallengeArgs",
+    "CheckResult",
     "Citation",
     "ClockSample",
     "Commentary",
@@ -164,6 +166,9 @@ __all__ = [
     "TeamSpec",
     "TossPoint",
     "TouchPayload",
+    "Track3DLabels",
+    "Track3DSample",
+    "Track3DView",
     "TrackSample",
     "Vote",
     "WsClientMessage",

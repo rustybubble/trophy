@@ -25,3 +25,29 @@ Droid's job is deriving other sports from it (`sports/pickleball/` in the demo) 
 
 Fixtures: `evals/fixtures/synthetic/<sport>/` (labelled synthetic; `trophy-synth` generates them). Recorded logs from
 real games go to `data/local/` (gitignored) and are labelled before they join a gate.
+
+## `checks/`: geometry over the fused 3D track (D-31)
+
+`sports/<sport>/checks/*.py` is the handwritten **golden check library**: one file per question the referee can be
+asked about the 3D ball track (`track3d.schema.json`: fused `t_s, xyz_m, sigma_m, conf` samples plus a `field.json`
+calibration). Each file has `PARAMS` (its defaults) and `check(track, field, params=None, **q) -> CheckResult`, imports
+only `trophy_engine.checks.api` and a few stdlib modules (the loader's allowlist), and never decides a point.
+
+| Check | Answers | How |
+|---|---|---|
+| `phases` | where rallies start and stop | still ball in a serve zone, then a sustained rise = release; floor, a gap or a still ball = end |
+| `bounces` | every bounce with position, σ, side, surface, edge split | z minima; the incoming free flight (`z + g t²/2` is a line) solved for where it meets the surface |
+| `in_out` | in / out / edge at an instant, with p | the bounce nearest the asked time; p = Φ(margin / σ), σ grows with speed × timing skew |
+| `contacts` | racket hits | a velocity jump near an end line, above the surface |
+| `net_touch` | touch / into at the net | plane crossings with clearance over the cord; a below-cord crossing that comes back is `into` |
+| `serve_toss` | toss height and angle, legality (D-22) | release = held mean; apex = fitted parabola; hit = the velocity kink; one horizontal velocity for both legs |
+| `rally_summary` | duration, peak speed | informational |
+
+`library.json` says whether the library is **calibrated**: the golden one is not (every result carries
+`calibrated: false`, which caps calls at BETA). A Droid `calibrate_checks` run (`services/compiler`) copies this library
+into a sandbox with the session's `field.json` and warm-up samples, edits it to the setup, passes `check-test`, and the
+judge approves it into `data/local/sessions/<id>/checks/` with `calibrated: true`.
+
+The gate: `check-test --checks sports/table_tennis/checks --samples evals/fixtures/synthetic/table_tennis_3d`
+(fixtures from `trophy-synth3d`, SYNTHETIC, labelled). The engine consumes the same checks live:
+`trophy-engine --field field.json [--checks <dir>] [--track3d game.track3d.jsonl --speed 1] [--ask]`.

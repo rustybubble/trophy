@@ -11,12 +11,16 @@ dependencies = [
     "anthropic>=2.3,<3",
     "openai>=3.37,<4",
     "httpx>=0.28",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
     "redis>=5",
 ]
 
 [project.scripts]
 replay-test = "trophy_engine.replay_test.cli:main"
 trophy-synth = "trophy_engine.synth.generate:main"
+trophy-synth3d = "trophy_engine.synth.track3d:main"
+check-test = "trophy_engine.check_test.cli:main"
 trophy-engine = "trophy_engine.loop:main"
 trophy-ctl = "trophy_engine.ctl_cli:main"
 

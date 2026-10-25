@@ -7,7 +7,6 @@ import shutil
 from pathlib import Path
 
 import pytest
-
 from trophy_engine.engine import Engine
 from trophy_engine.gate import gate
 from trophy_engine.scoring import ScoringParams, replay_score

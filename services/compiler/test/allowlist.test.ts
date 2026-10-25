@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { editableFiles, isAllowedCommand, isAllowedEdit, sandboxRelative } from "../src/allowlist.ts";
+import { editableFiles, gateScript, isAllowedCommand, isAllowedEdit, sandboxRelative } from "../src/allowlist.ts";
 
 const SB = "/tmp/sb";
 
@@ -16,6 +16,15 @@ describe("allowlist", () => {
       "sports/table_tennis/config.yaml",
       "sports/table_tennis/events.py",
     ]);
+  });
+
+  it("lets a calibrate_checks job edit every copied check file and nothing else", () => {
+    expect(
+      editableFiles("calibrate_checks", "table_tennis", ["bounces.py", "phases.py", "library.json", "_x.py"]),
+    ).toEqual(["checks/bounces.py", "checks/phases.py"]);
+    expect(editableFiles("calibrate_checks", "table_tennis")).toEqual([]);
+    expect(gateScript("calibrate_checks")).toBe("check_test");
+    expect(gateScript("house_rule")).toBe("replay_test");
   });
 
   it("accepts absolute and relative paths inside the sandbox only", () => {
@@ -45,5 +54,16 @@ describe("allowlist", () => {
     expect(isAllowedCommand('cd "/tmp/sb" && ./replay_test --quiet', "/tmp/sb/")).toBe(true);
     expect(isAllowedCommand("cd /tmp/other && ./replay_test", "/tmp/sb")).toBe(false);
     expect(isAllowedCommand("cd /tmp/sb && ./replay_test && rm -rf /", "/tmp/sb")).toBe(false);
+  });
+
+  it("accepts ./check_test as a gate, and only the job's own gate when told which", () => {
+    expect(isAllowedCommand("./check_test")).toBe(true);
+    expect(isAllowedCommand("./check_test --quiet")).toBe(true);
+    expect(isAllowedCommand("cd /tmp/sb && ./check_test", "/tmp/sb")).toBe(true);
+    expect(isAllowedCommand("./check_test; curl x")).toBe(false);
+    expect(isAllowedCommand("./check_tests")).toBe(false);
+    expect(isAllowedCommand("./check_test", undefined, ["check_test"])).toBe(true);
+    expect(isAllowedCommand("./replay_test", undefined, ["check_test"])).toBe(false);
+    expect(isAllowedCommand("./check_test", "/tmp/sb", ["replay_test"])).toBe(false);
   });
 });

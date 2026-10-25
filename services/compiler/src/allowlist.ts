@@ -4,12 +4,23 @@
  */
 import { isAbsolute, normalize, relative, sep } from "node:path";
 
-export type JobKind = "compile" | "house_rule" | "retune";
+export type JobKind = "compile" | "house_rule" | "retune" | "calibrate_checks";
 
 export const MODULE_FILES = ["config.yaml", "events.py", "rules.yaml"] as const;
 
-/** Files (relative to the sandbox root) the Droid may create or edit for a job. */
-export function editableFiles(kind: JobKind, sport: string): string[] {
+/** The gate script each job kind runs (and the only command the Droid may run in that sandbox). */
+export const GATE_SCRIPTS = ["replay_test", "check_test"] as const;
+export type GateScript = (typeof GATE_SCRIPTS)[number];
+
+export function gateScript(kind: JobKind): GateScript {
+  return kind === "calibrate_checks" ? "check_test" : "replay_test";
+}
+
+/**
+ * Files (relative to the sandbox root) the Droid may create or edit for a job. A calibrate_checks job may edit
+ * every check file the copied library holds (`checkFiles`, e.g. `["bounces.py", ...]`), never library.json.
+ */
+export function editableFiles(kind: JobKind, sport: string, checkFiles: readonly string[] = []): string[] {
   const dir = `sports/${sport}`;
   switch (kind) {
     case "compile":
@@ -18,6 +29,8 @@ export function editableFiles(kind: JobKind, sport: string): string[] {
       return [`${dir}/rules.yaml`];
     case "retune":
       return [`${dir}/config.yaml`, `${dir}/events.py`];
+    case "calibrate_checks":
+      return checkFiles.filter((f) => f.endsWith(".py") && !f.startsWith("_")).map((f) => `checks/${f}`);
   }
 }
 
@@ -34,10 +47,15 @@ export function isAllowedEdit(sandboxRoot: string, filePath: string, allowed: re
   return rel !== null && allowed.includes(rel);
 }
 
-/** The one command the Droid may run: the test gate, optionally with flags. */
-const TEST_CMD = /^(\.\/)?replay_test(\s+--?[a-z-]+(=\S+|\s+\S+)?)*\s*$/;
+/** The one command the Droid may run: a test gate, optionally with flags. Group 2 is the script name. */
+const TEST_CMD = /^(\.\/)?(replay_test|check_test)(\s+--?[a-z-]+(=\S+|\s+\S+)?)*\s*$/;
 
-export function isAllowedCommand(command: string, sandboxRoot?: string): boolean {
+/** `scripts` narrows the gate to the job's own (`["check_test"]`); by default either gate name passes. */
+export function isAllowedCommand(
+  command: string,
+  sandboxRoot?: string,
+  scripts: readonly string[] = GATE_SCRIPTS,
+): boolean {
   let c = command.trim();
   if (sandboxRoot) {
     // Agents like to prefix `cd <sandbox> && ./replay_test`; allow exactly that directory, quoted or not.
@@ -60,5 +78,6 @@ export function isAllowedCommand(command: string, sandboxRoot?: string): boolean
   ) {
     return false;
   }
-  return TEST_CMD.test(c);
+  const m = TEST_CMD.exec(c);
+  return m !== null && scripts.includes(m[2]!);
 }

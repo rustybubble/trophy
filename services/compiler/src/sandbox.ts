@@ -1,13 +1,24 @@
 /**
  * The Droid's sandbox: a fresh directory (its own git repository, so every edit is a diff against a base commit)
- * containing only what the job needs:
+ * containing only what the job needs.
  *
+ * Module jobs (compile, house_rule, retune):
  *   sports/<sport>/           the module to produce or edit (the only editable files)
  *   reference/<base_sport>/   the golden module to derive from (compile jobs; read-only)
  *   schema/                   rulepack, sportmodule and event JSON Schemas
  *   scene/scene.json          the scene descriptor (compile and retune jobs)
  *   samples/*.l1.jsonl + .labels.json
  *   replay_test               the test gate, pinned to the engine venv; the one command the Droid may run
+ *
+ * calibrate_checks (D-31):
+ *   checks/*.py + library.json   a copy of the golden check library to specialise (the *.py are the editable files)
+ *   reference/checks/            the same copy, read-only (the gate's "before" column)
+ *   samples/field.json + *.track3d.jsonl + *.labels3d.json   this calibration and its labelled fused tracks
+ *   rules/<sport>/               config.yaml, events.py, rules.yaml (read-only; the gate scores the events with them)
+ *   schema/track3d.schema.json
+ *   check_test                   the gate; the one command the Droid may run
+ *
+ * Both:
  *   TASK.md                   the brief, the allowlist and the pass criteria
  *
  * No secrets, no repo, no network beyond the Factory API (the permission handler refuses every other command).
@@ -16,7 +27,7 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { editableFiles, type JobKind, MODULE_FILES } from "./allowlist.ts";
+import { editableFiles, type GateScript, gateScript, type JobKind, MODULE_FILES } from "./allowlist.ts";
 import { REPO_ROOT } from "./config.ts";
 
 export interface Job {
@@ -30,6 +41,12 @@ export interface Job {
   samplesDir: string;
   /** house_rule / retune: the current module directory (defaults to the repo's sports/<sport>) */
   moduleDir?: string;
+  /** calibrate_checks: this calibration's field.json (defaults to <samplesDir>/field.json) */
+  fieldPath?: string;
+  /** calibrate_checks: the check library to specialise (defaults to the repo's sports/<sport>/checks) */
+  checksDir?: string;
+  /** calibrate_checks: the session the approved library belongs to */
+  sessionId?: string;
   gameId?: string;
   ruleVersion?: string;
 }
@@ -38,7 +55,10 @@ export interface Sandbox {
   dir: string;
   allowlist: string[];
   baseCommit: string;
+  /** The directory the Droid edits: sports/<sport> for module jobs, checks/ for calibrate_checks */
   moduleDir: string;
+  /** The gate script's name (`replay_test` | `check_test`), also the only command the sandbox allows */
+  gate: GateScript;
 }
 
 function git(dir: string, ...args: string[]): string {
@@ -48,6 +68,49 @@ function git(dir: string, ...args: string[]): string {
 export function createSandbox(job: Job, dir: string, enginePython: string, root = REPO_ROOT): Sandbox {
   mkdirSync(dir, { recursive: true });
   if (readdirSync(dir).length) throw new Error(`sandbox dir is not empty: ${dir}`);
+  const gate = gateScript(job.kind);
+  const { moduleDir, allowlist, samples, gateCmd } =
+    job.kind === "calibrate_checks" ? layoutChecks(job, dir, root) : layoutModule(job, dir, root);
+  // the gate: a fixed script so the Droid cannot vary the interpreter, module or samples
+  const script = [
+    "#!/bin/sh",
+    `# The Droid's test gate (${gateCmd.module}). The only command the sandbox allows.`,
+    `cd "$(dirname "$0")" || exit 2`,
+    `exec "${enginePython}" -m ${gateCmd.module} ${gateCmd.args} --json .trophy/results.json --events .trophy/events.json "$@"`,
+    "",
+  ].join("\n");
+  writeFileSync(join(dir, gate), script);
+  chmodSync(join(dir, gate), 0o755);
+  writeFileSync(join(dir, ".gitignore"), ".trophy/\n__pycache__/\n");
+  writeFileSync(join(dir, "TASK.md"), renderTask(job, allowlist, samples));
+  installGuard(dir, allowlist, [`./${gate}`]);
+  git(dir, "init", "-q", "-b", "main");
+  git(dir, "-c", "user.name=trophy-droid", "-c", "user.email=droid@trophy.local", "add", "-A");
+  git(
+    dir,
+    "-c",
+    "user.name=trophy-droid",
+    "-c",
+    "user.email=droid@trophy.local",
+    "commit",
+    "-q",
+    "-m",
+    "sandbox base",
+    "--allow-empty",
+  );
+  const baseCommit = git(dir, "rev-parse", "HEAD");
+  return { dir, allowlist, baseCommit, moduleDir, gate };
+}
+
+interface Layout {
+  moduleDir: string;
+  allowlist: string[];
+  /** sample file names listed in TASK.md */
+  samples: string[];
+  gateCmd: { module: string; args: string };
+}
+
+function layoutModule(job: Job, dir: string, root: string): Layout {
   const schemaDir = join(dir, "schema");
   mkdirSync(schemaDir);
   for (const f of ["rulepack", "sportmodule", "event", "scene"]) {
@@ -72,7 +135,9 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
   if (job.kind === "compile") {
     const base = job.baseSport ?? "table_tennis";
     const refSrc = job.moduleDir ?? join(root, "sports", base);
-    cpSync(refSrc, join(dir, "reference", base), { recursive: true });
+    // only the three module files: sports/<sport>/ also holds checks/ (D-31), which is not this job's business
+    mkdirSync(join(dir, "reference", base), { recursive: true });
+    for (const f of MODULE_FILES) cpSync(join(refSrc, f), join(dir, "reference", base, f));
     // Seed the new module with the reference so the Droid edits (a 90 s job) instead of retyping events.py.
     for (const f of MODULE_FILES) cpSync(join(refSrc, f), join(moduleDir, f));
   } else {
@@ -82,36 +147,61 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
       cpSync(join(src, f), join(moduleDir, f));
     }
   }
-  // the gate: a fixed script so the Droid cannot vary the interpreter, module or samples
-  const script = [
-    "#!/bin/sh",
-    "# The Droid's test gate (trophy_engine.replay_test). The only command the sandbox allows.",
-    `cd "$(dirname "$0")" || exit 2`,
-    `exec "${enginePython}" -m trophy_engine.replay_test.cli --module "sports/${job.sport}" --samples samples --json .trophy/results.json --events .trophy/events.json "$@"`,
-    "",
-  ].join("\n");
-  writeFileSync(join(dir, "replay_test"), script);
-  chmodSync(join(dir, "replay_test"), 0o755);
-  writeFileSync(join(dir, ".gitignore"), ".trophy/\n__pycache__/\n");
-  const allowlist = editableFiles(job.kind, job.sport);
-  writeFileSync(join(dir, "TASK.md"), renderTask(job, allowlist, samples));
-  installGuard(dir, allowlist);
-  git(dir, "init", "-q", "-b", "main");
-  git(dir, "-c", "user.name=trophy-droid", "-c", "user.email=droid@trophy.local", "add", "-A");
-  git(
-    dir,
-    "-c",
-    "user.name=trophy-droid",
-    "-c",
-    "user.email=droid@trophy.local",
-    "commit",
-    "-q",
-    "-m",
-    "sandbox base",
-    "--allow-empty",
-  );
-  const baseCommit = git(dir, "rev-parse", "HEAD");
-  return { dir, allowlist, baseCommit, moduleDir };
+  return {
+    moduleDir,
+    allowlist: editableFiles(job.kind, job.sport),
+    samples,
+    gateCmd: { module: "trophy_engine.replay_test.cli", args: `--module "sports/${job.sport}" --samples samples` },
+  };
+}
+
+const noPycache = (p: string) => !/__pycache__/.test(p);
+
+function layoutChecks(job: Job, dir: string, root: string): Layout {
+  const schemaDir = join(dir, "schema");
+  mkdirSync(schemaDir);
+  cpSync(join(root, "packages/contracts/track3d.schema.json"), join(schemaDir, "track3d.schema.json"));
+  // the calibration and its labelled tracks
+  const fieldPath = job.fieldPath ?? join(job.samplesDir, "field.json");
+  if (!existsSync(fieldPath)) throw new Error(`${fieldPath}: no field.json for this calibration`);
+  const samplesOut = join(dir, "samples");
+  mkdirSync(samplesOut);
+  cpSync(fieldPath, join(samplesOut, "field.json"));
+  const samples: string[] = [];
+  for (const f of readdirSync(job.samplesDir)) {
+    if (f.endsWith(".track3d.jsonl") || f.endsWith(".labels3d.json")) {
+      cpSync(join(job.samplesDir, f), join(samplesOut, f));
+      if (f.endsWith(".track3d.jsonl")) samples.push(f);
+    }
+  }
+  if (!samples.length) throw new Error(`${job.samplesDir}: no *.track3d.jsonl samples`);
+  // the golden library, twice: checks/ to edit, reference/checks/ as the gate's "before" column
+  const src = job.checksDir ?? join(root, "sports", job.sport, "checks");
+  if (!existsSync(src)) throw new Error(`${src}: no check library to calibrate`);
+  const moduleDir = join(dir, "checks");
+  cpSync(src, moduleDir, { recursive: true, filter: noPycache });
+  cpSync(src, join(dir, "reference", "checks"), { recursive: true, filter: noPycache });
+  const checkFiles = readdirSync(moduleDir)
+    .filter((f) => f.endsWith(".py") && !f.startsWith("_"))
+    .sort();
+  if (!checkFiles.length) throw new Error(`${src}: no checks (*.py)`);
+  // the sport module, read-only: the gate replays the library's events through rules.yaml for the rally winners
+  const modSrc = join(root, "sports", job.sport);
+  const rulesDir = join(dir, "rules", job.sport);
+  mkdirSync(rulesDir, { recursive: true });
+  for (const f of MODULE_FILES) {
+    if (!existsSync(join(modSrc, f))) throw new Error(`${modSrc}/${f} missing`);
+    cpSync(join(modSrc, f), join(rulesDir, f));
+  }
+  return {
+    moduleDir,
+    allowlist: editableFiles(job.kind, job.sport, checkFiles),
+    samples,
+    gateCmd: {
+      module: "trophy_engine.check_test.cli",
+      args: `--checks checks --samples samples --field samples/field.json --baseline reference/checks --rules "rules/${job.sport}"`,
+    },
+  };
 }
 
 const PROMPTS = join(REPO_ROOT, "services/compiler/prompts");
@@ -121,12 +211,13 @@ export const GUARD = join(REPO_ROOT, "services/compiler/hooks/guard.py");
  * The enforcement point. The Droid CLI runs project hooks from <cwd>/.factory/hooks.json before every tool call;
  * autonomy "low" auto-approves edits without asking the SDK permission handler (measured 2026-10-24), so the
  * PreToolUse hook is what keeps the agent inside the allowlist. The allowlist and the hooks file are read-only.
+ * `commands` names the job's gate (`./replay_test` or `./check_test`); the guard refuses the other one.
  */
-export function installGuard(dir: string, allowlist: string[]): void {
+export function installGuard(dir: string, allowlist: string[], commands: string[] = ["./replay_test"]): void {
   mkdirSync(join(dir, ".trophy"), { recursive: true });
   mkdirSync(join(dir, ".factory"), { recursive: true });
   const allowPath = join(dir, ".trophy", "allowlist.json");
-  writeFileSync(allowPath, JSON.stringify({ files: allowlist, commands: ["./replay_test"] }, null, 1));
+  writeFileSync(allowPath, JSON.stringify({ files: allowlist, commands }, null, 1));
   chmodSync(allowPath, 0o444);
   const cmd = `python3 "${GUARD}" "${dir}"`;
   const hooks = {
@@ -145,14 +236,17 @@ export function installGuard(dir: string, allowlist: string[]): void {
 
 export function renderTask(job: Job, allowlist: string[], samples: string[]): string {
   const tpl = readFileSync(join(PROMPTS, `${job.kind}.md`), "utf8");
+  const labelOf = (f: string) =>
+    f.endsWith(".track3d.jsonl")
+      ? f.replace(".track3d.jsonl", ".labels3d.json")
+      : f.replace(".l1.jsonl", ".labels.json");
   const vars: Record<string, string> = {
     sport: job.sport,
     base_sport: job.baseSport ?? "table_tennis",
     text: job.text ?? "",
+    gate: `./${gateScript(job.kind)}`,
     allowlist: allowlist.map((f) => `- \`${f}\``).join("\n"),
-    samples: samples
-      .map((f) => `- \`samples/${f}\` (labels: \`samples/${f.replace(".l1.jsonl", ".labels.json")}\`)`)
-      .join("\n"),
+    samples: samples.map((f) => `- \`samples/${f}\` (labels: \`samples/${labelOf(f)}\`)`).join("\n"),
     scene: job.scene ? "`scene/scene.json`" : "(none)",
   };
   return tpl.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => vars[k] ?? `{{${k}}}`);

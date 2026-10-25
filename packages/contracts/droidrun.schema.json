@@ -11,7 +11,7 @@
     "game_id": { "type": ["string", "null"] },
     "sport": { "type": "string", "description": "The module being produced or edited" },
     "base_sport": { "type": ["string", "null"], "description": "The reference module a compile derives from" },
-    "kind": { "enum": ["compile", "house_rule", "retune"] },
+    "kind": { "enum": ["compile", "house_rule", "retune", "calibrate_checks", "new_check"] },
     "trigger": { "$ref": "#/$defs/DroidRunTrigger" },
     "status": { "$ref": "#/$defs/DroidRunStatus" },
     "backend": { "enum": ["droid", "claude-fallback"] },
