@@ -105,6 +105,10 @@ def seed(script: dict, game_id: str, speed: float, run_tag: str) -> dict[str, in
             must("post_ai_vote", row, "engine")
         elif table == "ask":
             must("post_ask", row, "engine")
+        elif table == "moment":
+            must("upsert_moment", row, "engine")
+        elif table == "commentary":
+            must("post_commentary", row, "engine")
         elif table == "observation":
             must("post_observations", [row], "vision")
         elif table == "track_sample":
@@ -134,10 +138,12 @@ def check(game_id: str) -> None:
         "score": 2,
         "rally": 3,
         "challenge": 1,
-        "ai_vote": 3,
+        "ai_vote": 1,  # Claude only (D-41)
         "house_rule": 1,
-        "ask": 1,
+        "ask": 2,
         "camera": 1,
+        "moment": 4,
+        "commentary": 2,
     }
     for table, n in expect.items():
         got = len(sql(f"SELECT * FROM {table} WHERE {g}"))
@@ -150,6 +156,8 @@ def check(game_id: str) -> None:
     assert hr["status"] == "approved" and json.loads(hr["json"])["diff"], hr["status"]
     b = {r["team_id"]: r["points"] for r in sql(f"SELECT * FROM score WHERE {g}")}
     assert b == {"A": 0, "B": 3}, b
+    best = [m for m in sql(f"SELECT * FROM moment WHERE {g}") if m["is_best_play"]]
+    assert len(best) == 1, f"expected one best play, got {len(best)}"
     assert len(sql(f"SELECT * FROM observation WHERE {g}")) > 5
     assert len(sql(f"SELECT * FROM track_sample WHERE {g}")) > 20
     # auth: wrong role, no token, compiler can't approve, engine can't post observations
