@@ -155,6 +155,7 @@ house rules the Spacetime `house_rule` row via `update_house_rule_progress`, whi
 | calibrate_checks on `evals/fixtures/synthetic/table_tennis_3d`      | not yet run live | —        | 25 checks; ~1.9 s per gate run with a scripted agent (2026-10-24) |
 | compile_rules: the whole table-tennis pack from `laws.md` (2026-10-24, effort low, 600 s cap) | 531 s | 1 | 34/34 in 0.8 s (synthetic + the judge-labelled recording); a first run at effort medium read its inputs for 40 s and then produced nothing until its 480 s cap |
 | correction: "9.2-48.1 s was ONE rally, won by B" on the live stream (2026-10-24, effort low, 300 s cap) | timed out | 1 | partial fix (`ev.side_p > 0.95` on double_bounce) after a 210 s silent gap; the cap is now 600 s and the label carries per-call evidence digests |
+| correction run #2 (600 s cap, labels with evidence digests) | timed out | 1 | 36 s of reading, 545 s silent, then two edits in the right direction (evidence params, `!rally.hit_since_last_bounce`), gate 41/46 at the cap |
 
 ## Approval
 
@@ -186,7 +187,9 @@ cd services/engine && uv sync                  # the gate's interpreter
 cd ../compiler && npm run cli -- house-rule --sport table_tennis --text "a serve that clips the net is a let"
 npm run cli -- compile --sport pickleball --from table_tennis    # scene + samples default to evals/fixtures/synthetic/pickleball
 npm run cli -- calibrate --sport table_tennis --session s_demo01 # field + samples default to evals/fixtures/synthetic/table_tennis_3d
-npm run cli -- watch                           # subscribe to pending house rules in Spacetime (needs SPACETIME_COMPILER_TOKEN)
+npm run cli -- compile-rules --sport table_tennis   # the whole rules: list from sports/table_tennis/laws.md (600 s cap)
+npm run cli -- correction --sport table_tennis --text "9-48 s was one rally, won by B"   # what watch runs for a dashboard correction
+npm run cli -- watch                           # subscribe to pending house rules and corrections in Spacetime (needs SPACETIME_COMPILER_TOKEN)
 npm run cli -- approve <run_id>
 ```
 

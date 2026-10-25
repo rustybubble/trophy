@@ -17,7 +17,15 @@ sample, including the judge-labelled recording. Work from evidence, not guesses:
 
 ## How to work
 
-1. Run `{{gate}}` first; read the two `.trophy` files for the recorded sample.
+Budget: this run has a hard wall clock. **Never simulate the engine in your head**: the gate runs in under a second,
+so the loop is edit -> `{{gate}}` -> read `.trophy/results.json` -> edit again. A first grounded edit within two
+minutes beats a perfect plan that never runs.
+
+0. Read the judge-labelled sample's `samples/<sample>.labels.json` first: its `called[]` list has, for every wrong
+   call, the event that caused it (`n_cams`, `conf`, `side_p`, `p_in`, `surface`, `kind`) and the rally state the
+   rules saw just before it (`hits_since_last_bounce`, `t_since_last_bounce_s`, `last_bounce_side_p`, ...). That is
+   the evidence; the full event log is only for checking details.
+1. Run `{{gate}}`; read the two `.trophy` files for the recorded sample.
 2. For each wrong call, find in the events what the rule did not check: how many cameras saw the bounce and how
    confident it was, how sure its side was (`ev.side_p`, from its distance to the net and its sigma), whether a
    racket contact came between two same-side bounces (`rally.hit_since_last_bounce`), how long apart they were
