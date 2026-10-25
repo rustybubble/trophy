@@ -96,8 +96,9 @@ The ping-pong footage is unlabelled, so we don't claim an accuracy number. Claud
 | Media / tools | ffmpeg (VideoToolbox), Caddy, cel-python, GitHub |
 
 ## Credits (Creative Commons footage)
-- **Pickleball:** "Pickleball Doubles Challenge Court in Melbourne, FL 06/09/2023 Game 1" by BT Pickleball, CC BY. https://www.youtube.com/watch?v=QhLECLlXU3c
+- **Pickleball:** "Pickleball - Ultimate Mixer | SportsAlgo Coverage | BaselineSports x Kica x NetGala | Oct 2024' 3/8" by SportsAlgo, CC BY. https://www.youtube.com/watch?v=dVJ-fLqjE9A
+- **Pickleball (rule tests):** "Pickleball Doubles Challenge Court in Melbourne, FL 06/09/2023 Game 1" by BT Pickleball, CC BY. https://www.youtube.com/watch?v=QhLECLlXU3c
 - **Volleyball:** "Handymen vs AZIAN Mixed - Mixed Moscow Volleyball League (1st set)" by Almost Volleyball, CC BY. https://www.youtube.com/watch?v=kVpO4ypzPYU
 - **Basketball:** "Fun Moderate to Intense 10 games Saturday run" by JaiArtHub, CC BY. https://www.youtube.com/watch?v=2NxcgKW7xFM
 
-All three were trimmed and re-encoded. The ping-pong footage is our own team's recording.
+All were trimmed and re-encoded. The ping-pong footage is our own team's recording.
