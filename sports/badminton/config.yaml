@@ -1,0 +1,13 @@
+# Sport module: badminton (annotated, D-44). No events.py: hand-marked events arrive as trophy.event.v1 with
+# source "annotated", so this file only names the sport and describes the court for the Droid and the UI.
+# rules.yaml (the let/out/fault interpreter) is written by the Factory Droid (interpreter job, D-43).
+sport: badminton
+version: 1
+court:
+  template: badminton           # field frame: origin at the court centre, +x toward end B, net plane x = 0
+  length_m: 13.4
+  width_m: 6.1                  # doubles; singles 5.18
+  plane_z_m: 0.0
+  surface: court
+  net_x_m: 0.0
+  net_height_m: 1.524           # at the centre
