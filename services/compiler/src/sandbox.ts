@@ -102,7 +102,7 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
   mkdirSync(dir, { recursive: true });
   if (readdirSync(dir).length) throw new Error(`sandbox dir is not empty: ${dir}`);
   const gate = gateScript(job.kind);
-  const { moduleDir, allowlist, samples, gateCmd, fixtures } =
+  const { moduleDir, allowlist, samples, gateCmd, fixtures, vars } =
     job.kind === "new_check"
       ? layoutNewCheck(job, dir, root)
       : job.kind === "calibrate_checks"
@@ -116,7 +116,7 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
   writeFileSync(join(dir, gate), script);
   chmodSync(join(dir, gate), 0o755);
   writeFileSync(join(dir, ".gitignore"), ".trophy/\n__pycache__/\n");
-  writeFileSync(join(dir, "TASK.md"), renderTask(job, allowlist, samples, fixtures ?? []));
+  writeFileSync(join(dir, "TASK.md"), renderTask(job, allowlist, samples, fixtures ?? [], vars));
   installGuard(dir, allowlist, [`./${gate}`]);
   git(dir, "init", "-q", "-b", "main");
   git(dir, "-c", "user.name=trophy-droid", "-c", "user.email=droid@trophy.local", "add", "-A");
@@ -143,6 +143,8 @@ interface Layout {
   samples: string[];
   /** annotated fixture names listed in TASK.md */
   fixtures?: string[];
+  /** extra TASK.md template values */
+  vars?: Record<string, string>;
   gateCmd: { module: string; args: string };
 }
 
@@ -268,6 +270,10 @@ function layoutInterpreter(job: Job, dir: string, root: string): Layout {
   for (const f of ["config.yaml", "events.py", "RULES.md", "rules.yaml"]) {
     if (existsSync(join(src, f))) cpSync(join(src, f), join(moduleDir, f));
   }
+  // a regeneration starts from the newest interpreter the engine approved (data/local/modules/<sport>/v<n>)
+  const approved = job.moduleDir ? undefined : newestApproved(root, job.sport);
+  if (approved) cpSync(approved, join(moduleDir, "rules.yaml"));
+  const seeded = existsSync(join(moduleDir, "rules.yaml"));
   mkdirSync(join(dir, "reference", "table_tennis"), { recursive: true });
   cpSync(join(root, "sports/table_tennis/rules.yaml"), join(dir, "reference/table_tennis/rules.yaml"));
   writeFileSync(
@@ -288,7 +294,23 @@ function layoutInterpreter(job: Job, dir: string, root: string): Layout {
     samples,
     fixtures,
     gateCmd: { module: "trophy_engine.replay_test.cli", args: args.join(" ") },
+    vars: {
+      seeded: seeded
+        ? `\`sports/${job.sport}/rules.yaml\` already holds the current interpreter${approved ? " (the newest approved one)" : ""}: improve it until the gate passes.`
+        : `\`sports/${job.sport}/rules.yaml\` does not exist yet: create it.`,
+    },
   };
+}
+
+/** data/local/modules/<sport>/v<n>/rules.yaml with the highest n, if any. */
+function newestApproved(root: string, sport: string): string | undefined {
+  const base = join(root, "data/local/modules", sport);
+  if (!existsSync(base)) return undefined;
+  const vs = readdirSync(base)
+    .filter((d) => /^v\d+$/.test(d) && existsSync(join(base, d, "rules.yaml")))
+    .map((d) => Number(d.slice(1)))
+    .sort((a, b) => b - a);
+  return vs.length ? join(base, `v${vs[0]}`, "rules.yaml") : undefined;
 }
 
 /** The event vocabulary as a short Markdown table (types and payload fields), from event.schema.json. */
@@ -456,7 +478,13 @@ function layoutNewCheck(job: Job, dir: string, root: string): Layout {
   };
 }
 
-export function renderTask(job: Job, allowlist: string[], samples: string[], fixtures: string[] = []): string {
+export function renderTask(
+  job: Job,
+  allowlist: string[],
+  samples: string[],
+  fixtures: string[] = [],
+  extra: Record<string, string> = {},
+): string {
   const tpl = readFileSync(join(PROMPTS, `${job.kind}.md`), "utf8");
   const labelOf = (f: string) =>
     f.endsWith(".track3d.jsonl")
@@ -487,11 +515,7 @@ export function renderTask(job: Job, allowlist: string[], samples: string[], fix
       existsSync(join(REPO_ROOT, "sports", job.sport, "RULES.md")) || existsSync(join(job.moduleDir ?? "", "RULES.md"))
         ? `\`sports/${job.sport}/RULES.md\``
         : "(none: use your knowledge of the official rules, and cite them in `rule_ref`)",
-    seeded:
-      job.kind === "interpreter" &&
-      existsSync(join(job.moduleDir ?? join(REPO_ROOT, "sports", job.sport), "rules.yaml"))
-        ? `\`sports/${job.sport}/rules.yaml\` already holds the current interpreter: improve it until the gate passes.`
-        : `\`sports/${job.sport}/rules.yaml\` does not exist yet: create it.`,
+    ...extra,
   };
   return tpl.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => vars[k] ?? `{{${k}}}`);
 }
