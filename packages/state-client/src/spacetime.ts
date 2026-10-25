@@ -102,7 +102,9 @@ export class SpacetimeState extends StateStore implements TrophyState {
             );
           conn
             .subscriptionBuilder()
-            .onError((ctx) => console.warn(`Trophy: post-game tables unavailable (${String((ctx as { event?: unknown }).event)})`))
+            .onError((ctx) =>
+              console.warn(`Trophy: post-game tables unavailable (${String((ctx as { event?: unknown }).event)})`),
+            )
             .subscribe(POST_GAME.map((t) => `SELECT * FROM ${t} ${where}`));
         })
         .onConnectError((_ctx, err) => {
