@@ -30,6 +30,11 @@
 	handle /stdb/* {
 		respond "forbidden" 403
 	}
+	# Trophy Watch (Vite dev server, base "/watch/")
+	redir /watch /watch/ 308
+	handle /watch/* {
+		reverse_proxy 127.0.0.1:5175
+	}
 	# PWA (Vite dev server, base "/cam/")
 	handle /cam/* {
 		reverse_proxy 127.0.0.1:5173

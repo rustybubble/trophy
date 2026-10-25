@@ -76,6 +76,29 @@ export const Challenge = __t.object("Challenge", {
 });
 export type Challenge = __Infer<typeof Challenge>;
 
+export const Commentary = __t.object("Commentary", {
+  commentaryKey: __t.string(),
+  momentId: __t.string(),
+  gameId: __t.string(),
+  voice: __t.string(),
+  text: __t.string(),
+  validated: __t.bool(),
+  createdAtMs: __t.f64(),
+  json: __t.string(),
+});
+export type Commentary = __Infer<typeof Commentary>;
+
+export const DroidRun = __t.object("DroidRun", {
+  runId: __t.string(),
+  gameId: __t.string(),
+  sport: __t.string(),
+  kind: __t.string(),
+  status: __t.string(),
+  updatedAtMs: __t.f64(),
+  json: __t.string(),
+});
+export type DroidRun = __Infer<typeof DroidRun>;
+
 export const Game = __t.object("Game", {
   gameId: __t.string(),
   sport: __t.string(),
@@ -99,6 +122,20 @@ export const HouseRule = __t.object("HouseRule", {
   json: __t.string(),
 });
 export type HouseRule = __Infer<typeof HouseRule>;
+
+export const Moment = __t.object("Moment", {
+  momentId: __t.string(),
+  gameId: __t.string(),
+  kind: __t.string(),
+  tGameS: __t.f64(),
+  tStartS: __t.f64(),
+  tEndS: __t.f64(),
+  label: __t.string(),
+  highlightScore: __t.f64(),
+  isBestPlay: __t.bool(),
+  json: __t.string(),
+});
+export type Moment = __Infer<typeof Moment>;
 
 export const Observation = __t.object("Observation", {
   eventId: __t.string(),
@@ -147,6 +184,18 @@ export const Service = __t.object("Service", {
   label: __t.string(),
 });
 export type Service = __Infer<typeof Service>;
+
+export const SportModule = __t.object("SportModule", {
+  moduleKey: __t.string(),
+  sport: __t.string(),
+  gameId: __t.string(),
+  version: __t.u32(),
+  runId: __t.string(),
+  path: __t.string(),
+  approvedAtMs: __t.f64(),
+  json: __t.string(),
+});
+export type SportModule = __Infer<typeof SportModule>;
 
 export const TrackSample = __t.object("TrackSample", {
   id: __t.u64(),

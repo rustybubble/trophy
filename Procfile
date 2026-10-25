@@ -11,4 +11,5 @@ recorder: uv run --project services/recorder --frozen python -m recorder
 voice: python spikes/cartesia-voice/serve.py --port 8765
 pwa: npm run dev -w @trophy/pwa -- --logLevel warn
 dashboard: npm run dev -w @trophy/dashboard -- --logLevel warn
+watch: npm run dev -w @trophy/watch -- --logLevel warn
 caddy: python infra/caddy/run.py

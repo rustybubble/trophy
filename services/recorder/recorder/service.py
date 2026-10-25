@@ -277,7 +277,14 @@ class Recorder:
                     session.close()
                     session = None
                 if not session:
-                    session = CameraRecording(self.store, frame, self.fps, self.encoder)
+                    try:
+                        session = CameraRecording(self.store, frame, self.fps, self.encoder)
+                    except FileExistsError as exc:
+                        # Frames retained on the bus from a game recorded before a restart: leave the archive
+                        # alone and keep recording every other camera (resume isn't implemented).
+                        print(json.dumps({"service": "recorder", "skipped": str(exc)}), flush=True)
+                        self.finalized.add((frame.game_id, frame.cam_id))
+                        continue
                     self.sessions[frame.cam_id] = session
                     raw = self.redis.hgetall(f"game:{frame.game_id}")
                     game = {

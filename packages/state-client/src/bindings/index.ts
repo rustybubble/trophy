@@ -41,18 +41,24 @@ import OpenRallyReducer from "./open_rally_reducer";
 import PostAiVoteReducer from "./post_ai_vote_reducer";
 import PostAskReducer from "./post_ask_reducer";
 import PostCallReducer from "./post_call_reducer";
+import PostCommentaryReducer from "./post_commentary_reducer";
 import PostObservationsReducer from "./post_observations_reducer";
 import PostTrackSamplesReducer from "./post_track_samples_reducer";
 import PruneTrackSamplesReducer from "./prune_track_samples_reducer";
 import RegisterServiceReducer from "./register_service_reducer";
 import ResolveChallengeReducer from "./resolve_challenge_reducer";
+import SetBestPlayReducer from "./set_best_play_reducer";
+import SetDroidRunStatusReducer from "./set_droid_run_status_reducer";
 import SetHouseRuleStatusReducer from "./set_house_rule_status_reducer";
 import SetScoreReducer from "./set_score_reducer";
 import UnregisterServiceReducer from "./unregister_service_reducer";
 import UpdateCallStatusReducer from "./update_call_status_reducer";
+import UpdateDroidRunReducer from "./update_droid_run_reducer";
 import UpdateHouseRuleProgressReducer from "./update_house_rule_progress_reducer";
 import UpsertCameraReducer from "./upsert_camera_reducer";
 import UpsertGameReducer from "./upsert_game_reducer";
+import UpsertMomentReducer from "./upsert_moment_reducer";
+import UpsertSportModuleReducer from "./upsert_sport_module_reducer";
 
 // Import all procedure arg schemas
 
@@ -62,11 +68,15 @@ import AskRow from "./ask_table";
 import CallRow from "./call_table";
 import CameraRow from "./camera_table";
 import ChallengeRow from "./challenge_table";
+import CommentaryRow from "./commentary_table";
+import DroidRunRow from "./droid_run_table";
 import GameRow from "./game_table";
 import HouseRuleRow from "./house_rule_table";
+import MomentRow from "./moment_table";
 import ObservationRow from "./observation_table";
 import RallyRow from "./rally_table";
 import ScoreRow from "./score_table";
+import SportModuleRow from "./sport_module_table";
 import TrackSampleRow from "./track_sample_table";
 
 /** Type-only namespace exports for generated type groups. */
@@ -149,6 +159,43 @@ const tablesSchema = __schema({
       { name: 'challenge_challenge_id_key', constraint: 'unique', columns: ['challengeId'] },
     ],
   }, ChallengeRow),
+  commentary: __table({
+    name: 'commentary',
+    indexes: [
+      { accessor: 'commentary_key', name: 'commentary_commentary_key_idx_btree', algorithm: 'btree', columns: [
+        'commentaryKey',
+      ] },
+      { accessor: 'game_id', name: 'commentary_game_id_idx_btree', algorithm: 'btree', columns: [
+        'gameId',
+      ] },
+      { accessor: 'moment_id', name: 'commentary_moment_id_idx_btree', algorithm: 'btree', columns: [
+        'momentId',
+      ] },
+    ],
+    constraints: [
+      { name: 'commentary_commentary_key_key', constraint: 'unique', columns: ['commentaryKey'] },
+    ],
+  }, CommentaryRow),
+  droidRun: __table({
+    name: 'droid_run',
+    indexes: [
+      { accessor: 'game_id', name: 'droid_run_game_id_idx_btree', algorithm: 'btree', columns: [
+        'gameId',
+      ] },
+      { accessor: 'run_id', name: 'droid_run_run_id_idx_btree', algorithm: 'btree', columns: [
+        'runId',
+      ] },
+      { accessor: 'sport', name: 'droid_run_sport_idx_btree', algorithm: 'btree', columns: [
+        'sport',
+      ] },
+      { accessor: 'status', name: 'droid_run_status_idx_btree', algorithm: 'btree', columns: [
+        'status',
+      ] },
+    ],
+    constraints: [
+      { name: 'droid_run_run_id_key', constraint: 'unique', columns: ['runId'] },
+    ],
+  }, DroidRunRow),
   game: __table({
     name: 'game',
     indexes: [
@@ -177,6 +224,20 @@ const tablesSchema = __schema({
       { name: 'house_rule_rule_version_key', constraint: 'unique', columns: ['ruleVersion'] },
     ],
   }, HouseRuleRow),
+  moment: __table({
+    name: 'moment',
+    indexes: [
+      { accessor: 'game_id', name: 'moment_game_id_idx_btree', algorithm: 'btree', columns: [
+        'gameId',
+      ] },
+      { accessor: 'moment_id', name: 'moment_moment_id_idx_btree', algorithm: 'btree', columns: [
+        'momentId',
+      ] },
+    ],
+    constraints: [
+      { name: 'moment_moment_id_key', constraint: 'unique', columns: ['momentId'] },
+    ],
+  }, MomentRow),
   observation: __table({
     name: 'observation',
     indexes: [
@@ -219,6 +280,23 @@ const tablesSchema = __schema({
       { name: 'score_score_key_key', constraint: 'unique', columns: ['scoreKey'] },
     ],
   }, ScoreRow),
+  sportModule: __table({
+    name: 'sport_module',
+    indexes: [
+      { accessor: 'game_id', name: 'sport_module_game_id_idx_btree', algorithm: 'btree', columns: [
+        'gameId',
+      ] },
+      { accessor: 'module_key', name: 'sport_module_module_key_idx_btree', algorithm: 'btree', columns: [
+        'moduleKey',
+      ] },
+      { accessor: 'sport', name: 'sport_module_sport_idx_btree', algorithm: 'btree', columns: [
+        'sport',
+      ] },
+    ],
+    constraints: [
+      { name: 'sport_module_module_key_key', constraint: 'unique', columns: ['moduleKey'] },
+    ],
+  }, SportModuleRow),
   trackSample: __table({
     name: 'track_sample',
     indexes: [
@@ -247,18 +325,24 @@ const reducersSchema = __reducers(
   __reducerSchema("post_ai_vote", PostAiVoteReducer),
   __reducerSchema("post_ask", PostAskReducer),
   __reducerSchema("post_call", PostCallReducer),
+  __reducerSchema("post_commentary", PostCommentaryReducer),
   __reducerSchema("post_observations", PostObservationsReducer),
   __reducerSchema("post_track_samples", PostTrackSamplesReducer),
   __reducerSchema("prune_track_samples", PruneTrackSamplesReducer),
   __reducerSchema("register_service", RegisterServiceReducer),
   __reducerSchema("resolve_challenge", ResolveChallengeReducer),
+  __reducerSchema("set_best_play", SetBestPlayReducer),
+  __reducerSchema("set_droid_run_status", SetDroidRunStatusReducer),
   __reducerSchema("set_house_rule_status", SetHouseRuleStatusReducer),
   __reducerSchema("set_score", SetScoreReducer),
   __reducerSchema("unregister_service", UnregisterServiceReducer),
   __reducerSchema("update_call_status", UpdateCallStatusReducer),
+  __reducerSchema("update_droid_run", UpdateDroidRunReducer),
   __reducerSchema("update_house_rule_progress", UpdateHouseRuleProgressReducer),
   __reducerSchema("upsert_camera", UpsertCameraReducer),
   __reducerSchema("upsert_game", UpsertGameReducer),
+  __reducerSchema("upsert_moment", UpsertMomentReducer),
+  __reducerSchema("upsert_sport_module", UpsertSportModuleReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */
@@ -269,8 +353,12 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
   tables: typeof tablesSchema.schemaType.tables & {
     /** @deprecated Use `aiVote` instead. This alias will be removed in the next major version. */
     readonly "ai_vote": Omit<typeof tablesSchema.schemaType.tables["aiVote"], "accessorName"> & { readonly accessorName: "ai_vote" };
+    /** @deprecated Use `droidRun` instead. This alias will be removed in the next major version. */
+    readonly "droid_run": Omit<typeof tablesSchema.schemaType.tables["droidRun"], "accessorName"> & { readonly accessorName: "droid_run" };
     /** @deprecated Use `houseRule` instead. This alias will be removed in the next major version. */
     readonly "house_rule": Omit<typeof tablesSchema.schemaType.tables["houseRule"], "accessorName"> & { readonly accessorName: "house_rule" };
+    /** @deprecated Use `sportModule` instead. This alias will be removed in the next major version. */
+    readonly "sport_module": Omit<typeof tablesSchema.schemaType.tables["sportModule"], "accessorName"> & { readonly accessorName: "sport_module" };
     /** @deprecated Use `trackSample` instead. This alias will be removed in the next major version. */
     readonly "track_sample": Omit<typeof tablesSchema.schemaType.tables["trackSample"], "accessorName"> & { readonly accessorName: "track_sample" };
   };
@@ -292,7 +380,9 @@ const REMOTE_MODULE = {
 
 const tableAccessorAliases = {
   "ai_vote": "aiVote",
+  "droid_run": "droidRun",
   "house_rule": "houseRule",
+  "sport_module": "sportModule",
   "track_sample": "trackSample",
 } as const;
 
@@ -316,8 +406,12 @@ type __DbViewBase = __DbConnectionImpl<typeof REMOTE_MODULE>["db"];
 export type DbView = __DbViewBase & {
   /** @deprecated Use `aiVote` instead. This alias will be removed in the next major version. */
   readonly "ai_vote": __DbViewBase["aiVote"];
+  /** @deprecated Use `droidRun` instead. This alias will be removed in the next major version. */
+  readonly "droid_run": __DbViewBase["droidRun"];
   /** @deprecated Use `houseRule` instead. This alias will be removed in the next major version. */
   readonly "house_rule": __DbViewBase["houseRule"];
+  /** @deprecated Use `sportModule` instead. This alias will be removed in the next major version. */
+  readonly "sport_module": __DbViewBase["sportModule"];
   /** @deprecated Use `trackSample` instead. This alias will be removed in the next major version. */
   readonly "track_sample": __DbViewBase["trackSample"];
 };
@@ -326,8 +420,12 @@ type __TablesBase = __QueryBuilder<typeof tablesSchema.schemaType>;
 export type Tables = __TablesBase & {
   /** @deprecated Use `aiVote` instead. This alias will be removed in the next major version. */
   readonly "ai_vote": __TablesBase["aiVote"];
+  /** @deprecated Use `droidRun` instead. This alias will be removed in the next major version. */
+  readonly "droid_run": __TablesBase["droidRun"];
   /** @deprecated Use `houseRule` instead. This alias will be removed in the next major version. */
   readonly "house_rule": __TablesBase["houseRule"];
+  /** @deprecated Use `sportModule` instead. This alias will be removed in the next major version. */
+  readonly "sport_module": __TablesBase["sportModule"];
   /** @deprecated Use `trackSample` instead. This alias will be removed in the next major version. */
   readonly "track_sample": __TablesBase["trackSample"];
 };
