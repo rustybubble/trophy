@@ -219,7 +219,10 @@ export function Main(props: {
   }, [angle, backend, props.name]);
 
   // ---------------------------------------------------------------- actions
-  const target = challengeTarget(v.calls);
+  // a scenario restarts the game on the same id: only calls since the current scenario began are "now"
+  const t0Now = feeds.length ? Math.min(...feeds.map((f) => f.t_game0_s)) - 2 : -Infinity;
+  const nowCalls = v.calls.filter((c) => c.t_game_s >= t0Now);
+  const target = challengeTarget(nowCalls);
   const openChallengeFor = (callId: string) =>
     [...v.challenges].sort((a, b) => b.created_at_ms - a.created_at_ms).find((c) => c.call_id === callId);
 
@@ -308,7 +311,7 @@ export function Main(props: {
   const netState = !feeds.length ? "" : maxDrift < 40 ? "ok" : maxDrift < 120 ? "warn" : "bad";
   const items = droidItems(v.houseRules, v.droidRuns);
   const lastRun = items[0];
-  const banner = bannerCall(v.calls);
+  const banner = bannerCall(nowCalls);
   const replayChallenge = v.challenges.find((c) => c.challenge_id === replayId);
   const otherViewers = (cam: string) => phones.filter((p) => p.cam_id === cam && p.viewer_id !== session.camId).length;
 

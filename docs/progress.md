@@ -45,3 +45,10 @@ The team's two real takes (iPhone 17, 3840x2160 60 fps HEVC, 26.1 s + 39.2 s, on
 - **Live Factory Droid runs on the SYNTHETIC 3D fixtures (2026-10-24 night, this Mac, `claude-sonnet-5`, effort low, single runs):**
   - `calibrate_checks`: **ready in 86.9 s** (2 attempts; gate 25/25 in 1.8 s): inside the 90 s cap, over the 60 s target.
   - `new_check` ("how fast was the ball in that rally"): the first run **failed at the 90 s cap**: the sandbox had no copy of the check API, so the Droid searched the disk (and the guard didn't yet confine reads). With `reference/checks_api.py` in the sandbox and reads confined: **ready in 37.2 s**, first attempt, gate 28/28, answer "fastest ball speed 7.7 m/s" on the session track.
+
+## Judging demo: replayed feeds (D-42..D-44), measured 2026-10-25 on the M5 Pro (throwaway stack on :3200/:6579/:8200)
+- [x] Two-angle ping pong (team takes 23:23:15, audio-aligned 0.068 s): both angles stream to the referee at 29.9–30.0 fps; BlurBall finds the ball in 76–100 % of frames (the tt-demo orange-ball pair: 3–10 %); 2–6 calls per 34–36 s run, depending on corners. **Unlabelled: no accuracy claimed.**
+- [x] Sync: dashboard and phone playback from the Spacetime `feed` row within ±2–13 ms of schedule (browser pane on the Mac; **not yet on iPhones**).
+- [x] Challenge → automatic verdict with a live Claude vote: 4.2 s (vote 3.0–3.3 s), spoken explanation; geometry-only fallback is instant.
+- [x] Factory Droid, live runs (droid 0.249): interpreters ready in 65.9 s (pickleball, gate 9/9), 43.7 s (volleyball, 9/9), 66.0 s (basketball, 11/11, after the fixture's shot times were moved to the rim); one earlier basketball run failed at the 90 s cap (fixture timing) and its shell probe was blocked by the guard. House rule from the phone: ready in ~31 s, the Droid decided "apply", re-judged 4 rallies, 3 calls changed; Undo restored them.
+- [ ] Phones on real iPhones through trophy.photo (DNS still points at the PC); Cartesia audio on iOS Safari.
