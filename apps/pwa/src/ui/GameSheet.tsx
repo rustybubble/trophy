@@ -4,12 +4,6 @@ import { ApiError, type Scenario } from "../lib/api.ts";
 import type { Backend } from "../lib/backend.ts";
 import { Sheet } from "./Sheet.tsx";
 
-const SOURCE_TEXT: Record<Scenario["source"], string> = {
-  team_recording: "our recording",
-  cc_by_online: "CC BY clip",
-  synthetic: "synthetic",
-};
-
 /** Host controls (any judge phone): pick a recorded scenario, Go live, Stop. Plus sound and leaving. */
 export function GameSheet(props: {
   backend: Backend;
@@ -100,8 +94,7 @@ export function GameSheet(props: {
             >
               <b>{s.title}</b>
               <span>
-                {s.angles.length} angle{s.angles.length === 1 ? "" : "s"} · {SOURCE_TEXT[s.source]}
-                {s.annotated ? " · annotated" : ""}
+                {s.angles.length} angle{s.angles.length === 1 ? "" : "s"}
                 {s.ready === false ? " · not prepared yet" : ""}
               </span>
             </button>
