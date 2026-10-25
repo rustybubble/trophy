@@ -187,10 +187,16 @@ export function Main(props: {
     return sortFeeds(v.feeds.filter((f) => f.wall0_ms === wall0));
   }, [v.feeds]);
   const [angle, setAngle] = useState<string>();
+  // the game's phones (joined with a display role; not the dashboard, not the streamed cameras)
+  const joinedPhones = useMemo(
+    () =>
+      v.cameras.filter((c) => c.role.split(",").includes("display") && c.label !== "dashboard").map((c) => c.cam_id),
+    [v.cameras],
+  );
   useEffect(() => {
-    const next = pickAngle(feeds, v.viewers, session.camId, angle, Date.now());
+    const next = pickAngle(feeds, v.viewers, session.camId, angle, Date.now(), joinedPhones);
     if (next !== angle) setAngle(next);
-  }, [feeds, v.viewers, session.camId, angle]);
+  }, [feeds, v.viewers, session.camId, angle, joinedPhones]);
   const feed = feeds.find((f) => f.cam_id === angle);
 
   // report playback drift every 2 s (the engine writes this phone's viewer row)

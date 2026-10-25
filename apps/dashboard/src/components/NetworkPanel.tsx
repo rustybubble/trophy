@@ -113,7 +113,12 @@ export function NetworkPanel({
         <h2>Cameras in sync · SpacetimeDB</h2>
         {session && (
           <div className="row">
-            <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Scenario" disabled={playing}>
+            <select
+              value={playing ? (feeds.find((f) => f.status === "playing")?.scenario_id ?? pick) : pick}
+              onChange={(e) => setPick(e.target.value)}
+              aria-label="Scenario"
+              disabled={playing}
+            >
               {scenarios.map((s) => (
                 <option key={s.id} value={s.id} disabled={!s.ready}>
                   {s.title}

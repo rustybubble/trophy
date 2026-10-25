@@ -220,3 +220,15 @@ describe("TrackBuffer", () => {
     expect(b.pxAt("c1", 1.3)?.[0]).toBeCloseTo(130);
   });
 });
+
+describe("pickAngle at Go live", () => {
+  it("gives phones that choose together different angles by their rank", () => {
+    const f = (cam_id: string, label: string) =>
+      ({ cam_id, label, status: "playing", wall0_ms: 1, offset_s: 0, t_game0_s: 0 }) as never;
+    const feeds = [f("c_side", "Side"), f("c_diag", "Diagonal")];
+    const phones = ["c_phone2", "c_phone1"];
+    const a = pickAngle(feeds, [], "c_phone1", undefined, 0, phones);
+    const b = pickAngle(feeds, [], "c_phone2", undefined, 0, phones);
+    expect(a).not.toBe(b);
+  });
+});

@@ -15,8 +15,10 @@ export function sortFeeds(feeds: Feed[]): Feed[] {
 }
 
 /**
- * The angle this phone should show: keep the current one while it exists, else the first angle no other live phone
- * shows yet, else the first angle.
+ * The angle this phone should show: keep the current one while it exists, else an angle no other live phone shows yet,
+ * else the first angle. Phones that choose at the same moment (Go live) can't see each other's choice yet, so each
+ * takes the free angle at its own rank among the game's phones (`phones`: their cam_ids, the same list on every
+ * device), and two phones never land on the same angle.
  */
 export function pickAngle(
   feeds: Feed[],
@@ -24,6 +26,7 @@ export function pickAngle(
   meId: string,
   current: string | undefined,
   nowMs: number,
+  phones: string[] = [],
 ): string | undefined {
   const sorted = sortFeeds(feeds.filter((f) => f.status !== "failed"));
   if (current && sorted.some((f) => f.cam_id === current)) return current;
@@ -32,7 +35,10 @@ export function pickAngle(
       .filter((v) => v.viewer_id !== meId)
       .map((v) => v.cam_id),
   );
-  return (sorted.find((f) => !taken.has(f.cam_id)) ?? sorted[0])?.cam_id;
+  const free = sorted.filter((f) => !taken.has(f.cam_id));
+  const rank = [...phones].sort().indexOf(meId);
+  if (free.length && rank >= 0) return free[rank % free.length]!.cam_id;
+  return (free[0] ?? sorted[0])?.cam_id;
 }
 
 /** Every call is spoken with who is at fault: append the name when the engine's line lacks it. */
