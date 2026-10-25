@@ -138,7 +138,7 @@ def check(game_id: str) -> None:
         "score": 2,
         "rally": 3,
         "challenge": 1,
-        "ai_vote": 3,
+        "ai_vote": 1,  # Claude only (D-41)
         "house_rule": 1,
         "ask": 2,
         "camera": 1,
