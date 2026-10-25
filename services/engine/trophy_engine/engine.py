@@ -400,7 +400,7 @@ class Engine(DroidMixin):
         }
         if challenge_id:  # a challenge is not on the call's clock: give the voter a little longer
             req["challenge_id"] = challenge_id
-            req["timeout_s"] = 6
+            req["timeout_s"] = 8
             # the option that means "the call was right": the outcome itself, else the first option (geometry's pick)
             req["original_option"] = call["outcome"] if call["outcome"] in options else options[0]
         g.decided.add(call["id"])

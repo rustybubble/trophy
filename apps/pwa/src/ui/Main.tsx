@@ -194,8 +194,12 @@ export function Main(props: {
     [v.cameras],
   );
   useEffect(() => {
-    const next = pickAngle(feeds, v.viewers, session.camId, angle, Date.now(), joinedPhones);
-    if (next !== angle) setAngle(next);
+    // a scenario's feed rows arrive one by one: pick once the list has settled, or every phone takes the first angle
+    const id = setTimeout(() => {
+      const next = pickAngle(feeds, v.viewers, session.camId, angle, Date.now(), joinedPhones);
+      if (next !== angle) setAngle(next);
+    }, 400);
+    return () => clearTimeout(id);
   }, [feeds, v.viewers, session.camId, angle, joinedPhones]);
   const feed = feeds.find((f) => f.cam_id === angle);
 
