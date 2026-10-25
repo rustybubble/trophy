@@ -70,9 +70,9 @@ An AI referee for pickup games: phones are the cameras, every call is spoken, an
 | **Factory Droid SDK** | [[Agent 3: house rules + calibrate_checks, the sandbox, the gate]] | README "Factory Droid"; Droid rule end to end [[s]] |
 | **Anthropic** | [[Agent 3: Claude in ask the ref + the challenge voter; where it could go wrong and how we contain it]] | README "Anthropic"; the named community and quotes above |
 | **Bitdeer AI Model Studio** | [[Agent 3: challenge voter]] | README "Bitdeer"; vote latency [[ms]] |
-| **Meta: bringing people closer** | Anyone joins with a phone and a QR code; everyone hears the same call; PLAYERS DECIDE hands close calls back; house rules keep each group's culture; Watch recap to share | README "Meta"; [[player quotes]]. [[Ask the user: does the track need a Meta model?]] |
+| **Meta: bringing people closer** | Anyone joins with a phone and a QR code; everyone hears the same call; PLAYERS DECIDE hands close calls back; house rules keep each group's culture; Watch recap to share | README "Meta"; [[player quotes]]. The theme is enough; no Meta model needed (the user, 2026-10-24) |
 | **MLH: Gemini API** | [[Agent 3: challenge voter]] | README "Gemini" |
-| **MLH: GoDaddy Registry / .Tech** | `trophy.photo` (registered at Porkbun) | [[Ask the user: does a Porkbun .photo domain qualify?]] |
+| **MLH: GoDaddy Registry / .Tech** | `trophy.photo` (registered at Porkbun), serving the phones over HTTPS | The live URL `https://trophy.photo/cam/`; the user confirmed it qualifies (2026-10-24) |
 | **MLH: Commit Fellowship** | [[the user: what this track needs]] | |
 | **Cal Hacks overall** | The whole project | The video |
 
