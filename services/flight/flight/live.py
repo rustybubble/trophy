@@ -3,8 +3,12 @@
     uv run python -m flight.live --game g_xxxxxxxx [--post-calls]
 
 For every camera of the game (role "cam"), reads `frames:{cam}` (trophy.framebus.FrameReader, every frame, never a
-backlog) and runs the gated ball tracker + table finder. The ball colour model starts from defaults and is re-learnt
-from this camera's own stream within its first seconds of play (flight.colour.LiveLearner).
+backlog) and runs the gated ball tracker + table finder. Detection is colour-first (bright orange, within the table
+region), with the measured side-camera defaults; `--learn-colour` re-learns them per camera (guarded against skin), and
+`--detector luma` uses the luma-motion detector instead (both measured worse on the side clip, D-30).
+
+Frames zoomed to the table by the phone (a `crop`, D-29) are tracked at their own resolution with thresholds scaled by
+the zoom; every output is in reference pixels (the full view at 1280x720, as calibration uses).
 
 Outputs (measurements only, D-18):
 - `trk:ball:{cam}` every frame, and Spacetime `track_sample` at 10 Hz (`trophy.world.TrackSampleWriter`);
@@ -25,19 +29,20 @@ import logging
 import os
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
 import numpy as np
 import redis
 from trophy.events import event_json, make_event
-from trophy.framebus import FrameReader
+from trophy.framebus import Crop, FrameReader
 from trophy.ids import new_ulid
 from trophy.streams import EV_FLIGHT, EVENT_STREAM_MAXLEN, cam_key, game_key
 from trophy.tracks import BallTrackWriter
 from trophy.world import ObservationWriter, SpacetimeClient, TrackSampleWriter
 
-from .balltrack import Detector, Tracker
+from .balltrack import Detector, LumaDetector, Tracker
 from .colour import LiveLearner
 from .rally import Rally, build_rallies
 from .table import Table, TableTracker
@@ -60,6 +65,37 @@ def _env(root: Path) -> dict[str, str]:
     return {**out, **os.environ}
 
 
+@dataclass(frozen=True)
+class View:
+    """Maps a frame's pixels to reference pixels: the camera's full view at W x H, the space calibration taps and all
+    outputs use. Uncropped frames are resized to W x H; a frame zoomed to the table (crop, D-29) keeps its own size
+    and `scale` (px per reference px) sizes the tracker's thresholds."""
+
+    crop: Crop | None
+    w: int
+    h: int
+
+    @property
+    def scale(self) -> float:
+        return 1.0 if self.crop is None else self.w / (self.crop[2] * W)
+
+    def pt(self, x: float, y: float) -> tuple[float, float]:
+        if self.crop is None:
+            return x, y
+        cx, cy, cw, ch = self.crop
+        return (cx + x / self.w * cw) * W, (cy + y / self.h * ch) * H
+
+    def table(self, t: Table) -> Table:
+        if self.crop is None:
+            return t
+        cx, cy, cw, ch = self.crop
+        sx, sy, ox, oy = cw * W / self.w, ch * H / self.h, cx * W, cy * H
+        a = t.a * sy / sx
+        return Table(
+            ox + t.x_left * sx, ox + t.x_right * sx, a, oy + sy * t.b - a * ox, ox + t.net_x * sx, t.thickness * sy
+        )
+
+
 class CamWorker(threading.Thread):
     def __init__(
         self,
@@ -69,24 +105,37 @@ class CamWorker(threading.Thread):
         obs: ObservationWriter,
         trk: TrackSampleWriter,
         calls: CallPoster | None,
+        detector: str = "colour",
+        learn_colour: bool = False,
     ) -> None:
         super().__init__(name=f"flight-{cam_id}", daemon=True)
         self.r, self.game_id, self.cam_id = r, game_id, cam_id
+        self.detector, self.learn_colour = detector, learn_colour
         self.obs, self.trk, self.calls = obs, trk, calls
         self.stop = threading.Event()
         self.rows: list[dict] = []
         self.sent: set[tuple] = set()
         self.done_rallies: set[float] = set()  # rally end times already judged
-        self.stats = {"frames": 0, "observed": 0, "events": 0, "fps": 0.0, "ms": 0.0, "analyse_ms": 0.0, "skipped": 0}
+        self.stats = {
+            "frames": 0,
+            "observed": 0,
+            "events": 0,
+            "fps": 0.0,
+            "ms": 0.0,
+            "analyse_ms": 0.0,
+            "skipped": 0,
+            "zoom": 1.0,
+        }
 
     def run(self) -> None:
-        # max_lag 45 (1.5 s at 30 fps): absorbs short stalls (the colour fits) and catches up, since a frame takes
+        # max_lag 45 (1.5 s at 30 fps): absorbs short stalls (e.g. colour fits) and catches up, since a frame takes
         # ~22 ms of the 33 ms budget; a longer backlog is skipped, and the tracker restarts across the gap
         reader = FrameReader(self.r, self.cam_id, mode="all", max_lag=45)
         balls = BallTrackWriter(self.r, self.cam_id)
-        learner: LiveLearner | None = LiveLearner()
+        learner: LiveLearner | None = LiveLearner() if self.learn_colour else None
         tracker: Tracker | None = None
         tables = TableTracker()
+        view: View | None = None
         last_analysis = 0.0
         t_win, n_win = time.monotonic(), 0
         while not self.stop.is_set():
@@ -97,35 +146,42 @@ class CamWorker(threading.Thread):
             img = cv2.imdecode(np.frombuffer(f.data, np.uint8), cv2.IMREAD_COLOR)
             if img is None:
                 continue
-            if img.shape[1] != W or img.shape[0] != H:
+            if f.crop is None and (img.shape[1] != W or img.shape[0] != H):
                 img = cv2.resize(img, (W, H), interpolation=cv2.INTER_AREA)
-            if tracker is None:
+            v = View(f.crop, img.shape[1], img.shape[0])
+            if tracker is None or v != view:  # first frame, or the phone changed its crop: new geometry
                 fps = float(self.r.hget(cam_key(self.cam_id), "fps_in") or 0)
-                tracker = Tracker(fps=fps if 10 <= fps <= 60 else 30.0)  # fps_in is 0 until the gateway measures it
+                colour = tracker.detector.colour if tracker is not None else None
+                # fps_in is 0 until the gateway measures it
+                det = LumaDetector(colour) if self.detector == "luma" else Detector(colour)
+                tracker = Tracker(detector=det, fps=fps if 10 <= fps <= 60 else 30.0, scale=v.scale)
+                tables, view = TableTracker(), v
+                self.stats["zoom"] = round(v.scale, 2)
+            tb = tables.update(img)
+            roi = tb.roi(img.shape[1], img.shape[0]) if tb is not None else None
             if learner is not None:
-                model = learner.add(img)
+                model = learner.add(img, roi)
                 if model is not None:
-                    tracker.detector = Detector(model)
+                    tracker.detector.colour = model
                     log.info(
                         json.dumps({"svc": "flight", "cam_id": self.cam_id, "msg": "colour model", "model": str(model)})
                     )
                     learner = None
-            p = tracker.step(f.seq, f.t_game_s, img)
-            tb = tables.update(img)
+            p = tracker.step(f.seq, f.t_game_s, img, roi)
             self.stats["frames"] += 1
             n_win += 1
             row = {"seq": f.seq, "t": f.t_game_s, "state": p.state, "track_id": p.track_id}
-            if p.x is not None and p.y is not None:
-                row["x"], row["y"] = p.x, p.y
+            px = v.pt(p.x, p.y) if p.x is not None and p.y is not None else None
+            if px is not None:
+                row["x"], row["y"] = px
             if tb is not None:
-                row["tb"] = tb
+                row["tb"] = v.table(tb)
             self.rows.append(row)
-            if p.state == "observed":
+            if p.state == "observed" and px is not None:
                 self.stats["observed"] += 1
-                balls.write(
-                    {"t_game_s": f.t_game_s, "seq": f.seq, "px": [round(p.x, 1), round(p.y, 1)], "conf": p.score}
-                )
-                self.trk.post(self.game_id, self.cam_id, f.t_game_s, px=(round(p.x, 1), round(p.y, 1)), conf=p.score)
+                xy = (round(px[0], 1), round(px[1], 1))
+                balls.write({"t_game_s": f.t_game_s, "seq": f.seq, "px": list(xy), "conf": p.score})
+                self.trk.post(self.game_id, self.cam_id, f.t_game_s, px=xy, conf=p.score)
             else:
                 balls.write({"t_game_s": f.t_game_s, "seq": f.seq, "px": None, "conf": 0.0})
             self.stats["ms"] = 0.9 * self.stats["ms"] + 0.1 * (time.perf_counter() - t0) * 1000
@@ -305,6 +361,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--game", required=True, help='a game id, or "next" for the next game created')
     ap.add_argument("--post-calls", action="store_true", help="INTERIM: post point calls (no engine yet)")
+    ap.add_argument(
+        "--detector", choices=["colour", "luma"], default="colour", help="ball detector (D-30: colour measured better)"
+    )
+    ap.add_argument("--learn-colour", action="store_true", help="re-learn the ball colour per camera (guarded)")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     env = _env(Path(__file__).resolve().parents[3])
@@ -331,7 +391,7 @@ def main() -> None:
         while True:
             for cam in cameras(r, a.game):
                 if cam not in workers:
-                    w = CamWorker(r, a.game, cam, obs, trk, calls)
+                    w = CamWorker(r, a.game, cam, obs, trk, calls, a.detector, a.learn_colour)
                     w.start()
                     workers[cam] = w
                     log.info(json.dumps({"svc": "flight", "msg": "camera", "cam_id": cam}))

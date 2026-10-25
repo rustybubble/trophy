@@ -105,3 +105,30 @@ def test_stream_is_capped(r, jpeg):
     for s in range(50):
         _write(fw, s, jpeg)
     assert r.xlen("frames:c_abcdef") < 50
+
+
+def test_crop_roundtrip_through_header_and_stream(r, jpeg):
+    from trophy.framebus import FLAG_CROP
+
+    hdr, body = parse_message(pack_header(3, 1.7e12, 0, crop=(0.1, 0.2, 0.6, 0.5)) + jpeg)
+    assert hdr.flags & FLAG_CROP and hdr.crop == (0.1, 0.2, 0.6, 0.5) and body == jpeg
+    fw = FrameWriter(r)
+    fw.write(
+        cam_id="c_abcdef",
+        game_id="g_abcdefgh",
+        seq=3,
+        t_phone_ms=0,
+        t_srv_ms=0,
+        t_game_s=0,
+        sync_err_ms=0,
+        jpeg=jpeg,
+        crop=hdr.crop,
+    )
+    f = FrameReader(r, "c_abcdef").read(block_ms=0)
+    assert f.crop == (0.1, 0.2, 0.6, 0.5)
+    assert parse_message(pack_header(4, 0) + jpeg)[0].crop is None
+
+
+def test_bad_crop_is_rejected(jpeg):
+    with pytest.raises(ValueError):
+        parse_message(pack_header(1, 0, 0, crop=(0.8, 0.0, 0.5, 0.5)) + jpeg)  # runs off the right edge

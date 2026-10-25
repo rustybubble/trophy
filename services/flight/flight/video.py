@@ -54,15 +54,21 @@ def frames(
     h: int = 720,
     start_s: float = 0.0,
     seconds: float | None = None,
+    crop: tuple[float, float, float, float] | None = None,
 ) -> Iterator[tuple[int, float, np.ndarray]]:
-    """(source frame index, source time s, BGR frame) for every decoded frame from start_s.
+    """(source frame index, source time s, BGR frame) for every decoded frame from start_s, scaled to w x h; with
+    `crop` (normalised x, y, w, h), only that region of each frame, scaled to w x h.
 
     Frame indices count from the start of the file (assumes constant frame rate, which phone clips have)."""
     info = probe(path)
     cmd = ["ffmpeg", "-v", "error", "-ss", f"{start_s}", "-i", str(path)]
     if seconds is not None:
         cmd += ["-t", f"{seconds}"]
-    cmd += ["-vf", f"scale={w}:{h}:flags=area", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"]
+    vf = f"scale={w}:{h}:flags=area"
+    if crop is not None:
+        cx, cy, cw, ch = crop
+        vf = f"crop={cw * info.w:.0f}:{ch * info.h:.0f}:{cx * info.w:.0f}:{cy * info.h:.0f}," + vf
+    cmd += ["-vf", vf, "-f", "rawvideo", "-pix_fmt", "bgr24", "-"]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=w * h * 3 * 4)
     first = round(start_s * info.fps)
     n = 0

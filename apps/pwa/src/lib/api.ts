@@ -148,7 +148,7 @@ export class Api {
   voiceToken(): Promise<VoiceToken> {
     return req("/voice/token", {}, this.s.token);
   }
-  async still(): Promise<{ blob: Blob; seq: number; w: number; h: number }> {
+  async still(): Promise<{ blob: Blob; seq: number; w: number; h: number; cropped: boolean }> {
     const res = await fetch(`/api/cams/${this.s.camId}/still`, {
       headers: { Authorization: `Bearer ${this.s.token}` },
     });
@@ -158,6 +158,7 @@ export class Api {
       seq: Number(res.headers.get("X-Seq")),
       w: Number(res.headers.get("X-W")),
       h: Number(res.headers.get("X-H")),
+      cropped: res.headers.has("X-Crop"),
     };
   }
   calibrate(r: CalibrationRequest): Promise<Calibration> {

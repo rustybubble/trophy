@@ -1,7 +1,6 @@
 .PHONY: dev e2e contracts fixtures check smoke stdb-publish stdb-provision stdb-bindings stdb-seed
-dev:        ## start every service natively on the Mac (Agent 1 implements the Procfile)
-	@test -f Procfile || (echo "Procfile not created yet (Agent 1, plan §4)"; exit 1)
-	honcho start
+dev:        ## (re)start the whole stack natively from the Procfile (also: npm run dev; stop: python scripts/dev.py --stop)
+	python scripts/dev.py
 e2e:        ## headless clip -> calls -> Spacetime check (Agent 1, checkpoint C2)
 	@echo "not implemented yet (Agent 1, checkpoint C2)"; exit 1
 contracts:  ## regenerate TS (@trophy/contracts) + Pydantic (py-trophy) from packages/contracts/*.schema.json

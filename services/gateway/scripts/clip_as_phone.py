@@ -59,8 +59,9 @@ def reducer(name: str, payload: object, token: str) -> None:
     urllib.request.urlopen(req, timeout=10).read()
 
 
-async def jpeg_frames(path: Path, start: float, seconds: float):
-    """1280x720 JPEGs at 30 fps (ffmpeg decodes and scales, libjpeg encodes), with each frame's clip time."""
+async def jpeg_frames(path: Path, start: float, seconds: float, crop: tuple[float, float, float, float] | None = None):
+    """1280x720 JPEGs at 30 fps (ffmpeg decodes and scales, libjpeg encodes), with each frame's clip time. With
+    `crop` (normalised x, y, w, h), only that region, as the PWA streams once the table is set (D-29)."""
     import cv2  # dev tool only: `uv run --with opencv-python-headless==4.10.0.84`
     import numpy as np
 
@@ -76,7 +77,9 @@ async def jpeg_frames(path: Path, start: float, seconds: float):
         "-i",
         str(path),
         "-vf",
-        f"fps=30,scale={w}:{h}:flags=area",
+        "fps=30,"
+        + (f"crop=iw*{crop[2]}:ih*{crop[3]}:iw*{crop[0]}:ih*{crop[1]}," if crop else "")
+        + f"scale={w}:{h}:flags=area",
         "-f",
         "rawvideo",
         "-pix_fmt",
@@ -98,7 +101,13 @@ async def jpeg_frames(path: Path, start: float, seconds: float):
     await proc.wait()
 
 
-async def main(path: Path, start: float, seconds: float, no_challenge: bool = False) -> None:
+async def main(
+    path: Path,
+    start: float,
+    seconds: float,
+    no_challenge: bool = False,
+    crop: tuple[float, float, float, float] | None = None,
+) -> None:
     e = env()
     async with httpx.AsyncClient(base_url=BASE, timeout=30) as http:
         g = (await http.post("/api/games", json={"sport": "table_tennis"})).json()
@@ -144,10 +153,10 @@ async def main(path: Path, start: float, seconds: float, no_challenge: bool = Fa
         wall0 = now_ms() + 300
         sent = 0
         async with websockets.connect(f"{ws_base}/api/ws/frames?token={tok}", max_size=None) as fws:
-            async for c, jpeg in jpeg_frames(path, start, seconds):
+            async for c, jpeg in jpeg_frames(path, start, seconds, crop):
                 t_phone = wall0 + (c - start) * 1000
                 await asyncio.sleep(max(0, (t_phone - now_ms()) / 1000))
-                await fws.send(pack_header(sent, t_phone) + jpeg)
+                await fws.send(pack_header(sent, t_phone, 0, crop) + jpeg)
                 sent += 1
 
         if not no_challenge:
@@ -260,5 +269,7 @@ if __name__ == "__main__":
     ap.add_argument("--start", type=float, default=5.0)
     ap.add_argument("--seconds", type=float, default=12.0)
     ap.add_argument("--no-challenge", action="store_true", help="only stream (e.g. to test flight.live)")
+    ap.add_argument("--crop", help="x,y,w,h (normalised): stream only this region, like the PWA's table zoom")
     a = ap.parse_args()
-    asyncio.run(main(a.clip, a.start, a.seconds, a.no_challenge))
+    crop = tuple(float(v) for v in a.crop.split(",")) if a.crop else None
+    asyncio.run(main(a.clip, a.start, a.seconds, a.no_challenge, crop))  # type: ignore[arg-type]

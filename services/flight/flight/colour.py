@@ -4,7 +4,8 @@ Cameras differ (white balance, exposure): on the side clip the ball blob is H~8-
 H~15, V~215. Hand-tuned thresholds for one camera fail on the other. `learn()` runs a quick first pass: small,
 bright-cored blobs that fly fast on a smooth parabola (>= 6 frames, >= 8 px/frame, quadratic fit within 3 px RMS)
 are taken as the ball; other moving orange-ish blobs (skin, paddles, boxes) as distractors. Thresholds are set from
-those two populations. If too few ball samples are found, the (looser) defaults are kept.
+those two populations. If too few ball samples are found, or the result would accept skin (`skin_overlap`), the
+defaults (measured on the side clip) are kept. Detection itself is luma-first (`LumaDetector`): colour is a prior.
 """
 
 from __future__ import annotations
@@ -19,13 +20,11 @@ MIN_BALL_SAMPLES = 40  # ball blobs (from ballistic chains) needed before the le
 
 @dataclass(frozen=True)
 class ColourModel:
-    # defaults: loose enough for both test cameras as the phone sends them (4:2:0 JPEG at quality 70 costs a small
-    # ball a few units of S and V, and white balance moves its hue from ~8 to ~15); the learner tightens them per camera
-    h_min: float = 2.0
-    h_max: float = 22.0
-    v_min: float = 210.0  # blob mean V for a flying (blur-desaturated) ball
-    s_min: float = 50.0  # blob mean S for that case
-    peak_min: float = 225.0  # brightest pixel in the blob
+    h_min: float = 3.0
+    h_max: float = 14.0
+    v_min: float = 230.0  # blob mean V for a flying (blur-desaturated) ball
+    s_min: float = 65.0  # blob mean S for that case
+    peak_min: float = 235.0  # brightest pixel in the blob
     learned_from: int = 0  # ball blob samples behind the thresholds (0 = defaults)
 
     def is_ball(self, mean_h: float, mean_s: float, mean_v: float, peak_v: float) -> bool:
@@ -43,11 +42,17 @@ class ColourModel:
 
 
 def _blobs(
-    bgr: np.ndarray, prev: np.ndarray | None
+    bgr: np.ndarray, prev: np.ndarray | None, roi: tuple[int, int, int, int] | None = None
 ) -> list[tuple[float, float, int, float, float, float, float, float]]:
+    """Moving-orange-blob summaries (x, y, area, mean H, S, V, peak V, motion); only inside `roi` if given."""
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
     H, S, V = hsv[..., 0], hsv[..., 1], hsv[..., 2]
     raw = (H <= 24) & (S >= 40) & (V >= 140)
+    if roi is not None:
+        x0, y0, x1, y1 = roi
+        keep = np.zeros_like(raw)
+        keep[y0:y1, x0:x1] = True
+        raw &= keep
     n, lab, st, cen = cv2.connectedComponentsWithStats(raw.astype(np.uint8), 8)
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     diff = cv2.absdiff(gray, prev) if prev is not None else np.zeros_like(gray)
@@ -93,8 +98,8 @@ class ColourLearner:
         self.prev: np.ndarray | None = None
         self.per_frame: list[list[tuple]] = []
 
-    def add(self, bgr: np.ndarray) -> None:
-        self.per_frame.append(_blobs(bgr, self.prev))
+    def add(self, bgr: np.ndarray, roi: tuple[int, int, int, int] | None = None) -> None:
+        self.per_frame.append(_blobs(bgr, self.prev, roi))
         self.prev = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
 
     def fit(self) -> ColourModel:
@@ -109,9 +114,10 @@ class LiveLearner:
         self.lr = ColourLearner()
         self.fit_every, self.max_frames = fit_every, max_frames
 
-    def add(self, bgr: np.ndarray) -> ColourModel | None:
-        """Feed one frame; returns the model once it is decided (then stop feeding)."""
-        self.lr.add(bgr)
+    def add(self, bgr: np.ndarray, roi: tuple[int, int, int, int] | None = None) -> ColourModel | None:
+        """Feed one frame (`roi`: the table region; blobs outside it are ignored). Returns the model once it is
+        decided (then stop feeding)."""
+        self.lr.add(bgr, roi)
         n = len(self.lr.per_frame)
         if n % self.fit_every:
             return None
@@ -182,7 +188,7 @@ def _fit(per_frame: list[list[tuple]]) -> ColourModel:
             # stay above the bright end of the distractors when the populations separate
             d90 = float(np.percentile(ov[in_hue], 90))  # p90: unchained ball frames leak into the distractor sample
             v_min = max(v_min, d90 + 1) if d90 < np.percentile(bv, 40) else v_min
-    return ColourModel(
+    model = ColourModel(
         h_min=med_h - 3 * mad_h - 1,
         h_max=med_h + 3 * mad_h + 1,
         v_min=v_min,
@@ -190,3 +196,18 @@ def _fit(per_frame: list[list[tuple]]) -> ColourModel:
         peak_min=max(200.0, float(np.percentile(bp, 5)) - 3),
         learned_from=len(ball),
     )
+    return ColourModel() if skin_overlap(model) else model
+
+
+# skin under indoor light (OpenCV HSV): hue overlaps an orange ball's, but skin is less bright
+SKIN_H_MAX, SKIN_S, SKIN_V_MAX = 25.0, (25.0, 170.0), 195.0
+
+
+def skin_overlap(m: ColourModel) -> bool:
+    """True if a learnt model is implausible for an orange ball or would accept skin-coloured blobs: its hue
+    centre outside orange, or its hue range reaching the skin band together with brightness/saturation floors low
+    enough for skin. Such a fit learnt from hands, not the ball; keep the defaults instead."""
+    centre = (m.h_min + m.h_max) / 2
+    if not 2.0 <= centre <= 22.0:
+        return True
+    return m.h_min <= SKIN_H_MAX and m.v_min < SKIN_V_MAX and m.s_min <= SKIN_S[1]

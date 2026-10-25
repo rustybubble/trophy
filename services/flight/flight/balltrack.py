@@ -55,8 +55,10 @@ class TrackPoint:
 
 
 class Detector:
-    def __init__(self, colour: ColourModel | None = None) -> None:
+    def __init__(self, colour: ColourModel | None = None, scale: float = 1.0) -> None:
         self.colour = colour or ColourModel()  # per-camera; see flight.colour.learn
+        self.scale = scale  # px per reference px (a frame zoomed to the table, D-29): sizes scale with it
+        self.roi: tuple[int, int, int, int] | None = None  # where a ball in play can be (Table.roi); None = anywhere
         self.prev_gray: np.ndarray | None = None
         self.prev_small: np.ndarray | None = None
 
@@ -113,7 +115,8 @@ class Detector:
         out: list[Candidate] = []
         for k in range(1, n):
             x, y, w, hh, area = st[k]
-            if not MIN_AREA <= area <= MAX_AREA or max(w, hh) > 48:
+            k2 = self.scale * self.scale
+            if not MIN_AREA * k2 <= area <= MAX_AREA * k2 or max(w, hh) > 48 * self.scale:
                 continue
             sl = (slice(y, y + hh), slice(x, x + w))
             inside = (lab[sl] == k) & raw[sl]  # stats on real mask pixels, not the dilation halo
@@ -127,6 +130,116 @@ class Detector:
             colour = float(s[sl][inside].mean()) / 255 * (1.0 if is_strong else 0.6)
             motion = motion_at(int(x), int(y), int(w), int(hh))
             out.append(Candidate(float(cen[k][0]), float(cen[k][1]), int(area), colour, motion, is_strong))
+        if self.roi is not None:
+            rx0, ry0, rx1, ry1 = self.roi
+            out = [c for c in out if rx0 <= c.x < rx1 and ry0 <= c.y < ry1]
+        return out, (dx, dy)
+
+
+DIFF_T = 14  # luma change (0-255) that counts as "different" between shake-aligned frames
+BALL_MAX_AREA = 260  # px: a motion-blurred ball at 720p; larger moving blobs are arms, bodies, paddles
+LUMA_MIN = 140  # the ball's brightest pixel; red/black paddles and shadows are darker
+ISOLATION = 0.5  # other moving px allowed around a blob that may start a track, as a fraction of its own area
+
+
+_K3 = np.ones((3, 3), np.uint8)
+
+
+def _nbr_diff(cur: np.ndarray, prev: np.ndarray) -> np.ndarray:
+    """How far `cur` falls outside the 3x3 neighbourhood range of `prev`: ~0 on edges that moved by <= 1 px
+    (residual handheld shake after integer alignment), large where something new appeared (a moving ball)."""
+    above = cv2.subtract(cur, cv2.dilate(prev, _K3))
+    below = cv2.subtract(cv2.erode(prev, _K3), cur)
+    return cv2.max(above, below)
+
+
+class LumaDetector:
+    """Ball candidates from luma motion inside the table region; colour is only a weak prior (in `colour`).
+
+    Causal three-frame difference: where the ball is now, the frame differs from BOTH previous (shake-aligned)
+    frames; where it just was, only from one. So each moving ball gives one blob at its current position, whatever
+    its colour after JPEG chroma subsampling (luma keeps full resolution). Blobs are filtered by size and shape and
+    must have a bright core. `strong` (may start a track) = compact, bright and not colour-implausible.
+    Set `roi` (x0, y0, x1, y1) per frame from the table (`Table.roi`); None searches the whole frame.
+    """
+
+    def __init__(self, colour: ColourModel | None = None, diff_t: float = DIFF_T, scale: float = 1.0) -> None:
+        self.colour = colour or ColourModel()
+        self.diff_t = diff_t
+        self.scale = scale  # px per reference px (a frame zoomed to the table, D-29): sizes scale with it
+        self.roi: tuple[int, int, int, int] | None = None
+        self.hist: list[tuple[np.ndarray, int, int]] = []  # last two grays + their integer shift into the newest frame
+        self.prev_small: np.ndarray | None = None
+
+    shake = Detector.shake
+
+    def _colour_prior(self, patch_bgr: np.ndarray, inside: np.ndarray) -> float:
+        """Fraction of the blob's pixels this camera's colour model would call ball-coloured (0..1)."""
+        hsv = cv2.cvtColor(patch_bgr, cv2.COLOR_BGR2HSV)[inside]
+        if not len(hsv):
+            return 0.0
+        h_lo, h_hi, s_lo, v_lo = self.colour.pixel_mask
+        h, s, v = hsv[:, 0], hsv[:, 1], hsv[:, 2]
+        return float(((h >= h_lo) & (h <= h_hi) & (s >= s_lo) & (v >= v_lo)).mean())
+
+    def detect(
+        self, bgr: np.ndarray, near: tuple[float, float, float] | None = None
+    ) -> tuple[list[Candidate], tuple[float, float]]:
+        gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+        dx, dy = self.shake(gray)
+        idx, idy = int(round(dx)), int(round(dy))
+        hist = [(g, sx + idx, sy + idy) for g, sx, sy in self.hist]
+        self.hist = [(gray, 0, 0), *hist[:1]]
+        if len(hist) < 2:
+            return [], (dx, dy)
+        (g1, s1x, s1y), (g2, s2x, s2y) = hist[0], hist[1]
+        gh, gw = gray.shape
+        rx0, ry0, rx1, ry1 = self.roi or (0, 0, gw, gh)
+        x0, y0 = max(rx0, s1x, s2x, 0), max(ry0, s1y, s2y, 0)
+        x1, y1 = min(rx1, gw + min(s1x, s2x), gw), min(ry1, gh + min(s1y, s2y), gh)
+        if x1 - x0 < 8 or y1 - y0 < 8:
+            return [], (dx, dy)
+        cur = gray[y0:y1, x0:x1]
+        d1 = _nbr_diff(cur, g1[y0 - s1y : y1 - s1y, x0 - s1x : x1 - s1x])
+        d2 = _nbr_diff(cur, g2[y0 - s2y : y1 - s2y, x0 - s2x : x1 - s2x])
+        t = self.diff_t
+        moved = (d1 > t) & (d2 > t)
+        weak_zone = np.zeros_like(moved)
+        if near is not None:  # near the prediction, a lower threshold (still both differences: else the spot the
+            # ball just left would read as a detection)
+            cx, cy, rad = near
+            wx0, wx1 = int(max(0, cx - rad - x0)), int(min(x1 - x0, cx + rad + 1 - x0))
+            wy0, wy1 = int(max(0, cy - rad - y0)), int(min(y1 - y0, cy + rad + 1 - y0))
+            if wx1 > wx0 and wy1 > wy0:
+                zone = (slice(wy0, wy1), slice(wx0, wx1))
+                weak_zone[zone] = (d1[zone] > 0.6 * t) & (d2[zone] > 0.6 * t)
+        raw = moved | weak_zone
+        mask = cv2.dilate(raw.astype(np.uint8), np.ones((3, 3), np.uint8))
+        n, lab, st, cen = cv2.connectedComponentsWithStats(mask, 8)
+        out: list[Candidate] = []
+        for k in range(1, n):
+            x, y, w, hh, _ = st[k]
+            sl = (slice(y, y + hh), slice(x, x + w))
+            inside = (lab[sl] == k) & raw[sl]
+            area = int(inside.sum())
+            k2 = self.scale * self.scale
+            if not MIN_AREA * k2 <= area <= BALL_MAX_AREA * k2 or max(w, hh) > 40 * self.scale or area < 0.2 * w * hh:
+                continue
+            peak = float(cur[sl][inside].max())
+            if peak < LUMA_MIN:
+                continue
+            gx, gy = x + x0, y + y0
+            prior = self._colour_prior(bgr[gy : gy + hh, gx : gx + w], inside)
+            compact = bool(moved[sl][inside].sum() >= MIN_AREA * k2)  # not only weak-zone pixels
+            # a ball in flight moves alone; a fragment of a hand, arm or head has other moving pixels right next to it
+            m = int(max(6 * self.scale, 1.5 * max(w, hh)))
+            ring = moved[max(0, y - m) : y + hh + m, max(0, x - m) : x + w + m]
+            isolated = int(ring.sum()) - int(moved[sl][inside].sum()) <= ISOLATION * area
+            # colour as a weak prior: only a blob with no ball-coloured pixel at all AND a dull core can't start a track
+            strong = compact and isolated and (prior > 0.0 or peak >= 200)
+            score = 0.5 * min(1.0, (peak - LUMA_MIN) / (255 - LUMA_MIN)) + 0.5 * prior
+            motion = float(d1[sl][inside].max()) / 255
+            out.append(Candidate(float(cen[k][0] + x0), float(cen[k][1] + y0), area, score, motion, strong))
         return out, (dx, dy)
 
 
@@ -162,24 +275,28 @@ WEAK_ONLY = 5  # a track must see a strict-colour detection at least this often 
 
 @dataclass
 class Tracker:
-    detector: Detector = field(default_factory=Detector)
+    detector: Detector | LumaDetector = field(default_factory=Detector)
     track: _Track | None = None
     tentative: list[list[tuple[int, Candidate]]] = field(default_factory=list)
     next_id: int = 1
     frame: int = 0
     last_seq: int | None = None
     fps: float = 60.0  # the constants above are per 1/60 s; live phone streams run ~30 fps
+    scale: float = 1.0  # px per reference 1280x720 px (>1 for a frame zoomed to the table); distances scale with it
 
     def __post_init__(self) -> None:
         k = 60.0 / self.fps
-        self.vmax = VMAX * k
-        self.min_start = MIN_START_SPEED * k
+        s = self.scale
+        if hasattr(self.detector, "scale"):
+            self.detector.scale = s
+        self.vmax = VMAX * k * s
+        self.min_start = MIN_START_SPEED * k * s
         self.max_coast = max(2, round(MAX_COAST / k))
         self.still = max(4, round(STILL_FRAMES / k))
         self.weak_only = max(2, round(WEAK_ONLY / k))
 
     def _flying(self, ch: list[tuple[int, Candidate]]) -> bool:
-        return _speed(ch) >= self.min_start or _rising(ch, 60.0 / self.fps)
+        return _speed(ch) >= self.min_start or _rising(ch, 60.0 / self.fps * self.scale)
 
     def _grow_chains(self, cands: list[Candidate], dx: float, dy: float, exclude: Candidate | None) -> None:
         """Candidate new tracks: chains of strict-colour, moving detections with consistent velocity."""
@@ -194,10 +311,14 @@ class Tracker:
                 (f1, c1), (f2, c2) = ch[-2], ch[-1]
                 vx, vy = (c2.x - c1.x) / (f2 - f1), (c2.y - c1.y) / (f2 - f1)
                 ex, ey = lx + vx * (self.frame - f0), ly + vy * (self.frame - f0)
-                tol = 18 + 0.6 * float(np.hypot(vx, vy))
+                tol = 18 * self.scale + 0.6 * float(np.hypot(vx, vy))
             else:
                 ex, ey, tol = lx, ly, self.vmax * (self.frame - f0)
-            nxt = [c for c in moving if np.hypot(c.x - ex, c.y - ey) <= tol and np.hypot(c.x - lx, c.y - ly) > 1.5]
+            nxt = [
+                c
+                for c in moving
+                if np.hypot(c.x - ex, c.y - ey) <= tol and np.hypot(c.x - lx, c.y - ly) > 1.5 * self.scale
+            ]
             if nxt:
                 c = min(nxt, key=lambda c: np.hypot(c.x - ex, c.y - ey))
                 chains.append(ch + [(self.frame, c)])
@@ -225,7 +346,10 @@ class Tracker:
         self.tentative = []
         return tr
 
-    def step(self, seq: int, t: float, bgr: np.ndarray) -> TrackPoint:
+    def step(self, seq: int, t: float, bgr: np.ndarray, roi: tuple[int, int, int, int] | None = None) -> TrackPoint:
+        """One frame. `roi`: where a ball in play can be (`Table.roi`), used by detectors that support it."""
+        if hasattr(self.detector, "roi"):
+            self.detector.roi = roi
         gap = 1 if self.last_seq is None else seq - self.last_seq
         self.last_seq = seq
         if gap != 1:
@@ -237,8 +361,9 @@ class Tracker:
         near = None
         gate = 0.0
         if tr:
-            gate = min(self.vmax * (tr.misses + 1), 20 + 1.5 * float(np.hypot(tr.vx, tr.vy)) + 10 * tr.misses)
-            near = (tr.x + tr.vx, tr.y + tr.vy, gate + 10)
+            s = self.scale
+            gate = min(self.vmax * (tr.misses + 1), (20 + 10 * tr.misses) * s + 1.5 * float(np.hypot(tr.vx, tr.vy)))
+            near = (tr.x + tr.vx, tr.y + tr.vy, gate + 10 * self.scale)
         cands, (dx, dy) = self.detector.detect(bgr, near=near)
 
         best = None
@@ -246,7 +371,7 @@ class Tracker:
             px, py = tr.x + tr.vx + dx, tr.y + tr.vy + dy
             lx, ly, lf = tr.last_obs
             lx, ly = lx + dx, ly + dy  # shake moves the scene, including where the ball last was
-            reach = self.vmax * (self.frame - lf) + 6
+            reach = self.vmax * (self.frame - lf) + 6 * self.scale
             best_cost = 1e9
             for c in cands:
                 if np.hypot(c.x - lx, c.y - ly) > reach:
@@ -254,7 +379,7 @@ class Tracker:
                 d = float(np.hypot(c.x - px, c.y - py))
                 if not c.strong and d > gate:
                     continue  # weak colour is only trusted right where the ball should be
-                if c.strong and d > max(gate + 40, 0.75 * reach):
+                if c.strong and d > max(gate + 40 * self.scale, 0.75 * reach):
                     continue
                 cost = d - 25 * c.colour - (35 if c.strong else 0)
                 if cost < best_cost:
@@ -271,7 +396,7 @@ class Tracker:
             tr.hits += 1
             if best.strong:
                 tr.last_strong = self.frame
-            if np.hypot(best.x - tr.anchor[0] - dx, best.y - tr.anchor[1] - dy) > 3:
+            if np.hypot(best.x - tr.anchor[0] - dx, best.y - tr.anchor[1] - dy) > 3 * self.scale:
                 tr.anchor, tr.moved_at = (best.x, best.y), self.frame
             else:
                 tr.anchor = (tr.anchor[0] + dx, tr.anchor[1] + dy)

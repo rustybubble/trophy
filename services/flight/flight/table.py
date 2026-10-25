@@ -32,6 +32,33 @@ class Table:
     def over(self, x: float, margin: float = 0.0) -> bool:
         return self.x_left - margin <= x <= self.x_right + margin
 
+    def roi(self, w: int, h: int) -> tuple[int, int, int, int]:
+        """Where a ball in play can be (x0, y0, x1, y1), clipped to the frame: the table (ends taken symmetric about
+        the net, since players often hide one) plus ~1 m beyond each end, ~1.4 m above and a strip below the top (a
+        dropped ball must still be seen going below it). The table is 2.74 m long."""
+        half = max(self.net_x - self.x_left, self.x_right - self.net_x)
+        length = 2 * half
+        tops = (self.top_y(self.net_x - half), self.top_y(self.net_x + half))
+        x0, x1 = self.net_x - half - 0.35 * length, self.net_x + half + 0.35 * length
+        y0, y1 = min(tops) - 0.5 * length, max(tops) + self.thickness + 0.2 * length
+        return max(0, int(x0)), max(0, int(y0)), min(w, int(x1)), min(h, int(y1))
+
+    def stream_crop(self, w: int, h: int, aspect: float = 16 / 9) -> tuple[float, float, float, float] | None:
+        """The region a phone would stream for this table (x, y, w, h normalised; cf. the PWA's tableCrop): the
+        ball region widened to the stream's aspect ratio, inside the frame; None if that is most of the frame."""
+        x0, y0, x1, y1 = (float(v) for v in self.roi(10**6, 10**6))  # unclipped
+        cw, ch = x1 - x0, y1 - y0
+        if cw / ch < aspect:
+            x0, cw = x0 - (ch * aspect - cw) / 2, ch * aspect
+        else:
+            y0, ch = y0 - (cw / aspect - ch) / 2, cw / aspect
+        if cw > w:
+            cw, ch = w, w / aspect
+        if ch > h:
+            cw, ch = h * aspect, h
+        x0, y0 = min(max(x0, 0.0), w - cw), min(max(y0, 0.0), h - ch)
+        return None if cw > 0.8 * w else (x0 / w, y0 / h, cw / w, ch / h)
+
 
 def find_table(bgr: np.ndarray) -> Table | None:
     h, w = bgr.shape[:2]

@@ -1,0 +1,471 @@
+{
+ "schema": "trophy.ball_labels.v1",
+ "reviewed_by": "Claude (Agent 1), by eye on candidate sheets",
+ "split": "tuning: side clip 1-44 s, one frame per second",
+ "method": "candidate-assisted: reviewer chose the ball among numbered candidates on 720p crops, or marked held / none / an unmarked position read off a 100 px grid (position error up to ~10 working px for those)",
+ "tolerance_source_px": 32,
+ "labels": [
+  {
+   "cam_id": "side",
+   "seq": 60,
+   "t_source_s": 1.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 120,
+   "t_source_s": 2.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 180,
+   "t_source_s": 3.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 240,
+   "t_source_s": 4.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 300,
+   "t_source_s": 5.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 360,
+   "t_source_s": 6.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 420,
+   "t_source_s": 7.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 480,
+   "t_source_s": 8.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "visible",
+   "x": 1562,
+   "y": 1286
+  },
+  {
+   "cam_id": "side",
+   "seq": 540,
+   "t_source_s": 9.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "visible",
+   "x": 1053,
+   "y": 1310
+  },
+  {
+   "cam_id": "side",
+   "seq": 600,
+   "t_source_s": 10.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "visible",
+   "x": 1826,
+   "y": 1089
+  },
+  {
+   "cam_id": "side",
+   "seq": 660,
+   "t_source_s": 11.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "visible",
+   "x": 434,
+   "y": 1374
+  },
+  {
+   "cam_id": "side",
+   "seq": 720,
+   "t_source_s": 12.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 780,
+   "t_source_s": 13.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "unsure"
+  },
+  {
+   "cam_id": "side",
+   "seq": 840,
+   "t_source_s": 14.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "unsure"
+  },
+  {
+   "cam_id": "side",
+   "seq": 900,
+   "t_source_s": 15.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 960,
+   "t_source_s": 16.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 1020,
+   "t_source_s": 17.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 1080,
+   "t_source_s": 18.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "unsure"
+  },
+  {
+   "cam_id": "side",
+   "seq": 1140,
+   "t_source_s": 19.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "visible",
+   "x": 1743,
+   "y": 1372
+  },
+  {
+   "cam_id": "side",
+   "seq": 1200,
+   "t_source_s": 20.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "visible",
+   "x": 1291,
+   "y": 1318
+  },
+  {
+   "cam_id": "side",
+   "seq": 1260,
+   "t_source_s": 21.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "visible",
+   "x": 2072,
+   "y": 1270
+  },
+  {
+   "cam_id": "side",
+   "seq": 1320,
+   "t_source_s": 22.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "unsure"
+  },
+  {
+   "cam_id": "side",
+   "seq": 1380,
+   "t_source_s": 23.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "visible",
+   "x": 1887,
+   "y": 1354
+  },
+  {
+   "cam_id": "side",
+   "seq": 1440,
+   "t_source_s": 24.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "unsure"
+  },
+  {
+   "cam_id": "side",
+   "seq": 1500,
+   "t_source_s": 25.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "visible",
+   "x": 2100,
+   "y": 1079
+  },
+  {
+   "cam_id": "side",
+   "seq": 1560,
+   "t_source_s": 26.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "visible",
+   "x": 1146,
+   "y": 1145
+  },
+  {
+   "cam_id": "side",
+   "seq": 1620,
+   "t_source_s": 27.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "visible",
+   "x": 1425,
+   "y": 1105
+  },
+  {
+   "cam_id": "side",
+   "seq": 1680,
+   "t_source_s": 28.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 1740,
+   "t_source_s": 29.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 1800,
+   "t_source_s": 30.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 1860,
+   "t_source_s": 31.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 1920,
+   "t_source_s": 32.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 1980,
+   "t_source_s": 33.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 2040,
+   "t_source_s": 34.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 2100,
+   "t_source_s": 35.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 2160,
+   "t_source_s": 36.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 2220,
+   "t_source_s": 37.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 2280,
+   "t_source_s": 38.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 2340,
+   "t_source_s": 39.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 2400,
+   "t_source_s": 40.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 2460,
+   "t_source_s": 41.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 2520,
+   "t_source_s": 42.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 2580,
+   "t_source_s": 43.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  },
+  {
+   "cam_id": "side",
+   "seq": 2640,
+   "t_source_s": 44.0,
+   "source_size": [
+    3840,
+    2160
+   ],
+   "status": "none"
+  }
+ ]
+}

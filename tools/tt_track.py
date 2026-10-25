@@ -6,9 +6,9 @@
 Ball coordinates are written in SOURCE pixels (x, y; e.g. 3840x2160, comparable with the manual labels) and in
 working 1280x720 pixels (wx, wy). `tb` is the smoothed table (x_left, x_right, a, b, net_x, thickness) in working px.
 
-`--live` simulates what flight.live sees from a phone: ~30 fps (every 2nd frame of a 60 fps clip), each frame
-round-tripped through a 4:2:0 JPEG at quality 70 (the PWA's canvas encoder), and the colour model learnt online
-(flight.colour.LiveLearner, defaults until then). Rows keep source frame numbers so the labels still apply.
+`--live` simulates what flight.live sees from a phone, with its defaults: ~30 fps (every 2nd frame of a 60 fps clip),
+each frame round-tripped through a 4:2:0 JPEG at quality 70 (the PWA's canvas encoder), the colour detector limited to
+the table region (`--learn-colour` adds the guarded online learner). Rows keep source frame numbers for the labels.
 """
 
 from __future__ import annotations
@@ -33,7 +33,8 @@ def main() -> None:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--start", type=float, default=0.0)
     ap.add_argument("--seconds", type=float, default=None)
-    ap.add_argument("--live", action="store_true", help="simulate the live phone path (30 fps, JPEG, online colour)")
+    ap.add_argument("--live", action="store_true", help="simulate the live phone path (30 fps, JPEG, table region)")
+    ap.add_argument("--learn-colour", action="store_true", help="with --live: learn the colour online (guarded)")
     a = ap.parse_args()
     info = probe(a.clip)
     sx, sy = info.w / W, info.h / H
@@ -42,7 +43,7 @@ def main() -> None:
     stride = max(1, round(info.fps / 30)) if a.live else 1
     live_learner: LiveLearner | None = None
     if a.live:
-        live_learner = LiveLearner()
+        live_learner = LiveLearner() if a.learn_colour else None
         tr = Tracker(fps=info.fps / stride)
     else:
         colour = learn(frames(a.clip, W, H, a.start, 30.0))
@@ -65,8 +66,8 @@ def main() -> None:
                 if model is not None:
                     print(f"colour model after {n} frames: {model}")
                     tr.detector, live_learner = Detector(model), None
-            p = tr.step(seq // stride, t, bgr)
             tb = tables.update(bgr)
+            p = tr.step(seq // stride, t, bgr, tb.roi(W, H) if (a.live and tb is not None) else None)
             t_proc += time.perf_counter() - p0
             row = {"seq": seq, "t": round(t, 4), "state": p.state, "track_id": p.track_id, "score": p.score}
             if p.x is not None and p.y is not None:
