@@ -4,7 +4,14 @@
  */
 import { isAbsolute, normalize, relative, sep } from "node:path";
 
-export type JobKind = "compile" | "house_rule" | "retune" | "calibrate_checks" | "new_check";
+export type JobKind =
+  | "compile"
+  | "house_rule"
+  | "retune"
+  | "calibrate_checks"
+  | "new_check"
+  | "correction"
+  | "compile_rules";
 
 export const MODULE_FILES = ["config.yaml", "events.py", "rules.yaml"] as const;
 
@@ -26,6 +33,8 @@ export function editableFiles(kind: JobKind, sport: string, checkFiles: readonly
     case "compile":
       return MODULE_FILES.map((f) => `${dir}/${f}`);
     case "house_rule":
+    case "correction":
+    case "compile_rules":
       return [`${dir}/rules.yaml`];
     case "retune":
       return [`${dir}/config.yaml`, `${dir}/events.py`];

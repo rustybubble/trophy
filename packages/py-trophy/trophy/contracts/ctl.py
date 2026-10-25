@@ -133,6 +133,21 @@ class SubmitHouseRuleArgs(BaseModel):
     source: Literal["typed", "voice"]
 
 
+class LabelRallyArgs(BaseModel):
+    """
+    label_rally (judge): the span t0_s..t1_s (defaults: since the previous label, until now) was ONE rally won by `winner`. The engine fixes the score, exports the span as a labelled sample under data/local/labelled/<sport>/ and files a `correction` house rule for the Droid.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    winner: str = Field(..., max_length=16, min_length=1)
+    t0_s: float | None = Field(None, ge=0.0)
+    t1_s: float | None = Field(None, ge=0.0)
+    note: str | None = Field(None, max_length=300)
+
+
 class HouseRuleVersionArgs(BaseModel):
     """
     approve_house_rule, reject_house_rule
@@ -331,6 +346,7 @@ class CtlCommand(BaseModel):
         "bookmark",
         "clip_that",
         "review_call",
+        "label_rally",
         "run_check",
         "request_check",
     ] = Field(..., title="CtlCmd")

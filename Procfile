@@ -13,6 +13,7 @@ engine: uv run --directory services/engine --frozen trophy-engine --dead-after-p
 flight: uv run --directory services/flight --frozen python -m flight.live
 live: uv run --directory services/engine --frozen trophy-live
 referee: uv run --directory services/referee --frozen referee serve
+announcer: uv run --directory services/referee --frozen referee announce --speaker
 compiler: npm run cli -w @trophy/compiler -- watch
 voice: $PYTHON spikes/cartesia-voice/serve.py --port 8765
 pwa: npm run dev -w @trophy/pwa -- --logLevel warn

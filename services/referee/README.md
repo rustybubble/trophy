@@ -25,8 +25,14 @@ cd services/referee && uv sync && uv run referee serve            # needs ANTHRO
 uv run referee speak "Out by three centimetres. Clear." --voice ref   # Cartesia only; writes a WAV, prints first-audio ms
 uv run referee speak "Edge ball. Good. Point, B." --voice calls --emotion excited --play   # --play needs `uv sync --extra speaker`
 uv run referee transcribe question.wav                               # Ink-2
+uv run referee announce --speaker                                   # Cartesia only: speak every call the engine posts (Redis ev:calls) on this Mac
 uv run referee ask "was that out" --game <game_id> --context ctx.json
 ```
+**Every call is spoken.** `referee announce --speaker` (the Procfile's `announcer`) reads the engine's `ev:calls` stream
+from now on and speaks each call's `speech` with the calls voice (Daniel) on the Mac's output; measured 2026-10-24 on this
+Mac: first audio 83-321 ms after the call row, 3.2-3.4 s of audio per call. It needs only `CARTESIA_API_KEY`, so it runs
+when `serve` cannot (no Anthropic key). Voided calls are never spoken; a judge's `label_rally` correction is.
+
 `REFEREE_SPEAKER=1` plays the ref voice on this machine's output (a Bluetooth speaker at the table). Without it the
 voice still reaches `/ws/audio` listeners (`/listen` is a test page) and the phones speak through their own sockets.
 

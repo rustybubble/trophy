@@ -1,6 +1,9 @@
 import type { Observation, TrackSample } from "@trophy/state-client";
 import { TABLE_TENNIS, fitView, onField, toPx } from "../lib/world.ts";
 
+/** seconds of per-camera samples drawn as fading dots */
+const TRAIL_S = 1.0;
+
 /** The shared world state (D-21) drawn from Spacetime metadata only: no video. */
 export function WorldView({
   sport,
@@ -27,13 +30,13 @@ export function WorldView({
   const [x0, y0] = toPx(f, v, -f.length / 2, f.width / 2);
   const [x1, y1] = toPx(f, v, f.length / 2, -f.width / 2);
   const [nx] = toPx(f, v, 0, 0);
+  // The last second of each camera's samples as fading dots. Samples are projected through the table-plane
+  // homography, which is exact only when the ball is on the table: an airborne ball lands far from where it is, so
+  // joining samples (or cameras) into a line draws geometry that never happened. Bounces are the real positions.
   const ball = trail.filter((s) => s.object === "ball" && s.pos_m);
-  const path = ball
-    .map((s, i) => {
-      const [x, y] = toPx(f, v, s.pos_m![0], s.pos_m![1]);
-      return `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+  const tNow = ball.length ? ball[ball.length - 1]!.t_game_s : 0;
+  const recent = ball.filter((s) => tNow - s.t_game_s <= TRAIL_S);
+  const camIds = Array.from(new Set(recent.map((s) => s.cam_id)));
   const bounces = observations.filter((o) => o.type === "bounce" && o.pos_m).slice(0, 12);
   return (
     <div className="panel">
@@ -55,7 +58,20 @@ export function WorldView({
         <text x={x1 - 10} y={y1 + 18} className="label">
           B
         </text>
-        {path && <path d={path} className="trail" />}
+        {recent.map((s, i) => {
+          const [x, y] = toPx(f, v, s.pos_m![0], s.pos_m![1]);
+          const age = (tNow - s.t_game_s) / TRAIL_S;
+          return (
+            <circle
+              key={`${s.cam_id}:${s.t_game_s}:${i}`}
+              cx={x}
+              cy={y}
+              r={2.5}
+              className={`dot cam${camIds.indexOf(s.cam_id) % 4}`}
+              opacity={Math.max(0.1, 1 - age)}
+            />
+          );
+        })}
         {bounces.map((o, i) => {
           const [x, y] = toPx(f, v, o.pos_m!.x, o.pos_m!.y);
           const r = Math.max(4, (o.sigma_m ?? 0.02) * v.scale);

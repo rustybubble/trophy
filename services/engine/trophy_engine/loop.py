@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import redis
-from trophy.streams import CTL_ENGINE, EVENT_STREAMS, EventConsumer, parse_ctl
+from trophy.streams import CTL_ENGINE, EV_CALLS, EVENT_STREAMS, EventConsumer, parse_ctl
 
 from .ask import AskConfigError, Phraser, TrackStore, make_app, serve
 from .checks.events import TrackEventer
@@ -392,6 +392,13 @@ def run(argv: list[str] | None = None) -> int:
         r.expire(stream, 300)
 
     engine.reply = reply
+
+    def announce(call: dict[str, Any]) -> None:
+        # every posted call, for the voice announcer (services/referee `announce`): a stream, so a late listener
+        # never replays old points
+        r.xadd(EV_CALLS, {"json": json.dumps(call)}, maxlen=1000, approximate=True)
+
+    engine.announce = announce
     log.info(
         json.dumps(
             {"svc": "engine", "msg": "started", "state": a.state, "votes": a.votes, "track3d": a.field is not None}

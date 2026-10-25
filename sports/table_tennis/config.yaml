@@ -30,4 +30,7 @@ bounce:
 net:
   window_m: 0.15                # an x-reversal within 15 cm of the net plane with no bounce between = net
 dead:
-  gap_s: 0.8                    # no ball for 0.8 s after the last sample -> ball_dead
+  gap_s: 0.8                    # no tracked ball for 0.8 s -> ball_dead (after every such gap, and after each floor bounce)
+  min_run: 3                    # a ball is in play only inside a run of >= 3 consecutive detections...
+  max_jump_px: 200              # ...moving <= 200 px between frames; isolated detections are noise, not a ball
+  max_seq_gap: 2                # frames a run may skip (a missed detection) and still be one run

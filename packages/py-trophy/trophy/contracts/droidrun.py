@@ -20,7 +20,7 @@ class DroidRunTrigger(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    source: Literal["cli", "house_rule", "session", "health_stat"]
+    source: Literal["cli", "house_rule", "session", "health_stat", "correction"]
     rule_version: str | None = Field(None, description="house_rule.rule_version when source = house_rule")
     text: str | None = Field(None, description="The house rule, or the retune reason")
     scene: str | None = Field(None, description="Path of the scene descriptor used")
@@ -103,7 +103,7 @@ class DroidRun(BaseModel):
     game_id: str | None = None
     sport: str = Field(..., description="The module being produced or edited")
     base_sport: str | None = Field(None, description="The reference module a compile derives from")
-    kind: Literal["compile", "house_rule", "retune", "calibrate_checks", "new_check"]
+    kind: Literal["compile", "house_rule", "retune", "calibrate_checks", "new_check", "correction", "compile_rules"]
     trigger: DroidRunTrigger
     status: Literal["queued", "running", "ready", "failed", "approved", "rejected"] = Field(..., title="DroidRunStatus")
     backend: Literal["droid", "claude-fallback"]

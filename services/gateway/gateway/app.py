@@ -32,6 +32,7 @@ from trophy.contracts import (
     CtlCommand,
     EmptyArgs,
     HouseRuleVersionArgs,
+    LabelRallyArgs,
     ResolveChallengeArgs,
     ReviewCallArgs,
     SetServerArgs,
@@ -87,6 +88,7 @@ CLIENT_ARGS = {
     "bookmark": BookmarkArgs,
     "clip_that": ClipThatArgs,
     "review_call": ReviewCallArgs,
+    "label_rally": LabelRallyArgs,
 }
 
 
