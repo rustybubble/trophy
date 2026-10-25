@@ -52,6 +52,10 @@ describe("sandbox", () => {
     expect(task).not.toContain("{{");
     expect(existsSync(join(sb.dir, ".env"))).toBe(false);
     expect(changedFiles(sb)).toEqual([]);
+    // the gate pins its own arguments and never forwards the caller's ("$@" was a bypass)
+    const gate = readFileSync(join(sb.dir, "replay_test"), "utf8");
+    expect(gate).not.toContain('"$@"');
+    expect(gate).not.toContain("$*");
   });
 
   it("gives a compile job the reference module read-only and a seeded target", () => {

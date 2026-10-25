@@ -49,6 +49,19 @@ describe("allowlist", () => {
     expect(isAllowedCommand("python -c 'print(1)'")).toBe(false);
     expect(isAllowedCommand("curl https://example.com")).toBe(false);
     expect(isAllowedCommand("./replay_test $(whoami)")).toBe(false);
+  });
+
+  it("refuses the bypasses found in review: a newline, redirections, extra arguments", () => {
+    expect(isAllowedCommand("./replay_test --a\nrm -rf ..")).toBe(false);
+    expect(isAllowedCommand("./replay_test\nrm -rf ..")).toBe(false);
+    expect(isAllowedCommand("./replay_test --quiet\n")).toBe(false);
+    expect(isAllowedCommand("./replay_test --out >../../x")).toBe(false);
+    expect(isAllowedCommand("./replay_test --in <~/.ssh/id_rsa")).toBe(false);
+    expect(isAllowedCommand("./replay_test\t--quiet")).toBe(false);
+    expect(isAllowedCommand("./replay_test --module ../../etc")).toBe(false);
+    expect(isAllowedCommand("./replay_test --json=/tmp/x")).toBe(false);
+    expect(isAllowedCommand("./replay_test $HOME")).toBe(false);
+    expect(isAllowedCommand("./replay_test  --quiet")).toBe(false);
     expect(isAllowedCommand("../replay_test")).toBe(false);
     expect(isAllowedCommand("cd /tmp/sb && ./replay_test", "/tmp/sb")).toBe(true);
     expect(isAllowedCommand('cd "/tmp/sb" && ./replay_test --quiet', "/tmp/sb/")).toBe(true);

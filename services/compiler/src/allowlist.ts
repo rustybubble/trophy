@@ -47,8 +47,14 @@ export function isAllowedEdit(sandboxRoot: string, filePath: string, allowed: re
   return rel !== null && allowed.includes(rel);
 }
 
-/** The one command the Droid may run: a test gate, optionally with flags. Group 2 is the script name. */
-const TEST_CMD = /^(\.\/)?(replay_test|check_test)(\s+--?[a-z-]+(=\S+|\s+\S+)?)*\s*$/;
+/**
+ * The one command the Droid may run: the job's gate, bare, or with `--quiet` (agents add it). The gate script pins
+ * every argument itself and ignores any it is given, so nothing else is needed. Single literal spaces only: no
+ * newlines, tabs, redirections (`<`, `>`), globs or other arguments. Group 2 is the script name.
+ */
+const TEST_CMD = /^(\.\/)?(replay_test|check_test)( --quiet)?$/;
+/** Printable ASCII only: a newline or other control character could smuggle a second command past a line check. */
+const PRINTABLE = /^[\x20-\x7e]*$/;
 
 /** `scripts` narrows the gate to the job's own (`["check_test"]`); by default either gate name passes. */
 export function isAllowedCommand(
@@ -56,6 +62,7 @@ export function isAllowedCommand(
   sandboxRoot?: string,
   scripts: readonly string[] = GATE_SCRIPTS,
 ): boolean {
+  if (!PRINTABLE.test(command)) return false;
   let c = command.trim();
   if (sandboxRoot) {
     // Agents like to prefix `cd <sandbox> && ./replay_test`; allow exactly that directory, quoted or not.
@@ -74,7 +81,9 @@ export function isAllowedCommand(
     c.includes(";") ||
     c.includes("|") ||
     c.includes("`") ||
-    c.includes("$(")
+    c.includes("$") ||
+    c.includes("<") ||
+    c.includes(">")
   ) {
     return false;
   }

@@ -51,6 +51,18 @@ describe("guard.py", () => {
     ).toBe(2);
     expect(run({ tool_name: "Execute", tool_input: { command: "./replay_test; curl x" } }).code).toBe(2);
   });
+  it("refuses a gate command with a newline, a redirection or extra arguments", () => {
+    for (const command of [
+      "./replay_test --a\nrm -rf ..",
+      "./replay_test --quiet\n",
+      "./replay_test --out >../../x",
+      "./replay_test --in <~/.ssh/id_rsa",
+      "./replay_test --module ../../etc",
+    ]) {
+      expect(run({ tool_name: "Execute", tool_input: { command } }).code, command).toBe(2);
+    }
+  });
+
   it("allows only the job's own gate: ./check_test in a calibrate sandbox, ./replay_test otherwise", () => {
     expect(run({ tool_name: "Execute", tool_input: { command: "./check_test" } }, sbc).code).toBe(0);
     expect(run({ tool_name: "Execute", tool_input: { command: `cd ${sbc} && ./check_test --quiet` } }, sbc).code).toBe(

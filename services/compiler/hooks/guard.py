@@ -16,9 +16,11 @@ import sys
 
 EDIT_TOOLS = {"Edit", "Create", "ApplyPatch", "MultiEdit", "Write"}
 EXEC_TOOLS = {"Execute"}
-TEST_CMD = re.compile(r"^(\./)?(replay_test|check_test)(\s+--?[a-z-]+(=\S+|\s+\S+)?)*\s*$")
+# the job's gate, bare or with --quiet; single literal spaces only (see allowlist.ts). fullmatch: no trailing newline
+TEST_CMD = re.compile(r"(\./)?(replay_test|check_test)( --quiet)?")
+PRINTABLE = re.compile(r"[\x20-\x7e]*")
 DEFAULT_COMMANDS = ["./replay_test"]  # sandboxes written before `commands` existed in allowlist.json
-SHELL_META = ("&&", "||", ";", "|", "`", "$(")
+SHELL_META = ("&&", "||", ";", "|", "`", "$", "<", ">")
 
 
 def block(msg: str) -> None:
@@ -32,6 +34,8 @@ def norm(p: str) -> str:
 
 def allowed_command(cmd: str, sandbox: str, commands: list[str]) -> bool:
     """The job's gate script (`./replay_test` or `./check_test`, per `commands`), optionally with flags."""
+    if not PRINTABLE.fullmatch(cmd):
+        return False  # a newline or other control character could smuggle a second command
     c = cmd.strip()
     d = sandbox.rstrip("/")
     for q in ('"', "'", ""):
@@ -46,7 +50,7 @@ def allowed_command(cmd: str, sandbox: str, commands: list[str]) -> bool:
             break
     if any(m in c for m in SHELL_META):
         return False
-    m = TEST_CMD.match(c)
+    m = TEST_CMD.fullmatch(c)
     return bool(m) and m.group(2) in {str(x).removeprefix("./") for x in commands}
 
 

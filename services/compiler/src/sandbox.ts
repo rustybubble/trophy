@@ -76,7 +76,7 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
     "#!/bin/sh",
     `# The Droid's test gate (${gateCmd.module}). The only command the sandbox allows.`,
     `cd "$(dirname "$0")" || exit 2`,
-    `exec "${enginePython}" -m ${gateCmd.module} ${gateCmd.args} --json .trophy/results.json --events .trophy/events.json "$@"`,
+    `exec "${enginePython}" -m ${gateCmd.module} ${gateCmd.args} --json .trophy/results.json --events .trophy/events.json`, // never "$@": arguments are pinned here
     "",
   ].join("\n");
   writeFileSync(join(dir, gate), script);
