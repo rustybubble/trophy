@@ -24,3 +24,13 @@ stdb-seed:      ## replay the labelled-synthetic demo into a new game and check 
 	python spacetime/scripts/seed_demo.py --check
 smoke:      ## P0 spikes
 	bash scripts/smoke.sh
+
+.PHONY: recorder recorder-check gateway-check
+recorder:      ## local frame-bus HLS archive (install FFmpeg separately)
+	uv run --frozen --project services/recorder python -m recorder
+recorder-check:
+	uv run --frozen --project services/recorder ruff check services/recorder
+	uv run --frozen --project services/recorder pytest -q services/recorder/tests
+gateway-check:
+	uv run --frozen --project services/gateway ruff check services/gateway
+	uv run --frozen --project services/gateway pytest -q services/gateway/tests

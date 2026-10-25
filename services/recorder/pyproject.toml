@@ -1,0 +1,29 @@
+[project]
+name = "trophy-recorder"
+version = "1.0.0"
+description = "Local frame-bus HLS recorder and replay archive"
+requires-python = ">=3.11"
+dependencies = ["trophy"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff==0.14.5", "fakeredis>=2.26"]
+
+[tool.uv.sources]
+trophy = { path = "../../packages/py-trophy", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["recorder"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
