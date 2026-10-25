@@ -29,7 +29,7 @@ Point a phone at a ping-pong table and Trophy referees the game:
 | `docs/` | Plan, interfaces, decisions, progress, agent briefs (`docs/plan/prompts/`), research |
 
 ## Setup
-Everything runs natively on one Mac (we use an M5 Pro); there is no cloud backend (D-30). The phones and the Mac must be on the same Wi-Fi. Full walkthrough: [`docs/plan/prompts/mac-bringup.md`](docs/plan/prompts/mac-bringup.md).
+Everything runs natively on one Mac (we use an M5 Pro); there is no cloud backend (D-30). The phones and the Mac must be on the same Wi-Fi. Full walkthrough: [`docs/plan/prompts/mac-bringup.md`](docs/plan/prompts/mac-bringup.md); the live-demo commands, step by step: [`docs/demo-runbook.md`](docs/demo-runbook.md).
 
 **1. Tools.** `git`, Python 3.11, [`uv`](https://docs.astral.sh/uv/), Node 22 + npm, `ffmpeg`, Redis 7 (`brew install redis`, or Docker), the SpacetimeDB **2.13** CLI (`curl -sSf https://install.spacetimedb.com | sh`), and Caddy built with the Porkbun DNS module at `~/.trophy/bin/caddy`: download it from `https://caddyserver.com/api/download?os=darwin&arch=arm64&p=github.com%2Fcaddy-dns%2Fporkbun` (or `xcaddy build --with github.com/caddy-dns/porkbun`) and check `caddy list-modules | grep porkbun`.
 

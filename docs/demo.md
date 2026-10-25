@@ -1,5 +1,7 @@
 # Trophy demo: everything that is built, running together
 
+*Step-by-step commands for the live demo, with what to expect at each step: [`docs/demo-runbook.md`](demo-runbook.md).*
+
 *Branch `demo/integration` (2026-10-24): `main` (incl. the judges' dashboard #17 and the CC BY clip `make e2e` #18) + the
 finished branches `mvp/tt-cloud` (flight: clips → fused 3D map), `a3/droid-checks` (rule engine, Factory Droid compiler,
 golden table-tennis module, the Droid-written 3D check library and `calibrate_checks` job, synthetic fixtures) and
