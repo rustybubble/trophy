@@ -10,7 +10,7 @@ Tick items and record **measured** numbers (not estimates). The gates are in `do
 - [ ] **C2** `make e2e` on the CC BY ping-pong segment (8:30–9:00, Windows PC, local stack, 2026-10-24): stack health ✓, frame bus **30.0 fps at 1280×720** (900 frames sent) ✓, recorder HLS + replay clip + 4 voter crops (max 114 KB base64) + Watch manifest ✓; **observations + calls PENDING** (no flight/engine yet) → C2 not met; replay API ✓ (a mid-game cut hung on the live playlist until fixed); `/ask` cited answer ✗ (rules service not on main)
 - [ ] **C3** live: rallies ___/___ correct (CI ___); staged edge ___/___; staged serves ___/12 (height err ___ cm, angle err ___°); votes never delayed a call ✓/✗; call spoken p50 ___ ms; challenge → replay ___ s; 3 votes shown in ___ s; Droid rule end to end ___ s; voice ask → answer starts ___ s
 - [ ] **C3b** Trophy Watch core on ping pong ✓/✗ and basketball ✓/✗: recap, moments, highlights + ★ Play of the game, condensed, replay, stats, moment search (5 queries/game: ___/5 correct)
-- [ ] **C4** frozen, rehearsed 3×; 2-min video; README (Cartesia, Factory, Spacetime, Anthropic limits, Bitdeer, Moss, Apify, Gemini); Devpost writeup; Apify actor published (with the user's OK)
+- [ ] **C4** frozen, rehearsed 3×; 2-min video; README (Cartesia, Factory, Spacetime, Anthropic limits, Bitdeer, Gemini); Devpost writeup (Moss and Apify dropped by the user, 2026-10-24)
 
 ## Measured accuracy (from labelled evals only)
 | Sport / call | n | correct | 95% CI | source clips |

@@ -22,7 +22,7 @@ Read this file for project context, then the plan docs listed below. Explicit us
 - **SHOULD:** recorded basketball 2s/3s on a CC BY clip; **Trophy Watch** post-game analysis for every game (highlights + ★ Play of the game, condensed, moments, stats, replay, voice search; then broadcast mode, watch party, clips), translated from Replay's Fire TV app (`docs/plan/trophy-watch-postgame.md`).
 - Everything else is "coming next", and is labelled as not built.
 
-**Prize tracks targeted:** Factory Droid SDK, Cartesia, Spacetime, Anthropic, Meta, Moss, Bitdeer AI Model Studio, Apify, and MLH (Gemini, Vultr, the GoDaddy/.Tech domain, Commit Fellowship), plus Cal Hacks overall. SubQ, Firecrawl, Deepgram and Convex are **not used**.
+**Prize tracks targeted:** Factory Droid SDK, Cartesia, Spacetime, Anthropic, Meta, Bitdeer AI Model Studio, and MLH (Gemini, the GoDaddy/.Tech domain, Commit Fellowship), plus Cal Hacks overall. **Dropped (the user, 2026-10-24):** Moss and Apify; Vultr too, since the backend runs on the Mac (D-30). SubQ, Firecrawl, Deepgram and Convex are **not used**.
 
 ## Read these first
 - `docs/plan/three-agent-plan.md`: scope, cut, track evidence, architecture, phases, checkpoints, workflow, open decisions.
