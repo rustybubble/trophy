@@ -4,7 +4,9 @@
 
 ---
 
-You are **Agent 1 of 3** on Trophy (Cal Hacks 13.0), and the **integration owner**: you review and merge, run the checkpoints and assemble the submission. Read `CLAUDE.md` first ("Where things stand", "Safeguards to retain"), then `docs/status/a1.md` and `docs/plan/prompts/mac-bringup.md`. Work in `../trophy-a1` on short `a1/*` branches.
+You are **Agent 1 of 3** on Trophy (Cal Hacks 13.0), and the **integration owner**: you review and merge, run the checkpoints and assemble the submission. Read `CLAUDE.md` first ("Where things stand", "Safeguards to retain"), then `docs/status/a1.md`. Work in `../trophy-a1` on short `a1/*` branches.
+
+**You're on the Windows PC; Agent 2 has the M5 Pro Mac**, which is the demo machine. Agent 2 brings the stack up there (`docs/plan/prompts/mac-bringup.md`) and runs every live check on it. Anything you need verified on the Mac (a test that fails only there, a timing, a phone run against the demo stack), ask for in `docs/status/a2.md`. Give Agent 2 exact commands and what to report back.
 
 ## What you've built (all on `main`)
 - **Foundations:** C0 contracts, codegen, py-trophy, state client (tag `wk-c0`); the Spacetime module with identity-checked writers.
@@ -22,18 +24,23 @@ You are **Agent 1 of 3** on Trophy (Cal Hacks 13.0), and the **integration owner
 2. **Review and merge rustybubble/trophy#19** once Agent 3 has merged main into it, fixed the six review blockers and turned CI green.
    - Re-check the blockers yourself: the allowlist regex, the sandbox, trailing bounces, malformed events and the approval path.
    - Check that the dashboard reads the rows #19 writes.
-   - Check that `Procfile`/`scripts/dev.py` start `engine`, `referee` and `compiler` on the Mac.
+   - Check that `Procfile`/`scripts/dev.py` start `engine`, `referee` and `compiler`. Check it on the PC yourself, and ask Agent 2 to confirm it on the Mac.
    - **Then add the calls hop to `make e2e`**: the CC BY clip should produce calls once flight is live (Agent 2), and Agent 3's synthetic checks stay as `make e2e-synthetic`.
-3. **Bring the backend up on the Mac** (`mac-bringup.md`):
-   - Caddy with the Porkbun module, a fresh `.env` (fresh Spacetime tokens), `make dev`.
-   - **Ask the user before changing DNS**, then point `trophy.photo` at the Mac's LAN IP.
-   - Load `https://trophy.photo/cam/` from an iPhone on the same Wi-Fi.
-4. **Finish C1:** a 15-minute iPhone stream at ≥ 25 fps, real Safari as well as WebKit-in-Firefox, onsets, a spoken line. Record the measured numbers in `docs/progress.md`.
+3. **Support Agent 2's Mac bring-up** (`mac-bringup.md`; Agent 2 runs it):
+   - Answer its questions on Caddy, Porkbun, `.env` and the Spacetime tokens.
+   - The user copies the PC's `.env` to the Mac securely, or fills it in there. Never paste secrets into status files or chat.
+   - Once DNS points `trophy.photo` at the Mac (the user's OK first), the PC's Caddy no longer serves phones. Develop against `http://127.0.0.1` on the PC.
+4. **Finish C1** on the demo stack, with Agent 2 running the Mac side:
+   - a 15-minute iPhone stream at ≥ 25 fps;
+   - real Safari as well as WebKit-in-Firefox;
+   - onsets arriving and a spoken line.
+
+   You own the method and the write-up in `docs/progress.md`.
 5. **Platform requests from #19:**
    - Add `ask` table columns `speech, kind, check, p, calibrated` (today they ride in `json`); regenerate the bindings.
    - Make the PWA's late-answer matching use an ask id instead of question text + time.
-   - Fix `services/gateway/tests/test_gateway.py::test_frames_ws_writes_bus_and_still`, which fails on the Mac (3 rows instead of 4).
-6. **C3 (live, with Agents 2 and 3)**, measured and written to `docs/progress.md`:
+   - Fix `services/gateway/tests/test_gateway.py::test_frames_ws_writes_bus_and_still`, which fails only on the Mac (3 rows instead of 4). Ask Agent 2 to run it there with `-vv` and send you the output, then confirm your fix on the Mac the same way.
+6. **C3 (live on the Mac, run by Agent 2, with Agent 3)**. You define the measurements and collect them in `docs/progress.md`:
    - the call spoken ≤ 1.5 s after the rally ends (p50);
    - challenge → replay ≤ 4 s;
    - three votes shown and never delaying a call;
