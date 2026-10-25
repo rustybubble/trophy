@@ -144,6 +144,8 @@ def test_slow_calls_miss_the_target() -> None:
 def test_no_rows_prints_not_measured_with_n_zero() -> None:
     rep = compute({"game": [{"game_id": G, "t0_ms": T0}]})
     assert rep["synthetic"] is False
+    voters = [m["name"] for m in rep["metrics"] if "vote row" in m["name"]]
+    assert voters == ["BETA call posted -> claude vote row"]  # Claude is the only model voter (D-41)
     assert all(m["n"] == 0 and m["verdict"] == "not measured" for m in rep["metrics"])
 
 

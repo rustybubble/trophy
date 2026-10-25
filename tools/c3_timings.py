@@ -138,7 +138,7 @@ def compute(
     votes = [v for v in rows.get("ai_vote", []) if v.get("call_id") in by_id and v.get("backend") != "geometry"]
     beta = {c["id"] for c in calls if c.get("tier") == "BETA"}
     early = [v for v in votes if float(v["created_at_ms"]) < float(by_id[v["call_id"]]["created_at_ms"])]
-    for backend in sorted({v["backend"] for v in votes} | {"claude", "gemini", "bitdeer"}):
+    for backend in sorted({v["backend"] for v in votes} | {"claude"}):
         out.append(
             metric(
                 f"BETA call posted -> {backend} vote row",
