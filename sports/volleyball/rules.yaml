@@ -1,5 +1,5 @@
-# Written by the Factory Droid (interpreter job, D-43), live run 01M5S20J4Z4C7EQNW68MXAFX13 on 2026-10-25: ready in 43 s,
-# 1 attempt, gate passed on evals/fixtures/annotated/volleyball (hand-annotated). Gated sandbox commit b34c127c4f308515eafbf5386ca562eb03e7b84c.
+# Written by the Factory Droid (interpreter job, D-43), live run 01M5SCPQJ2QDF8Q117S3WTV706 on 2026-10-25: ready in 48 s,
+# 2 attempts, gate passed on evals/fixtures/annotated/volleyball (hand-annotated). Gated sandbox commit 280527ef79638609e8c9684e47bc8a89fea9fdf5.
 # Regenerate with: npm run cli -w @trophy/compiler -- interpreter --sport volleyball
 # Sport module: indoor volleyball rule pack. Validated by rulepack.schema.json.
 # CEL conditions run over ev (the current layer-2 event), rally (rally.phase, bounces, last_bounce_side,
@@ -32,10 +32,11 @@ rules:
   # loses the rally (the other side scores).
   - id: ball_in
     name: Ball lands in on a side
-    tier: AUTO
+    tier: BETA
     kind: point
     when: "ev.type == 'bounce' && ev.payload.surface == 'court' && has(ev.payload.in) && ev.payload.in == true"
     check: code
+    p: "ev.payload.p_in"
     outcome: point
     team: "opponent(ev.side)"
     at_fault: "ev.side"
@@ -44,6 +45,23 @@ rules:
     speech: "Point, {team}."
     requires: [bounce]
     rule_ref: "FIVB 8.3"
+  # Rule 8.4: a ball that lands out is a fault on whoever touched it last. Prefer the recorded last touch; fall
+  # back to the side that sent the ball across (the opponent of the landing side) when last_touch isn't available.
+  - id: ball_out
+    name: Ball lands out
+    tier: BETA
+    kind: point
+    when: "ev.type == 'bounce' && ev.payload.surface == 'court' && has(ev.payload.in) && ev.payload.in == false"
+    check: code
+    p: "1.0 - ev.payload.p_in"
+    outcome: out
+    team: "has(ev.payload.last_touch_side) ? opponent(ev.payload.last_touch_side) : ev.side"
+    at_fault: "has(ev.payload.last_touch_side) ? ev.payload.last_touch_side : opponent(ev.side)"
+    points: 1
+    text: "Out. Point {team}"
+    speech: "Out. Point, {team}."
+    requires: [bounce]
+    rule_ref: "FIVB 8.4"
   # Rule 9 / 8.4: if the rally dies (lost in flight, out of view) with no bounce yet in the rally, the side that
   # last touched the ball failed to return it and loses the rally.
   - id: ball_not_returned

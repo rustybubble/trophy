@@ -1,5 +1,5 @@
-# Written by the Factory Droid (interpreter job, D-43), live run 01M5S1Y7HK3HER1YZC3Q1DWRM4 on 2026-10-25: ready in 65 s,
-# 1 attempt, gate passed on evals/fixtures/annotated/pickleball (hand-annotated). Gated sandbox commit 625cfedb61fd1e23c7abff3924f9fe87f5127bf8.
+# Written by the Factory Droid (interpreter job, D-43), live run 01M5SCMB1H69JVR7T318FKPSPX on 2026-10-25: ready in 31 s,
+# 1 attempt, gate passed on evals/fixtures/annotated/pickleball (hand-annotated). Gated sandbox commit c6dee9af6cb7293ac7258c50dd823defbc94a889.
 # Regenerate with: npm run cli -w @trophy/compiler -- interpreter --sport pickleball
 # Sport module: pickleball (doubles) rule pack. CEL conditions run over ev (the current layer-2 event), rally
 # (rally.phase, bounces, last_bounce_side, at_fault_side, server_side, receiver, last_hitter) and params;
@@ -81,8 +81,8 @@ rules:
     check: code
     p: "1.0 - ev.payload.p_in"
     outcome: out
-    team: "opponent(ev.side)"
-    at_fault: "ev.side"
+    team: "ev.side"
+    at_fault: "opponent(ev.side)"
     points: 1
     text: "Out. Point {team}"
     speech: "Out. Point, {team}."

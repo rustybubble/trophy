@@ -1,0 +1,40 @@
+{
+  "synthetic": false,
+  "label": "HAND-ANNOTATED from CC BY footage by a Trophy agent (not synthetic, not perception output)",
+  "sport": "volleyball",
+  "labeller": "Claude (Trophy sports agent), 2026-10-25, from 720p frames at 1-60 fps",
+  "bounces": [
+    {
+      "t_game_s": 22.35,
+      "side": "A",
+      "surface": "court"
+    }
+  ],
+  "tol_count": 1,
+  "tol_t_s": 0.5,
+  "alternate_sides": false,
+  "min_recall": 0.75,
+  "initial_score": {
+    "A": 11,
+    "B": 10
+  },
+  "outcome_truth": "rally winner from the video's own score overlay (HND 11-10 -> 11-11 at about 27 s); in/out is our reading",
+  "not_annotated": [
+    {
+      "t_s": 5.0,
+      "why": "serve and the earlier contacts of the rally are not labelled; the next serve is after the segment"
+    }
+  ],
+  "calls": [
+    {
+      "t_s": 22.35,
+      "outcome": "point",
+      "team_id": "B",
+      "at_fault": "A",
+      "rule_hint": "ball_in",
+      "p_in": 0.69,
+      "expected_tier": "BETA",
+      "conf": 0.7
+    }
+  ]
+}

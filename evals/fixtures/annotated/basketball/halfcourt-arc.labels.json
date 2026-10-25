@@ -2,7 +2,7 @@
   "synthetic": false,
   "label": "HAND-ANNOTATED from CC BY footage by a Trophy agent (not synthetic, not perception output)",
   "sport": "basketball",
-  "labeller": "Claude (Trophy sports agent), 2026-10-25, from 720p frames at 2-15 fps",
+  "labeller": "Claude (Trophy sports agent), 2026-10-25, from 720p frames at 2-15 fps; 23.3 s shot re-read at 10 fps on 2026-10-25",
   "bounces": [],
   "tol_count": 1,
   "tol_t_s": 0.5,
@@ -14,7 +14,7 @@
   },
   "final_score": {
     "A": 4,
-    "B": 5
+    "B": 4
   },
   "scoring": "pickup 1s and 2s: inside the arc 1, beyond the arc 2 (the overlay's increments)",
   "outcome_truth": "made/points from the video's own score overlay; release positions eyeballed from one far camera",
@@ -43,8 +43,10 @@
       "team_id": "B",
       "at_fault": null,
       "points": 2,
-      "rule_hint": "made_three",
-      "conf": 0.8
+      "rule_hint": "made_beyond_arc_on_line",
+      "conf": 0.55,
+      "behind_arc_p": 0.55,
+      "expected_tier": "BETA"
     },
     {
       "t_s": 32.5,
@@ -63,15 +65,7 @@
       "points": 2,
       "rule_hint": "made_three",
       "conf": 0.8
-    },
-    {
-      "t_s": 63.0,
-      "outcome": "basket",
-      "team_id": "B",
-      "at_fault": null,
-      "points": 1,
-      "rule_hint": "made_inside",
-      "conf": 0.6
     }
-  ]
+  ],
+  "segment_note": "segment trimmed to source 2:25-3:25 (60 s); the 63 s basket of the earlier 75 s window is outside it"
 }

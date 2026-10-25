@@ -37,8 +37,14 @@ A ball that touches the net and still lands in the correct court is in play (the
 - A fault by the serving team passes the serve to the second server, or to the other team (side out). A fault by the
   receiving team gives the serving team a point.
 
-## What the annotated clip exercises
-`evals/fixtures/annotated/pickleball/rec-doubles.*`: three net faults (two by the near team as the serving team's
-opponents, one by the far team as server) and one ball not returned before the second bounce. Team A is the near team
-and team B the far team, which serves first. The clip has no clear out ball or kitchen fault in its 60 s window, so
-those rules are present here but not exercised by the fixture.
+## What the annotated clips exercise
+- `evals/fixtures/annotated/pickleball/mixer-sideline.*` (the judging-demo clip, SportsAlgo "Ultimate Mixer" doubles,
+  CC BY): one close line call. A deep cross-court drive by the far team (B) lands just outside the near court's left
+  sideline: `bounce` with `side: "A"` (the half of the field it landed in), `in: false`, `line: "sideline_left"`,
+  `margin_m: -0.09`, `sigma_m: 0.12`, `p_in: 0.23`. It is a fault on the hitter, B (`opponent(ev.side)`), and the call
+  goes to A. The call's confidence must come from the measurement (`p = 1 - p_in`, about 0.77), so a close ball is
+  BETA (challengeable), never AUTO. The server and score are not visible in this video, so only the call is labelled.
+- `evals/fixtures/annotated/pickleball/rec-doubles.*` (BT Pickleball, CC BY): three net faults (two by the near team as
+  the serving team's opponents, one by the far team as server) and one ball not returned before the second bounce.
+  Team A is the near team and team B the far team, which serves first.
+- No clip has a clear kitchen (non-volley-zone) fault, so that rule is present but not exercised.

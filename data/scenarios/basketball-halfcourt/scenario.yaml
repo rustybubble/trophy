@@ -1,17 +1,21 @@
+# Judging-demo basketball scenario: a jump shot with the shooter's feet on the arc (1 or 2 points?) among four clear
+# baskets. Media is local and ignored: data/local/scenarios/basketball-halfcourt/halfcourt-arc.mp4.
 id: basketball-halfcourt
-title: Basketball · half-court pickup
+title: Basketball · half-court pickup, foot on the arc
 sport: basketball
 teams:
   - {team_id: A, name: Team A}
   - {team_id: B, name: Team B}
 source: cc_by_online
-credit: "\"Fun Moderate to Intense 10 games Saturday run\" by JaiArtHub, CC BY (Creative Commons Attribution), youtube.com/watch?v=2NxcgKW7xFM; segment 2:25-3:40 (game 2), trimmed and re-encoded to 720p"
+credit: "\"Fun Moderate to Intense 10 games Saturday run\" by JaiArtHub, CC BY (Creative Commons Attribution), youtube.com/watch?v=2NxcgKW7xFM; segment 2:25-3:25 (game 2), trimmed and re-encoded to 720p"
 source_url: https://www.youtube.com/watch?v=2NxcgKW7xFM
-source_segment_s: [145.0, 220.0]
+source_segment_s: [145.0, 205.0]
 annotated: true
-events: evals/fixtures/annotated/basketball/halfcourt-game2.events.jsonl
-labels: evals/fixtures/annotated/basketball/halfcourt-game2.labels.json
+events: evals/fixtures/annotated/basketball/halfcourt-arc.events.jsonl
+labels: evals/fixtures/annotated/basketball/halfcourt-arc.labels.json
 events_angle: Half court
 initial_score: {A: 0, B: 1}     # the clip's overlay at the segment start
+close_calls:
+  - {t_s: 23.3, what: "white shirt's right-wing jumper with his feet on the arc at the gather (21.5-21.9 s)", behind_arc_p: 0.55, on_line_p: 0.4, expected: "2 points (the overlay's call), BETA (replay, p 0.55)"}
 angles:
-  - {label: Half court, file: data/local/scenarios/basketball-halfcourt/halfcourt.mp4, start_s: 0, duration_s: 75.0, offset_s: 0}
+  - {label: Half court, file: data/local/scenarios/basketball-halfcourt/halfcourt-arc.mp4, start_s: 0, duration_s: 60.0, offset_s: 0}
