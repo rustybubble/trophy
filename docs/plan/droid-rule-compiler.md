@@ -156,3 +156,12 @@ Fixtures to add, in this order:
 B and C can run in parallel. F needs the 3D track to matter live but is testable on the synthetic 3D fixtures now.
 Decision to record when B lands: **D-38, the Droid compiles rule packs from `laws.md` under an evidence gate;
 hand-written rules are removed.**
+
+## Status (2026-10-24, late night, branch `fix/evt-scoring-evidence`)
+
+Built: the evidence vocabulary and `trophy_engine.vocabulary` (3.1's `events.md`), `label_rally` + the dashboard
+button + the `correction` job (the real-time loop of 3.3's trigger), `compile_rules` from `laws.md` (3.2),
+`.l2.jsonl` recorded samples with the live engine switches and `rules:coverage` (3.4, informational), the recorded
+rally as a fixture, dead balls per tracked-ball gap, and the Cartesia announcer. Not built: `EMITS`/data-driven check
+wiring and `new_check` from gaps (3.3's second half), blocking coverage rows, synthetic serve-let/fault scenarios,
+Moss retrieval (no project or keys exist; the seam is `Job.lawsPath`). Decision: D-42.

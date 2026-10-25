@@ -5,6 +5,12 @@
  *   trophy-droid compile    --sport pickleball --from table_tennis --scene <scene.json> --samples <dir>
  *   trophy-droid house-rule --sport table_tennis --text "a serve that clips the net is a let" --samples <dir> [--rule-version <ulid> --spacetime]
  *   trophy-droid retune     --sport table_tennis --reason "ball lost in 45% of frames" --scene <scene.json> --samples <dir>
+ *   trophy-droid compile-rules --sport table_tennis [--laws <laws.md>] [--labelled <dir>]
+ *                           # write the whole `rules:` list from sports/<sport>/laws.md against the synthetic samples
+ *                           # plus every judge-labelled recording (evals/fixtures/recorded/<sport>, data/local/labelled/<sport>)
+ *   trophy-droid correction --sport table_tennis --text "<the judge's ruling>" [--labelled <dir>] [--rule-version <ulid> --spacetime]
+ *                           # repair rules.yaml so the labelled recording replays as the judge ruled (what `watch` runs
+ *                           # for a house_rule row with source = correction, i.e. the dashboard's "one rally, won by X")
  *   trophy-droid calibrate  --sport table_tennis --field <field.json> --samples <dir> [--checks <dir>] [--session <id>]
  *   trophy-droid new-check  --sport table_tennis --name ball_speed --question "how fast was that" --hint "..."
  *                           --session-track <track3d.jsonl> --session-field <field.json> --query '{"t0":1,"t1":4}'
@@ -109,9 +115,26 @@ async function main(argv: string[]): Promise<number> {
       query: { type: "string", default: "{}" },
       checks: { type: "string" },
       session: { type: "string" },
+      laws: { type: "string" },
+      labelled: { type: "string" },
     },
   });
   const samplesFor = (sport: string) => values.samples ?? join(REPO_ROOT, "evals/fixtures/synthetic", sport);
+  // judge-labelled recordings: the versioned ones (events + pixels, no media) and this Mac's label_rally exports
+  const labelledFor = (sport: string) =>
+    values.labelled
+      ? [values.labelled]
+      : [join(REPO_ROOT, "evals/fixtures/recorded", sport), join(REPO_ROOT, "data/local/labelled", sport)];
+  // Reasoning effort, measured 2026-10-24/25 (claude-sonnet-5): "medium" read its inputs for 40 s then produced
+  // nothing until the cap; "low" spent 210-545 s silent before its first edit (two corrections timed out, one
+  // compile_rules passed in 531 s); "minimal" repaired the pack in 328 s, first attempt, 52/52. The budgets are
+  // wall-clock caps; DROID_PACK_EFFORT / DROID_CORRECTION_EFFORT override the effort.
+  const PACK_BUDGET = { timeoutS: 600, reasoningEffort: process.env.DROID_PACK_EFFORT || "minimal", maxAttempts: 4 };
+  const CORRECTION_BUDGET = {
+    timeoutS: 600,
+    reasoningEffort: process.env.DROID_CORRECTION_EFFORT || "minimal",
+    maxAttempts: 4,
+  };
   switch (cmd) {
     case "compile": {
       if (!values.sport) usage();
@@ -140,8 +163,47 @@ async function main(argv: string[]): Promise<number> {
           sport: values.sport,
           text: values.text,
           samplesDir: samplesFor(values.sport),
+          extraSamplesDirs: labelledFor(values.sport),
           ruleVersion: values["rule-version"],
           gameId: values["game-id"],
+        },
+        extra,
+      );
+      return run.status === "ready" ? 0 : 1;
+    }
+    case "compile-rules": {
+      if (!values.sport) usage();
+      const sport = values.sport;
+      const run = await runOne({
+        kind: "compile_rules",
+        sport,
+        samplesDir: samplesFor(sport),
+        extraSamplesDirs: labelledFor(sport),
+        lawsPath: values.laws,
+        emptyRules: true,
+        budget: PACK_BUDGET,
+      });
+      return run.status === "ready" ? 0 : 1;
+    }
+    case "correction": {
+      if (!values.sport || !values.text) usage();
+      const extra: RunSink[] = [];
+      if (values.spacetime) {
+        if (!values["rule-version"])
+          throw new ConfigError("--spacetime needs --rule-version (the house_rule row to update)");
+        extra.push(new HouseRuleSpacetimeSink(reducerCaller(loadConfig()), values["rule-version"]));
+      }
+      const run = await runOne(
+        {
+          kind: "correction",
+          sport: values.sport,
+          text: values.text,
+          samplesDir: samplesFor(values.sport),
+          extraSamplesDirs: labelledFor(values.sport),
+          lawsPath: values.laws,
+          ruleVersion: values["rule-version"],
+          gameId: values["game-id"],
+          budget: CORRECTION_BUDGET,
         },
         extra,
       );
@@ -207,15 +269,28 @@ async function main(argv: string[]): Promise<number> {
         if (seen.has(h.rule_version)) return;
         seen.add(h.rule_version);
         process.stderr.write(`house_rule ${h.rule_version} (${h.sport}): ${h.text}\n`);
+        const correction = (h as { source?: string }).source === "correction";
         void runOne(
-          {
-            kind: "house_rule",
-            sport: h.sport,
-            text: h.text,
-            samplesDir: samplesFor(h.sport),
-            ruleVersion: h.rule_version,
-            gameId: h.game_id,
-          },
+          correction
+            ? {
+                kind: "correction",
+                sport: h.sport,
+                text: h.text,
+                samplesDir: samplesFor(h.sport),
+                extraSamplesDirs: labelledFor(h.sport),
+                ruleVersion: h.rule_version,
+                gameId: h.game_id,
+                budget: CORRECTION_BUDGET,
+              }
+            : {
+                kind: "house_rule",
+                sport: h.sport,
+                text: h.text,
+                samplesDir: samplesFor(h.sport),
+                extraSamplesDirs: labelledFor(h.sport),
+                ruleVersion: h.rule_version,
+                gameId: h.game_id,
+              },
           [new HouseRuleSpacetimeSink(call, h.rule_version)],
         ).catch((e) => process.stderr.write(`run failed: ${(e as Error).message}\n`));
       });

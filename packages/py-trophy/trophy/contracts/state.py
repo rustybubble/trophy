@@ -165,7 +165,11 @@ class HouseRule(BaseModel):
     game_id: str
     sport: str
     text: str
-    source: Literal["typed", "voice"]
+    source: Literal["typed", "voice", "correction"]
+    evidence: dict[str, Any] | None = Field(
+        None,
+        description="source = correction: the judge's label behind this run (sample name under data/local/labelled/<sport>, span, winner, voided call ids)",
+    )
     status: Literal["pending", "compiling", "ready", "approved", "rejected", "failed"] = Field(
         ..., title="HouseRuleStatus"
     )

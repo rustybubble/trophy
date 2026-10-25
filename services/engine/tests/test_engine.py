@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+from _handwritten import handwritten_modules_dir
 
 from trophy_engine.engine import Engine
 from trophy_engine.gate import gate
@@ -16,7 +17,9 @@ from trophy_engine.sportmod.loader import load_module
 from trophy_engine.state import MemoryState
 
 ROOT = Path(__file__).resolve().parents[3]
-TT = ROOT / "sports" / "table_tennis"
+# the engine-mechanics tests run on the frozen hand-written pack (tests/fixtures), not the Droid-written shipped one
+MODULES = handwritten_modules_dir()
+TT = MODULES / "table_tennis"
 SAMPLES = ROOT / "evals" / "fixtures" / "synthetic" / "table_tennis"
 GAME = "g_synth001"
 
@@ -35,7 +38,7 @@ def new_engine(**kw) -> tuple[Engine, MemoryState]:
         clock["t"] += 1
         return clock["t"]
 
-    eng = Engine(st, now_ms=now, **kw)
+    eng = Engine(st, now_ms=now, modules_dir=MODULES, **kw)
     eng.create_game(GAME, "table_tennis", t0_ms=0, params={"synthetic": True, "label": "SYNTHETIC"})
     eng.start_game(GAME, "A")
     return eng, st
@@ -401,11 +404,14 @@ def test_serve_toss_rules_from_d22() -> None:
     assert (
         low and low[-1]["outcome"] == "illegal_toss_height" and low[-1]["team_id"] == "B" and low[-1]["tier"] == "AUTO"
     )
-    assert low[-1]["speech"] == "Fault. Toss too low." and low[-1]["overlay"]["serve_toss_event_id"] == "s1.0"
+    # the spoken line adds the side that won the point and the score after it (the pack's line names neither)
+    assert low[-1]["speech"] == "Fault. Toss too low. Team B. 0, 1."
+    assert low[-1]["overlay"]["serve_toss_event_id"] == "s1.0"
     near = eng.feed(toss(5.0, 0.148, 0.1))  # 4 mm under the limit with σ 1 cm -> BETA
     assert near[-1]["outcome"] == "illegal_toss_height" and near[-1]["tier"] == "BETA" and 0.5 < near[-1]["p"] < 0.9
     angled = eng.feed(toss(9.0, 0.25, 0.7))
-    assert angled[-1]["outcome"] == "illegal_toss_angle" and angled[-1]["speech"] == "Fault. Toss not vertical."
+    assert angled[-1]["outcome"] == "illegal_toss_angle"
+    assert angled[-1]["speech"] == "Fault. Toss not vertical. Team A. 1, 2."  # A served (2 serves each), B led 0-2
     legal = eng.feed(toss(13.0, 0.25, 0.1))
     assert legal == []
 
@@ -434,7 +440,7 @@ def test_droid_net_let_house_rule_replays_the_point(tmp_path: Path) -> None:
     shutil.copytree(TT, mod)
     (mod / "rules.yaml").write_text(yaml.safe_dump(pack))
     st = MemoryState()
-    eng = Engine(st, now_ms=lambda: 1.0)
+    eng = Engine(st, now_ms=lambda: 1.0, modules_dir=MODULES)
     eng.create_game(GAME, "table_tennis", t0_ms=0, module_dir=mod)
     eng.start_game(GAME, "A")
     eng.feed(point_call(1.0, "A"))  # serve bounces on the server's side
@@ -484,7 +490,7 @@ def _bounce(t: float, side: str, surface: str = "table") -> dict:
 
 
 def _fresh() -> Engine:
-    eng = Engine(MemoryState(), modules_dir=ROOT / "sports")
+    eng = Engine(MemoryState(), modules_dir=MODULES)
     eng.create_game(GAME, "table_tennis", t0_ms=0)
     eng.start_game(GAME, "A")
     return eng
@@ -576,7 +582,7 @@ def test_a_failing_moment_write_never_leaves_a_rally_open() -> None:
             raise RuntimeError("Spacetime HTTP 530")
 
     st = Flaky()
-    eng = Engine(st, modules_dir=ROOT / "sports", dead_after_point_s=0)
+    eng = Engine(st, modules_dir=MODULES, dead_after_point_s=0)
     eng.create_game(GAME, "table_tennis", t0_ms=0)
     eng.start_game(GAME, "A")
     for t, side in [(1.0, "A"), (1.4, "B"), (1.9, "B")]:  # B double bounce -> point A

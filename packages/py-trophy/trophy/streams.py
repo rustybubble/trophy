@@ -21,6 +21,7 @@ EV_FLIGHT = "ev:flight"
 EV_PLAYERS = "ev:players"
 EV_POSSESSION = "ev:possession"
 EV_AUDIO = "ev:audio"
+EV_CALLS = "ev:calls"  # every call the engine posts, for the voice announcer (services/referee announce)
 EVENT_STREAMS = (EV_FLIGHT, EV_PLAYERS, EV_POSSESSION, EV_AUDIO)
 CTL_ENGINE = "ctl:engine"
 CTL_CALIB = "ctl:calib"  # pub/sub channel, message = cam_id
@@ -146,6 +147,7 @@ CTL_CLIENT_ROLES: Mapping[str, frozenset[str]] = {
     "bookmark": frozenset({"cam", "display", "judge"}),
     "clip_that": frozenset({"cam", "display", "judge"}),
     "review_call": frozenset({"judge"}),
+    "label_rally": frozenset({"judge"}),
 }
 
 

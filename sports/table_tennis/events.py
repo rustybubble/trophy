@@ -320,26 +320,26 @@ def events(observations: Iterable[Observation], state: ModuleState) -> Iterable[
                     out.append(net_event(state, t_s=t_i, cams=[cam_id], kind="into", from_side=from_side, conf=0.6))
                     break  # one net per log is enough for a rally; the engine ends the rally there
 
-    # Ball dead: after a floor bounce, or after dead.gap_s of silence at the end of the log.
-    all_samples = sorted((s for ss in samples.values() for s in ss if s.px is not None), key=lambda s: s.t_s)
-    if all_samples:
-        last_t = all_samples[-1].t_s
-        last_side = bounces[-1][1] if bounces else None
-        gap = float(cfg["dead"]["gap_s"])
-        floor = [b for b in bounces if b[2] == "floor"]
-        if floor:
-            t_floor, floor_side = floor[0][0], floor[0][1]
-            out.append(
-                ball_dead_event(
-                    state, t_s=t_floor + 0.05, cams=sorted(cams), reason="floor", last_side=floor_side, conf=0.9
-                )
-            )
-        else:
-            out.append(
-                ball_dead_event(
-                    state, t_s=last_t + gap, cams=sorted(cams), reason="lost", last_side=last_side, conf=0.7
-                )
-            )
+    # Ball dead: after each floor bounce, and after dead.gap_s with no *tracked* ball. A ball in play is a run of
+    # >= dead.min_run consecutive detections (seq gap <= dead.max_seq_gap) that move <= dead.max_jump_px between
+    # frames; isolated detections between rallies (hands, shirts, the ball being carried) never keep a rally alive.
+    dcfg = cfg["dead"]
+    gap = float(dcfg["gap_s"])
+    tracked = _tracked_times(
+        samples, int(dcfg.get("min_run", 1)), float(dcfg.get("max_jump_px", 0.0)), int(dcfg.get("max_seq_gap", 2))
+    )
+    deads: list[tuple[float, str, str | None, float]] = []  # (t, reason, last_side, conf)
+    for t_floor, floor_side, _surface in (b for b in bounces if b[2] == "floor"):
+        deads.append((t_floor + 0.05, "floor", floor_side, 0.9))
+    for t_gap in _gaps(tracked, gap):
+        deads.append((t_gap, "lost", _side_before(bounces, t_gap), 0.7))
+    deads.sort(key=lambda d: d[0])
+    last_dead = None
+    for t_dead, reason, side, conf in deads:
+        if last_dead is not None and t_dead - last_dead < 1.0:
+            continue  # one dead ball per stretch of dead time
+        out.append(ball_dead_event(state, t_s=t_dead, cams=sorted(cams), reason=reason, last_side=side, conf=conf))
+        last_dead = t_dead
 
     out.sort(key=lambda e: (e["t_game_s"], e["type"]))
     return out
@@ -354,3 +354,42 @@ def _prod(values: Iterable[float]) -> float:
     for v in values:
         p *= v
     return p
+
+
+def _tracked_times(
+    samples: dict[str, list[BallSample]], min_run: int, max_jump_px: float, max_seq_gap: int
+) -> list[float]:
+    """Game times at which some camera had the ball *tracked*: inside a run of >= min_run consecutive detections
+    (seq gap <= max_seq_gap) whose pixel jump is <= max_jump_px (0 = any). Sorted, all cameras together."""
+    out: list[float] = []
+    for pts in samples.values():
+        det = sorted((s for s in pts if s.px is not None), key=lambda s: (s.t_s, s.seq))
+        run: list[BallSample] = []
+        for s in det:
+            if run:
+                prev = run[-1]
+                jump = ((s.px[0] - prev.px[0]) ** 2 + (s.px[1] - prev.px[1]) ** 2) ** 0.5  # type: ignore[index]
+                if s.seq - prev.seq > max_seq_gap or (max_jump_px > 0 and jump > max_jump_px):
+                    if len(run) >= min_run:
+                        out.extend(r.t_s for r in run)
+                    run = []
+            run.append(s)
+        if len(run) >= min_run:
+            out.extend(r.t_s for r in run)
+    out.sort()
+    return out
+
+
+def _gaps(tracked: list[float], gap_s: float) -> list[float]:
+    """Dead-ball times: gap_s after any tracked time that is followed by more than gap_s without one (or by nothing)."""
+    out: list[float] = []
+    for i, t in enumerate(tracked):
+        nxt = tracked[i + 1] if i + 1 < len(tracked) else None
+        if nxt is None or nxt - t > gap_s:
+            out.append(t + gap_s)
+    return out
+
+
+def _side_before(bounces: list[tuple[float, str, str]], t: float) -> str | None:
+    before = [b for b in bounces if b[0] <= t]
+    return before[-1][1] if before else None

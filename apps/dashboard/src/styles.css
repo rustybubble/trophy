@@ -301,6 +301,18 @@ td {
   stroke: var(--accent);
   stroke-width: 2;
 }
+.world .dot {
+  fill: var(--accent);
+}
+.world .dot.cam1 {
+  fill: #38bdf8;
+}
+.world .dot.cam2 {
+  fill: #f472b6;
+}
+.world .dot.cam3 {
+  fill: #a3e635;
+}
 .world .bounce.in {
   fill: #22c55e55;
   stroke: var(--ok);
@@ -451,4 +463,107 @@ td {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+.liveclips .presets h3 {
+  margin: 0.6rem 0 0.2rem;
+  font-size: 0.95rem;
+}
+.liveclips .presetlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.liveclips .presetlist li {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+}
+.liveclips .presetlist .thumbs {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.liveclips .presetlist .thumb {
+  width: 120px;
+  cursor: default;
+}
+
+/* instant replay (ReplayModal) */
+.modal-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.65);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  width: min(1100px, 96vw);
+  max-height: 94vh;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+}
+.modal .why {
+  margin: 0;
+}
+.modal .stage {
+  position: relative;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 16/9;
+}
+.modal .stage video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.modal .stage .placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.modal .marks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.modal .marks ellipse {
+  fill: rgba(245, 158, 11, 0.18);
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.call .actions button {
+  padding: 3px 10px;
+  font-size: 13px;
+}
+a.button {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 14px;
+  text-decoration: none;
+  color: var(--fg);
+}
+.droid .gate summary {
+  cursor: pointer;
+  margin: 6px 0;
+}
+.droid .gate table {
+  max-height: 240px;
+  display: block;
+  overflow: auto;
 }

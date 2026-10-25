@@ -39,19 +39,25 @@ export function DroidPanel({ rules, session }: { rules: HouseRule[]; session?: S
           {h.diff && <pre className="diff">{h.diff}</pre>}
           {h.results && (
             <>
-              <table className="small">
-                <tbody>
-                  {h.results.tests.map((t) => (
-                    <tr key={t.name}>
-                      <td className={t.pass ? "ok" : "bad"}>{t.pass ? "pass" : "fail"}</td>
-                      <td>{t.name}</td>
-                      <td className="muted">
-                        {t.before ?? ""} {t.after ? `→ ${t.after}` : ""}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <details className="gate" open={h.results.tests.some((t) => !t.pass)}>
+                <summary className={h.results.tests.every((t) => t.pass) ? "ok" : "bad"}>
+                  Gate: {h.results.tests.filter((t) => t.pass).length}/{h.results.tests.length} checks passed
+                  <span className="muted"> · replay_test on the labelled samples, in the Droid's sandbox</span>
+                </summary>
+                <table className="small">
+                  <tbody>
+                    {h.results.tests.map((t) => (
+                      <tr key={t.name}>
+                        <td className={t.pass ? "ok" : "bad"}>{t.pass ? "pass" : "fail"}</td>
+                        <td>{t.name}</td>
+                        <td className="muted">
+                          {t.before ?? ""} {t.after ? `→ ${t.after}` : ""}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </details>
               {!!h.results.calls_changed.length && (
                 <p className="small">
                   Calls that would change:{" "}

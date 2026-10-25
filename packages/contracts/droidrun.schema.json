@@ -28,7 +28,7 @@
     "game_id": { "type": ["string", "null"] },
     "sport": { "type": "string", "description": "The module being produced or edited" },
     "base_sport": { "type": ["string", "null"], "description": "The reference module a compile derives from" },
-    "kind": { "enum": ["compile", "house_rule", "retune", "calibrate_checks", "new_check"] },
+    "kind": { "enum": ["compile", "house_rule", "retune", "calibrate_checks", "new_check", "correction", "compile_rules"] },
     "trigger": { "$ref": "#/$defs/DroidRunTrigger" },
     "status": { "$ref": "#/$defs/DroidRunStatus" },
     "backend": { "enum": ["droid", "claude-fallback"] },
@@ -73,7 +73,7 @@
       "type": "object",
       "required": ["source"],
       "properties": {
-        "source": { "enum": ["cli", "house_rule", "session", "health_stat"] },
+        "source": { "enum": ["cli", "house_rule", "session", "health_stat", "correction"] },
         "rule_version": { "type": "string", "description": "house_rule.rule_version when source = house_rule" },
         "text": { "type": "string", "description": "The house rule, or the retune reason" },
         "scene": { "type": "string", "description": "Path of the scene descriptor used" },

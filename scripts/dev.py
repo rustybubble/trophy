@@ -47,6 +47,7 @@ WAITS = {
     "recorder": [6379, 3000],
     "engine": [6379, 3000],
     "referee": [6379],
+    "announcer": [6379],
     "compiler": [3000],
     "caddy": [8000, 5173, 5174, 5175],
     "flight": [6379, 3000, 8000],
@@ -100,7 +101,9 @@ def image_name(pid: int) -> str:
             ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"], capture_output=True, text=True
         ).stdout
         return out.split(",")[0].strip('"').lower() if out.startswith('"') else ""
-    return subprocess.run(["ps", "-p", str(pid), "-o", "comm="], capture_output=True, text=True).stdout.strip().lower()
+    # macOS reports the full executable path in `comm`; only the basename is compared against OURS
+    comm = subprocess.run(["ps", "-p", str(pid), "-o", "comm="], capture_output=True, text=True).stdout.strip()
+    return os.path.basename(comm).lower()
 
 
 def port_pids(port: int) -> set[int]:

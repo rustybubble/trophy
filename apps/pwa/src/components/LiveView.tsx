@@ -600,6 +600,7 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
         <ClipViewer
           api={api}
           call={g.calls.find((c) => c.id === replayCall)!}
+          cameras={g.cameras}
           onClose={() => setReplayCall(undefined)}
         />
       )}

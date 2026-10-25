@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import redis
-from trophy.streams import CTL_ENGINE, EVENT_STREAMS, EventConsumer, parse_ctl
+from trophy.streams import CTL_ENGINE, EV_CALLS, EVENT_STREAMS, EventConsumer, parse_ctl
 
 from .ask import AskConfigError, Phraser, TrackStore, make_app, serve
 from .checks.events import TrackEventer
@@ -273,6 +273,11 @@ def run(argv: list[str] | None = None) -> int:
     ap.add_argument("--redis", default=None, help="REDIS_URL (default from env/.env)")
     ap.add_argument("--state", choices=["spacetime", "memory"], default="spacetime")
     ap.add_argument("--votes", action="store_true", help="run decide() with the Claude voter (needs ANTHROPIC_API_KEY)")
+    ap.add_argument(
+        "--votes-if-keyed",
+        action="store_true",
+        help="run decide() when ANTHROPIC_API_KEY is set, else say so and run without votes (the Procfile's choice)",
+    )
     ap.add_argument("--modules", type=Path, default=ROOT / "sports")
     ap.add_argument("--log-json", action="store_true")
     ap.add_argument(
@@ -315,6 +320,11 @@ def run(argv: list[str] | None = None) -> int:
         dead_after_point_s=a.dead_after_point,
         server_from_first_hit=a.server_from_first_hit,
     )
+    if a.votes_if_keyed and not a.votes:
+        if env.get("ANTHROPIC_API_KEY"):
+            a.votes = True
+        else:
+            log.warning("votes: off (ANTHROPIC_API_KEY is not set); challenged calls get the geometry vote only")
     if a.votes:
         try:
             engine.decider = build_decider(env, state, engine)
@@ -392,6 +402,13 @@ def run(argv: list[str] | None = None) -> int:
         r.expire(stream, 300)
 
     engine.reply = reply
+
+    def announce(call: dict[str, Any]) -> None:
+        # every posted call, for the voice announcer (services/referee `announce`): a stream, so a late listener
+        # never replays old points
+        r.xadd(EV_CALLS, {"json": json.dumps(call)}, maxlen=1000, approximate=True)
+
+    engine.announce = announce
     log.info(
         json.dumps(
             {"svc": "engine", "msg": "started", "state": a.state, "votes": a.votes, "track3d": a.field is not None}
