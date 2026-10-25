@@ -619,7 +619,8 @@ export const insert_house_rule = spacetimedb.reducer({ json: t.string() }, (ctx,
 
 const ENGINE_HR_STATUS = ["pending", "approved", "rejected", "failed", "applied", "reverted"];
 const COMPILER_HR_STATUS = ["compiling", "ready", "failed"];
-const HR_FIELDS = ["plan_md", "steps", "diff", "results", "pack_path", "error", "backend"];
+// decision: the Droid's {applies, rationale, decided_by: droid} (D-43); run_id: the droid_run row of that run
+const HR_FIELDS = ["plan_md", "steps", "diff", "results", "pack_path", "error", "backend", "decision", "run_id"];
 
 /** Engine. {rule_version, status: pending|approved|rejected|failed, error?, pack_path?} */
 export const set_house_rule_status = spacetimedb.reducer({ json: t.string() }, (ctx, { json }) => {
@@ -904,6 +905,23 @@ export const update_droid_run = spacetimedb.reducer({ json: t.string() }, (ctx, 
     if (num(o, "updated_at_ms") < old.updated_at_ms) throw new SenderError("stale run snapshot");
   }
   writeDroidRun(ctx, o);
+});
+/**
+ * Engine. A queued DroidRun request (D-43): an interpreter for a sport with no approved one (trigger sport_module, an
+ * event) or the judge's "Regenerate interpreter" (trigger user). The compiler subscribes to droid_run WHERE status =
+ * 'queued' and runs it under this run_id (update_droid_run keeps sport, game and kind).
+ */
+export const request_droid_run = spacetimedb.reducer({ json: t.string() }, (ctx, { json }) => {
+  requireRole(ctx, "engine");
+  const o = parseObj(json);
+  oneOf(o, "status", ["queued"]);
+  oneOf(o, "kind", ["interpreter"]);
+  const trigger = record(o, "trigger");
+  if (!["sport_module", "user"].includes(String(trigger.source))) {
+    throw new SenderError("a requested run's trigger.source is sport_module or user");
+  }
+  if (ctx.db.droid_run.run_id.find(str(o, "run_id"))) throw new SenderError("run_id exists");
+  writeDroidRun(ctx, { ...o, trigger: { ...trigger, requested_by: "engine" } });
 });
 /** Engine. {run_id, status: approved|rejected, error?}; approval requires a ready, passing run. */
 export const set_droid_run_status = spacetimedb.reducer({ json: t.string() }, (ctx, { json }) => {
