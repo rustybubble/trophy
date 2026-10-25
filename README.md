@@ -4,14 +4,14 @@
 
 Point a phone at a ping-pong table and Trophy referees the game:
 - It **keeps score**.
-- It **calls the edge rule and illegal serves**. Under the official ITTF law, the toss must rise at least 16 cm off the open palm, go up within 30° of vertical and be struck on the way down. Hidden serves and net-touch lets are called too.
+- It **calls the edge rule**. Illegal serves follow the official ITTF law: the toss must rise at least 16 cm off the open palm, go up within 30° of vertical and be struck on the way down. Today that is **measured on recorded serves only**: the serve, hidden-serve and net-let rules are in the rule pack, but they don't fire live yet, because the live 2D pipeline doesn't emit serve-toss or net-touch events.
 - It **speaks every call** in a referee voice.
 - Every call shows how sure it is: **AUTO** at p ≥ 0.90, **BETA** with its probability and open to challenge, or **PLAYERS DECIDE** when the cameras can't judge it.
 - A **challenge** brings up an **instant replay** with a second opinion from Claude next to the geometry. The vote runs in the background and never holds up a call.
 - Players can **ask the ref** by voice. Judgement questions ("was that on the edge?") are answered by a geometry check on the ball track; rules questions are answered from the sport's rule pack and the group's approved house rules.
 - Players can **add their own house rule** in plain English, and a Factory Droid writes, tests and applies it.
 
-> **Status (2026-10-24):** the platform is on `main`: capture, the gateway, replay, voice, the Spacetime world state, the judges' dashboard and Trophy Watch. The referee itself (rule engine, vision, Droid compiler, referee voice) is in review on rustybubble/trophy#19, so on `main` a game streams, records and replays, but nothing calls a point yet. Every number below is measured, with the device and method next to it; anything not measured yet says so.
+> **Status (2026-10-25):** the platform is on `main`: capture, the gateway, replay, voice, the Spacetime world state, the judges' dashboard and Trophy Watch. The referee itself (rule engine, vision, Droid compiler, referee voice) is in review on rustybubble/trophy#19, #36 and #37, so on `main` a game streams, records and replays, but nothing calls a point yet. Claude's challenge vote and ask-the-ref have not run live yet (no Anthropic key on the demo Mac). No accuracy has been measured on real play. Every number below is measured, with the device and method next to it; anything not measured yet says so.
 
 ## Repo map
 | Path | What |
