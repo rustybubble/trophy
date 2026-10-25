@@ -1,4 +1,4 @@
-.PHONY: dev e2e contracts fixtures check stdb-publish stdb-provision stdb-bindings stdb-seed
+.PHONY: dev e2e e2e-calls contracts fixtures check stdb-publish stdb-provision stdb-bindings stdb-seed
 # macOS and most Linux ship only `python3`; Windows has `python` (and a Store stub named python3).
 ifeq ($(OS),Windows_NT)
 PYTHON ?= python
@@ -9,6 +9,8 @@ dev:        ## (re)start the whole stack natively from the Procfile (also: npm r
 	$(PYTHON) scripts/dev.py
 e2e:        ## CC BY clip as a phone -> frames -> recorder/replay -> Spacetime observations + calls (C2; stack running)
 	uv run --project services/gateway --frozen python scripts/e2e.py
+e2e-calls:  ## make e2e plus hop 5: the calls obey the contract, the gate and the score (needs flight + engine)
+	uv run --project services/gateway --frozen python scripts/e2e.py --calls-hop
 contracts:  ## regenerate TS (@trophy/contracts) + Pydantic (py-trophy) from packages/contracts/*.schema.json
 	node scripts/gen-contracts.mjs
 fixtures:   ## rebuild the labelled-synthetic MockState scripts
