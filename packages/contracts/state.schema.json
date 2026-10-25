@@ -375,7 +375,12 @@
           "type": "string"
         },
         "source": {
-          "enum": ["typed", "voice"]
+          "enum": ["typed", "voice", "correction"]
+        },
+        "evidence": {
+          "type": "object",
+          "description": "source = correction: the judge's label behind this run (sample name under data/local/labelled/<sport>, span, winner, voided call ids)",
+          "additionalProperties": true
         },
         "status": {
           "$ref": "#/$defs/HouseRuleStatus"

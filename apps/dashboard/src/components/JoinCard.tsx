@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import type { Session } from "../lib/api.ts";
+import { watchLink, type Session } from "../lib/api.ts";
 
 export function JoinCard({ session }: { session: Session }) {
   const [svg, setSvg] = useState<string>();
@@ -20,6 +20,13 @@ export function JoinCard({ session }: { session: Session }) {
       </p>
       <p className="muted small">
         Game {session.gameId}. Put the camera side-on at the net line, landscape, on a fixed mount.
+      </p>
+      <p className="small">
+        After the game:{" "}
+        <a href={watchLink(session.gameId, session.joinKey)} target="_blank" rel="noreferrer">
+          Trophy Watch ↗
+        </a>{" "}
+        <span className="muted">(recap, ★ Play of the game, every call's replay)</span>
       </p>
     </div>
   );

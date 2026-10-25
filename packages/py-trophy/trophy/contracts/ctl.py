@@ -133,6 +133,21 @@ class SubmitHouseRuleArgs(BaseModel):
     source: Literal["typed", "voice"]
 
 
+class LabelRallyArgs(BaseModel):
+    """
+    label_rally (judge): the span t0_s..t1_s (defaults: since the previous label, until now) was ONE rally won by `winner`. The engine fixes the score, exports the span as a labelled sample under data/local/labelled/<sport>/ and files a `correction` house rule for the Droid.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    winner: str = Field(..., max_length=16, min_length=1)
+    t0_s: float | None = Field(None, ge=0.0)
+    t1_s: float | None = Field(None, ge=0.0)
+    note: str | None = Field(None, max_length=300)
+
+
 class HouseRuleVersionArgs(BaseModel):
     """
     approve_house_rule, reject_house_rule
@@ -143,6 +158,67 @@ class HouseRuleVersionArgs(BaseModel):
         populate_by_name=True,
     )
     rule_version: str
+
+
+class CheckReply(BaseModel):
+    """
+    The referee reply (was CheckResult; renamed at the demo merge because track3d.schema.json owns CheckResult, the check function's own return). What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-36 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    check: str = Field(..., description="e.g. in_out")
+    verdict: str | None = Field(
+        None, description="e.g. in, out, edge, A, B, top_edge, side_face, legal, too_low, angled, yes, no"
+    )
+    p: float | None = Field(None, description="Probability of verdict, carrying the track sigma", ge=0.0, le=1.0)
+    evidence: dict[str, Any] | None = Field(
+        None, description="Check-specific numbers: margin_m, sigma_m, line, height_m, angle_deg, t_game_s, shots ..."
+    )
+    inputs: dict[str, Any] | None = Field(
+        None, description="The resolved arguments the check ran with (t_game_s, rally_no ...)"
+    )
+    calibrated: bool = Field(..., description="false on the unedited golden library or when sigma was a default")
+    tier: Literal["AUTO", "BETA", "PLAYERS"] | None = Field(None, description="The tier ceiling the engine applied")
+    error: str | None = Field(None, description="no_such_check | no_data | failed:<reason> | timeout")
+    latency_ms: float
+
+
+class RunCheckArgs(BaseModel):
+    """
+    Referee -> engine: run one session check and XADD a CheckReply to the Redis stream `reply_to` (D-36 §5).
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    check: str
+    args: dict[str, Any] = Field(
+        ...,
+        description="t_game_s (absolute, field clock) when known, else ref: last | last_rally | call:<call_id>; plus check-specific args",
+    )
+    reply_to: str = Field(..., description="Redis stream key reply:<req_id>; the engine XADDs {json: CheckReply} once")
+    question: str | None = Field(None, description="The spoken question, for the engine's transcript")
+
+
+class RequestCheckArgs(BaseModel):
+    """
+    Referee -> engine: no session check answers this question. The engine opens a droid_run of kind new_check (the Droid writes and gates it in 30-90 s), runs it, and replies on `reply_to` with a CheckReply, or one with `error` when the run failed.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    question: str
+    check_hint: str | None = Field(
+        None, description="The router's suggested signature, e.g. ball_speed(rally) -> max speed in m/s"
+    )
+    args: dict[str, Any] | None = None
+    reply_to: str
 
 
 class AskCitation(BaseModel):
@@ -270,6 +346,9 @@ class CtlCommand(BaseModel):
         "bookmark",
         "clip_that",
         "review_call",
+        "label_rally",
+        "run_check",
+        "request_check",
     ] = Field(..., title="CtlCmd")
     game_id: str
     t_srv_ms: float

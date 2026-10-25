@@ -90,3 +90,31 @@ export async function joinDashboard(gameId: string, joinKey: string): Promise<Se
 export function ctl(s: Session, cmd: string, args: Record<string, unknown> = {}): Promise<{ req_id: string }> {
   return req("/ctl", { method: "POST", body: JSON.stringify({ cmd, args }) }, s.token);
 }
+
+/** Trophy Watch for this game: the Vite dev server on 5175 on a local origin, /watch/ behind Caddy. */
+export function watchLink(gameId: string, joinKey: string): string {
+  const q = `?g=${encodeURIComponent(gameId)}&k=${encodeURIComponent(joinKey)}`;
+  const local = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+  return local ? `${location.protocol}//${location.hostname}:5175/watch/${q}` : `${location.origin}/watch/${q}`;
+}
+
+/** The referee's own recording of a window on one camera (the recorder's archive), cut by the gateway. */
+export function replayClipUrl(s: Session, camId: string, t0: number, t1: number): string {
+  const q = new URLSearchParams({ cam: camId, t0: t0.toFixed(3), t1: t1.toFixed(3), token: s.token });
+  return `/api/replay/${s.gameId}/clip?${q}`;
+}
+
+export interface Overlay {
+  marks: {
+    t_game_s: number;
+    px: number[];
+    ellipse_px: { cx: number; cy: number; rx: number; ry: number; angle_rad: number };
+  }[];
+  warnings: string[];
+}
+
+/** The call's bounce marks and their σ ellipses projected onto that camera's frame (source pixels, 1280×720). */
+export function replayOverlay(s: Session, camId: string, t0: number, t1: number, callId: string): Promise<Overlay> {
+  const q = new URLSearchParams({ cam: camId, t0: t0.toFixed(3), t1: t1.toFixed(3), call_id: callId });
+  return req(`/replay/${s.gameId}/overlay?${q}`, {}, s.token);
+}

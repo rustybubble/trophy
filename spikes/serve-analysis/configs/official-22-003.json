@@ -1,0 +1,127 @@
+{
+  "video": "samples/official-22-003.mp4",
+  "width": 1280,
+  "height": 720,
+  "table_corners_px": [
+    [
+      327,
+      371
+    ],
+    [
+      972,
+      376
+    ],
+    [
+      844,
+      304
+    ],
+    [
+      435,
+      302
+    ]
+  ],
+  "table_corners_world_m": [
+    [
+      -1.37,
+      -0.7625,
+      0.76
+    ],
+    [
+      1.37,
+      -0.7625,
+      0.76
+    ],
+    [
+      1.37,
+      0.7625,
+      0.76
+    ],
+    [
+      -1.37,
+      0.7625,
+      0.76
+    ]
+  ],
+  "note": "Manually selected visible tabletop corners in original frame 0. Fixed camera, centered principal point, square pixels, lens distortion assumed zero. Single-view metric estimates are approximate.",
+  "player_rois_px": [
+    [
+      100,
+      100,
+      620,
+      650
+    ],
+    [
+      650,
+      100,
+      1190,
+      650
+    ]
+  ],
+  "events": [
+    {
+      "frame": 0,
+      "kind": "start"
+    },
+    {
+      "frame": 12,
+      "kind": "release"
+    },
+    {
+      "frame": 48,
+      "kind": "hit"
+    },
+    {
+      "frame": 59,
+      "kind": "bounce"
+    },
+    {
+      "frame": 86,
+      "kind": "bounce"
+    },
+    {
+      "frame": 106,
+      "kind": "hit"
+    },
+    {
+      "frame": 126,
+      "kind": "bounce"
+    },
+    {
+      "frame": 135,
+      "kind": "hit"
+    },
+    {
+      "frame": 161,
+      "kind": "bounce"
+    },
+    {
+      "frame": 163,
+      "kind": "hit"
+    },
+    {
+      "frame": 184,
+      "kind": "bounce"
+    },
+    {
+      "frame": 202,
+      "kind": "hit"
+    },
+    {
+      "frame": 226,
+      "kind": "bounce"
+    },
+    {
+      "frame": 242,
+      "kind": "hit"
+    },
+    {
+      "frame": 260,
+      "kind": "bounce"
+    },
+    {
+      "frame": 271,
+      "kind": "end"
+    }
+  ],
+  "event_provenance": "Demo event boundaries selected from observed 2D direction changes. Approximate and manually reviewed, not ground-truth contact times."
+}

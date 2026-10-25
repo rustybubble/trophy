@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trophy referee speaker</title>
+<style>
+  body { font: 16px system-ui, sans-serif; margin: 2rem; max-width: 40rem; background: #111; color: #eee; }
+  button, input, select { font: inherit; padding: .5rem .8rem; }
+  #log { white-space: pre-wrap; font: 13px ui-monospace, monospace; color: #9c9; margin-top: 1rem; }
+</style>
+</head>
+<body>
+<h1>Trophy referee speaker</h1>
+<p>Plays the server-side ref voice relayed on <code>/ws/audio</code> (PCM s16le). Tap once to unlock audio.</p>
+<button id="start">Listen</button>
+<form id="say" style="margin-top:1rem">
+  <input id="text" size="40" value="Out by three centimetres. Clear." />
+  <select id="voice"><option>ref</option><option>calls</option></select>
+  <button>Speak</button>
+</form>
+<div id="log"></div>
+<script>
+  const log = (m) => { document.getElementById("log").textContent += m + "\n"; };
+  let ac, next = 0, rate = 24000;
+  document.getElementById("start").onclick = async () => {
+    ac = new AudioContext();
+    await ac.resume();
+    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/audio`);
+    ws.onmessage = (e) => {
+      const m = JSON.parse(e.data);
+      if (m.type === "hello") { rate = m.sample_rate; log(`listening at ${rate} Hz`); return; }
+      if (m.type !== "tts" || !m.pcm_b64) return;
+      const bin = atob(m.pcm_b64), n = bin.length / 2, f = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const v = (bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8)) << 16 >> 16;
+        f[i] = v / 32768;
+      }
+      const buf = ac.createBuffer(1, n, rate);
+      buf.copyToChannel(f, 0);
+      const src = ac.createBufferSource();
+      src.buffer = buf; src.connect(ac.destination);
+      next = Math.max(next, ac.currentTime + 0.02);
+      src.start(next); next += buf.duration;
+    };
+    ws.onclose = () => log("audio socket closed");
+  };
+  document.getElementById("say").onsubmit = async (e) => {
+    e.preventDefault();
+    const t0 = performance.now();
+    const r = await fetch("/speak", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: document.getElementById("text").value, voice: document.getElementById("voice").value }) });
+    const j = await r.json();
+    log(`${r.status} ${JSON.stringify(j)} (${(performance.now() - t0).toFixed(0)} ms round trip)`);
+  };
+</script>
+</body>
+</html>

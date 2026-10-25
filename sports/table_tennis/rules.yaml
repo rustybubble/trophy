@@ -1,0 +1,197 @@
+# Sport module: table tennis rule pack. WRITTEN BY A FACTORY DROID, not by hand (D-42).
+#   run 01M5RX1CR1B10F3R0CQ1CAEGCR (claude-sonnet-5, effort low, first attempt, 531 s; gate 34/34 in 810 ms), 2026-10-24,
+#   sandbox commit 289aae2afeef7e0e412a52055fc2251dae6759d3; job `trophy-droid compile-rules --sport table_tennis`.
+#   Inputs: sports/table_tennis/laws.md (ITTF ch. 2, paraphrased), the engine's vocabulary (`python -m
+#   trophy_engine.vocabulary`), the labelled synthetic rallies and the judge-labelled recording in
+#   evals/fixtures/recorded/table_tennis. The `rules:` list started empty; params/field/scoring (the table and the
+#   scoring system) were given. Every rule cites the clause it implements; the Droid's own notes stay as comments.
+#   Laws it declared not encodable from the 2D pipeline: 2.6.2 toss, 2.6.4 position, 2.6.5 hidden serve (rules are
+#   present but need the fused 3D track's serve_* events). Validated by rulepack.schema.json. Agent 2 owns field:.
+#   The previous hand-written pack is kept only as a test fixture: services/engine/tests/fixtures/.
+#   Repaired by correction run 01M5RYXPPF6WP7WXAQDKSJN0ZD (effort minimal, first attempt, 328 s; gate 52/52 in 1.3 s), 2026-10-25,
+#   sandbox commit a44ff4b94bd5e41c0c822c5d02cacca6464df251, after the judge labelled live game g_tcfktwyn ("one rally,
+#   won by B"): evidence_min_conf 0.80 -> 0.82 and double_bounce_min_p_in 0.9 (the repeat bounce must be inside the
+#   lines, ittf:2.1.2). Gated on 2 synthetic + 5 judge-labelled recorded rallies.
+sport: table_tennis
+family: flight
+version: 1
+name: Table tennis (pickup)
+teams:
+  - {team_id: A, name: Team A, color: "#e4572e"}
+  - {team_id: B, name: Team B, color: "#2e86ab"}
+params:
+  edge_band_m: 0.03
+  serve_min_toss_m: 0.1524      # D-22: the toss must rise more than 6 in (STRETCH: needs serve_toss observations)
+  serve_max_angle_rad: 0.5236   # D-22: within 30 degrees of vertical
+  net_let_on_serve: true        # a serve that clips the net and lands in is replayed (ITTF 2.9.1)
+  serve_hidden_min_visible: 0.3 # ittf:2.6.5: below this the ball was effectively hidden from the receiver
+  evidence_min_cams: 2          # a bounce/net seen by fewer cams AND below evidence_min_conf never reaches the rules
+  evidence_min_conf: 0.82       # a single-camera table bounce at conf 0.811 is an edge/side-face graze (p_in ~0.57,
+                                 # 7 mm from the sideline): below this it stays an observation and never updates rally state
+  double_bounce_max_gap_s: 1.0  # a same-side bounce pair more than this apart is not treated as one uninterrupted double bounce
+  double_bounce_min_side_p: 0.98 # both bounces of the pair must be almost certainly on that side (excludes near-net side_p ambiguity)
+  double_bounce_min_p_in: 0.9   # the repeat bounce must be almost certainly within the table lines (ittf:2.1.2), not an edge/side-face graze
+variants:
+  ittf_strict: {serve_min_toss_m: 0.16, serve_max_angle_rad: 0.0873}
+field:
+  units: m
+  frame: "Origin at the centre of the table top; +x toward end B; +y left when facing from A to B; z up. Net plane x = 0."
+  dims: {length: 2.74, width: 1.525, net_height: 0.1525}
+  landmarks:
+    - {name: A_left, pos_m: [-1.37, 0.7625], prompt: "Team A's end, left corner"}
+    - {name: A_right, pos_m: [-1.37, -0.7625], prompt: "Team A's end, right corner"}
+    - {name: B_right, pos_m: [1.37, -0.7625], prompt: "Team B's end, right corner"}
+    - {name: B_left, pos_m: [1.37, 0.7625], prompt: "Team B's end, left corner"}
+  lines:
+    end_A: [[-1.37, -0.7625], [-1.37, 0.7625]]
+    end_B: [[1.37, -0.7625], [1.37, 0.7625]]
+    side_left: [[-1.37, 0.7625], [1.37, 0.7625]]
+    side_right: [[-1.37, -0.7625], [1.37, -0.7625]]
+    net: [[0.0, -0.7625], [0.0, 0.7625]]
+  zones:
+    side_A: [[-1.37, -0.7625], [0.0, -0.7625], [0.0, 0.7625], [-1.37, 0.7625]]
+    side_B: [[0.0, -0.7625], [1.37, -0.7625], [1.37, 0.7625], [0.0, 0.7625]]
+scoring:
+  template: rally
+  params:
+    points_to_win: 11
+    win_by: 2
+    serves_per_turn: 2
+    deuce_serves_per_turn: 1    # alternate every point from 10-10
+    games_to_win: 1
+rules:
+  # ittf:2.9.1.1 - a serve that clips the net assembly and still lands correctly on the
+  # receiver's court is a let, not a fault. We only know the clip was "correct" once the
+  # following bounce lands legally on the receiver's side during the serve phase.
+  - id: serve_let_net_touch
+    name: Serve clips net, lands in -> let
+    tier: BETA
+    kind: line_call
+    when: "ev.type == 'bounce' && params.net_let_on_serve && rally.phase == 'serve' && rally.nets >= 1 && ev.side == rally.receiver && ev.payload.surface == 'table'"
+    check: code
+    outcome: let
+    text: "Let - serve touched the net"
+    speech: "Let, serve touched the net."
+    requires: [net, bounce]
+    rule_ref: "ittf:2.9.1.1"
+
+  # ittf:2.6.2 (D-31 review criterion) - toss must rise >= serve_min_toss_m and stay within
+  # serve_max_angle_rad of vertical on the way up. Needs the fused 3D track (serve_toss);
+  # not produced by the 2D pipeline, so this never fires on the 2-camera samples.
+  - id: serve_toss_fault
+    name: Illegal serve toss
+    tier: BETA
+    kind: violation
+    when: "ev.type == 'serve_toss' && (ev.payload.height_m < params.serve_min_toss_m || ev.payload.angle_from_vertical_rad > params.serve_max_angle_rad || ev.payload.struck_on_descent == false)"
+    check: code
+    outcome: point
+    team: "opponent(ev.payload.server_side)"
+    points: 1
+    text: "Fault - illegal serve toss"
+    speech: "Fault, the toss was not legal."
+    requires: [serve_toss]
+    rule_ref: "ittf:2.6.2"
+
+  # ittf:2.6.4 - from the start of service until it is struck the ball must stay above the
+  # playing surface and behind the server's end line. Needs serve_position (3D track only).
+  - id: serve_position_fault
+    name: Illegal serve position
+    tier: BETA
+    kind: violation
+    when: "ev.type == 'serve_position' && ((ev.payload.p_above < 0.1 && ev.payload.min_above_surface_m < 0.0) || (ev.payload.p_behind < 0.1 && ev.payload.min_behind_end_line_m < 0.0))"
+    check: code
+    outcome: point
+    team: "opponent(ev.payload.server_side)"
+    points: 1
+    text: "Fault - illegal serve position"
+    speech: "Fault, the ball was not above the surface and behind the line."
+    requires: [serve_position]
+    rule_ref: "ittf:2.6.4"
+
+  # ittf:2.6.5 - the ball must not be hidden from the receiver between release and strike.
+  # Needs serve_hidden (3D track only).
+  - id: serve_hidden_fault
+    name: Serve hidden from receiver
+    tier: BETA
+    kind: violation
+    when: "ev.type == 'serve_hidden' && ev.payload.visible_fraction < params.serve_hidden_min_visible"
+    check: code
+    outcome: point
+    team: "opponent(ev.payload.server_side)"
+    points: 1
+    text: "Fault - serve hidden from receiver"
+    speech: "Fault, the serve was hidden."
+    requires: [serve_hidden]
+    rule_ref: "ittf:2.6.5"
+
+  # ittf:2.10.1.3 - the ball bounces twice on the same side with no racket contact between
+  # the bounces: the side that let it bounce twice loses the point. Gated tight (quick,
+  # no intervening hit, confident side assignment) so a single-camera reversal or a bounce
+  # pair a second apart (same side, hit in between) is never mistaken for this. Also
+  # requires the repeat bounce to be almost certainly inside the lines (ev.payload.p_in):
+  # a single-camera graze on the side face/edge (p_in near 0.5) is not a confirmed table
+  # touch under ittf:2.1.2, so it must not be allowed to end the rally.
+  - id: double_bounce_same_side
+    name: Double bounce, same side
+    tier: BETA
+    kind: point
+    when: "ev.type == 'bounce' && ev.payload.surface == 'table' && ev.payload.p_in >= params.double_bounce_min_p_in && rally.last_bounce_surface == 'table' && ev.side == rally.last_bounce_side && !rally.hit_since_last_bounce && rally.t_since_last_bounce_s >= 0.0 && rally.t_since_last_bounce_s <= params.double_bounce_max_gap_s && rally.last_bounce_side_p >= params.double_bounce_min_side_p && ev.side_p >= params.double_bounce_min_side_p"
+    check: code
+    outcome: point
+    team: "opponent(ev.side)"
+    points: 1
+    text: "Point {team} - double bounce"
+    speech: "Point, double bounce."
+    requires: [bounce]
+    rule_ref: "ittf:2.10.1.3"
+
+  # ittf:2.7.1 / 2.10.1.2 - a shot that clips the net and drops back on the striker's own
+  # side never reaches the opponent's court: failure to make a correct return.
+  - id: net_into_own_side_fault
+    name: Ball stops at net (own side)
+    tier: BETA
+    kind: point
+    when: "ev.type == 'net' && ev.payload.kind == 'into'"
+    check: code
+    outcome: point
+    team: "opponent(ev.payload.from_side)"
+    points: 1
+    text: "Point {team} - net"
+    speech: "Point, into the net."
+    requires: [net]
+    rule_ref: "ittf:2.7.1"
+
+  # ittf:2.10.1.3 / 2.10.1.4 - the ball touches the floor (or anything but the net
+  # assembly) before being struck again: failure to make a correct return. Gated on at
+  # least one contact so a pre-rally warm-up bounce is never scored.
+  - id: floor_bounce_fault
+    name: Ball bounces off the table
+    tier: BETA
+    kind: point
+    when: "ev.type == 'bounce' && ev.payload.surface == 'floor' && rally.contacts >= 2"
+    check: code
+    outcome: point
+    team: "opponent(ev.side)"
+    points: 1
+    text: "Point {team} - ball off the table"
+    speech: "Point, the ball went off the table."
+    requires: [bounce]
+    rule_ref: "ittf:2.10.1.3"
+
+  # ittf:2.5.3/2.5.4 fallback - when the ball is called dead for any reason once play has
+  # started, the side that last let it bounce (or the server, if nobody has) loses the
+  # point. This is the backstop for rallies that end in a plain "lost"/"stopped" ball_dead
+  # rather than an explicit floor bounce.
+  - id: ball_dead_fault
+    name: Rally ends, point to opponent of fault side
+    tier: BETA
+    kind: point
+    when: "ev.type == 'ball_dead' && rally.contacts >= 2"
+    check: code
+    outcome: point
+    team: "opponent(rally.at_fault_side)"
+    points: 1
+    text: "Point {team}"
+    speech: "Point."
+    requires: [ball_dead]
+    rule_ref: "ittf:2.10.1.2"

@@ -1,0 +1,46 @@
+{
+  "source": "https://cloud.cs.uni-tuebingen.de/index.php/s/SCKq85JZEmKoC6J",
+  "project": "https://cogsys-tuebingen.github.io/tt3d/",
+  "files": [
+    {
+      "path": "samples/tt3d/game_00/oblique-010.mp4",
+      "sha256": "64ce636fc26d661e305f8eaeb3f49f0a5a655feef0b2c7069f4c3f8ad9dcb76d",
+      "bytes": 2766415
+    },
+    {
+      "path": "samples/tt3d/game_00/side-010.mp4",
+      "sha256": "9a4044a5011fbc3ba003d4d9d82ee69ba630d379fe3974f9867632d990ca4a66",
+      "bytes": 1981011
+    },
+    {
+      "path": "samples/tt3d/game_00/038/oblique.mp4",
+      "sha256": "72979c3f927594552477806b085093e5bb9baba8ec8411fc8fd942226ba23727",
+      "bytes": 2017446
+    },
+    {
+      "path": "samples/tt3d/game_00/038/side.mp4",
+      "sha256": "e8a9bdb8c90d882dbcb509e32504b14df265e87080a20b767936a4b6c5f85fb5",
+      "bytes": 1334440
+    },
+    {
+      "path": "samples/tt3d/game_00/oblique.yaml",
+      "sha256": "833bd05eccccd27fccfe1fdbdf26ad4e0258582bda960ddba0439e9d836fbde0",
+      "bytes": 158
+    },
+    {
+      "path": "samples/tt3d/game_00/side.yaml",
+      "sha256": "065824f900a83f761bebb7ddc49096755ef3ecdb3afe4e60233ca0c72996bb3b",
+      "bytes": 157
+    },
+    {
+      "path": "samples/tt3d/game_00/reference-010.csv",
+      "sha256": "ccc47c9b42b3667f34308a20b5074c1033caaa1fcd4837425c057e9522347da8",
+      "bytes": 102066
+    },
+    {
+      "path": "samples/tt3d/game_00/038/reference.csv",
+      "sha256": "0f77eb1feed6501d951a44e7fbb804f37bc6eecb5d1f42371d49ab16141bfacc",
+      "bytes": 61113
+    }
+  ]
+}

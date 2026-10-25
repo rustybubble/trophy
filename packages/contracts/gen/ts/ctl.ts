@@ -23,7 +23,10 @@ export type CtlCmd =
   | "ask_logged"
   | "bookmark"
   | "clip_that"
-  | "review_call";
+  | "review_call"
+  | "label_rally"
+  | "run_check"
+  | "request_check";
 
 /**
  * trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 §9). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (§13).
@@ -161,6 +164,18 @@ export interface SubmitHouseRuleArgs {
   source: "typed" | "voice";
 }
 /**
+ * label_rally (judge): the span t0_s..t1_s (defaults: since the previous label, until now) was ONE rally won by `winner`. The engine fixes the score, exports the span as a labelled sample under data/local/labelled/<sport>/ and files a `correction` house rule for the Droid.
+ *
+ * This interface was referenced by `CtlCommand`'s JSON-Schema
+ * via the `definition` "LabelRallyArgs".
+ */
+export interface LabelRallyArgs {
+  winner: string;
+  t0_s?: number;
+  t1_s?: number;
+  note?: string;
+}
+/**
  * approve_house_rule, reject_house_rule
  *
  * This interface was referenced by `CtlCommand`'s JSON-Schema
@@ -168,6 +183,83 @@ export interface SubmitHouseRuleArgs {
  */
 export interface HouseRuleVersionArgs {
   rule_version: string;
+}
+/**
+ * The referee reply (was CheckResult; renamed at the demo merge because track3d.schema.json owns CheckResult, the check function's own return). What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-36 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.
+ *
+ * This interface was referenced by `CtlCommand`'s JSON-Schema
+ * via the `definition` "CheckReply".
+ */
+export interface CheckReply {
+  /**
+   * e.g. in_out
+   */
+  check: string;
+  /**
+   * e.g. in, out, edge, A, B, top_edge, side_face, legal, too_low, angled, yes, no
+   */
+  verdict?: string;
+  /**
+   * Probability of verdict, carrying the track sigma
+   */
+  p?: number;
+  /**
+   * Check-specific numbers: margin_m, sigma_m, line, height_m, angle_deg, t_game_s, shots ...
+   */
+  evidence?: {};
+  /**
+   * The resolved arguments the check ran with (t_game_s, rally_no ...)
+   */
+  inputs?: {};
+  /**
+   * false on the unedited golden library or when sigma was a default
+   */
+  calibrated: boolean;
+  /**
+   * The tier ceiling the engine applied
+   */
+  tier?: "AUTO" | "BETA" | "PLAYERS";
+  /**
+   * no_such_check | no_data | failed:<reason> | timeout
+   */
+  error?: string;
+  latency_ms: number;
+}
+/**
+ * Referee -> engine: run one session check and XADD a CheckReply to the Redis stream `reply_to` (D-36 §5).
+ *
+ * This interface was referenced by `CtlCommand`'s JSON-Schema
+ * via the `definition` "RunCheckArgs".
+ */
+export interface RunCheckArgs {
+  check: string;
+  /**
+   * t_game_s (absolute, field clock) when known, else ref: last | last_rally | call:<call_id>; plus check-specific args
+   */
+  args: {};
+  /**
+   * Redis stream key reply:<req_id>; the engine XADDs {json: CheckReply} once
+   */
+  reply_to: string;
+  /**
+   * The spoken question, for the engine's transcript
+   */
+  question?: string;
+}
+/**
+ * Referee -> engine: no session check answers this question. The engine opens a droid_run of kind new_check (the Droid writes and gates it in 30-90 s), runs it, and replies on `reply_to` with a CheckReply, or one with `error` when the run failed.
+ *
+ * This interface was referenced by `CtlCommand`'s JSON-Schema
+ * via the `definition` "RequestCheckArgs".
+ */
+export interface RequestCheckArgs {
+  question: string;
+  /**
+   * The router's suggested signature, e.g. ball_speed(rally) -> max speed in m/s
+   */
+  check_hint?: string;
+  args?: {};
+  reply_to: string;
 }
 /**
  * This interface was referenced by `CtlCommand`'s JSON-Schema

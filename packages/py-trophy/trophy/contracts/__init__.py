@@ -17,7 +17,11 @@ from .ctl import (
     EmptyArgs,
     AdjustScoreArgs,
     SubmitHouseRuleArgs,
+    LabelRallyArgs,
     HouseRuleVersionArgs,
+    CheckReply,
+    RunCheckArgs,
+    RequestCheckArgs,
     AskCitation,
     AskLoggedArgs,
     WsClientMessage,
@@ -55,6 +59,7 @@ from .event import (
 )
 from .frame import FrameMeta
 from .rulepack import RulePack, Team, Landmark, FieldTemplate, Scoring, Ensemble, Rule
+from .scene import SceneDescriptor, SceneCamera, SceneCourt, SceneBall, L1Record, BounceLabel, SampleLabels
 from .sportmodule import SportConfig, SportModuleRow
 from .state import (
     StateTables,
@@ -76,6 +81,7 @@ from .state import (
     Moment,
     Commentary,
 )
+from .track3d import Track3DSample, Track3DView, CheckResult, Track3DLabels
 from .tracks import BallTrackSample, PlayerBox, PlayersTrackSample
 
 __all__ = [
@@ -88,6 +94,7 @@ __all__ = [
     "BallDeadPayload",
     "BallTrackSample",
     "BookmarkArgs",
+    "BounceLabel",
     "BounceMark",
     "BouncePayload",
     "Calibration",
@@ -98,6 +105,8 @@ __all__ = [
     "CameraHealthArgs",
     "Challenge",
     "ChallengeArgs",
+    "CheckReply",
+    "CheckResult",
     "Citation",
     "ClipThatArgs",
     "ClockSample",
@@ -134,6 +143,8 @@ __all__ = [
     "HouseRuleTest",
     "HouseRuleVersionArgs",
     "ImageSize",
+    "L1Record",
+    "LabelRallyArgs",
     "Landmark",
     "LineCrossPayload",
     "Moment",
@@ -148,10 +159,17 @@ __all__ = [
     "ReachOverNetPayload",
     "RegisterCameraArgs",
     "Replacement",
+    "RequestCheckArgs",
     "ResolveChallengeArgs",
     "ReviewCallArgs",
     "Rule",
     "RulePack",
+    "RunCheckArgs",
+    "SampleLabels",
+    "SceneBall",
+    "SceneCamera",
+    "SceneCourt",
+    "SceneDescriptor",
     "Score",
     "Scoring",
     "ServeHiddenPayload",
@@ -170,6 +188,9 @@ __all__ = [
     "TeamSpec",
     "TossMark",
     "TouchPayload",
+    "Track3DLabels",
+    "Track3DSample",
+    "Track3DView",
     "TrackSample",
     "Vote",
     "WsClientMessage",

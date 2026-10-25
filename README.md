@@ -11,7 +11,7 @@ Point a phone at a ping-pong table and Trophy referees the game:
 - Players can **ask the ref** by voice. Judgement questions ("was that on the edge?") are answered by a geometry check on the ball track; rules questions are answered from the sport's rule pack and the group's approved house rules.
 - Players can **add their own house rule** in plain English, and a Factory Droid writes, tests and applies it.
 
-> **Status (2026-10-25):** the platform is on `main`: capture, the gateway, replay, voice, the Spacetime world state, the judges' dashboard and Trophy Watch. The referee itself (rule engine, vision, Droid compiler, referee voice) is in review on rustybubble/trophy#19, #36 and #37, so on `main` a game streams, records and replays, but nothing calls a point yet. Claude's challenge vote and ask-the-ref have not run live yet (no Anthropic key on the demo Mac). No accuracy has been measured on real play. Every number below is measured, with the device and method next to it; anything not measured yet says so.
+> **Status (2026-10-25, demo day):** the whole referee runs natively on one Mac from `make dev` (branch `demo/integration`, rustybubble/trophy#19). Phones, or recorded clips played as phones from the dashboard's library, stream to the gateway; BlurBall tracks the ball on every camera; the golden table-tennis module turns the tracks into bounces, nets and dead balls; a rule pack **written by the Factory Droid from the ITTF laws** (D-42) calls the points; every call is spoken on the Mac's speaker and on the phones; a challenge opens the instant replay from the referee's own recording on the dashboard and on the phone; a house rule typed or spoken on a phone is compiled, gated and approved live ("first to 7, win by 1": ready in 18.7 s on this Mac today); Trophy Watch opens on the ended game. Claude's background vote on challenged calls and ask-the-ref need `ANTHROPIC_API_KEY` (the referee service refuses to start without it, by design; set on the demo Mac on 2026-10-25). **No accuracy on real footage is claimed**: the calls on the preloaded clips are unlabelled. Every number below is measured, with the device and method next to it; anything not measured yet says so.
 
 ## Repo map
 | Path | What |
@@ -19,18 +19,19 @@ Point a phone at a ping-pong table and Trophy referees the game:
 | `apps/pwa` | Phone app: camera, calls, voice, challenge, replay |
 | `apps/dashboard` | Judges' screen: score, calls, AI votes, Droid panel, ask-the-ref, live world state |
 | `apps/watch` | Trophy Watch: post-game recap, highlights, moments, replay, stats |
-| `services/gateway`, `services/recorder` | Phone API and replay recording |
-| `services/flight` | The ping-pong vision module (arriving with #19) |
-| `services/engine`, `services/compiler`, `services/referee` | Rule engine + AI votes, Factory Droid house rules, the referee voice (arriving with #19) |
+| `services/gateway`, `services/recorder` | Phone API, replay recording, the demo's clip upload + "stream as a phone" |
+| `services/flight` | The ping-pong vision module: BlurBall live on every camera stream, N-camera 3D fusion |
+| `services/engine`, `services/compiler`, `services/referee` | Rule engine + AI votes + 3D checks, Factory Droid house rules, the referee voice |
+| `spikes/serve-analysis` | BlurBall adapter (vendored upstream + official weights), serve spotting, two-camera HMR2 replay, ball-track completion and toss evidence ([reproduce on another computer](spikes/serve-analysis/REPRODUCE.md)) |
 | `spacetime/` | SpacetimeDB module: the shared world state (metadata only, no video) |
 | `packages/` | Contracts (JSON Schema), generated types, shared Python lib, state client |
 | `infra/` | Caddy + Porkbun DNS for `https://trophy.photo` |
 | `docs/` | Plan, interfaces, decisions, progress, agent briefs (`docs/plan/prompts/`), research |
 
 ## Setup
-Everything runs natively on one Mac (we use an M5 Pro); there is no cloud backend (D-30). The phones and the Mac must be on the same Wi-Fi. Full walkthrough: [`docs/plan/prompts/mac-bringup.md`](docs/plan/prompts/mac-bringup.md).
+Everything runs natively on one Mac (we use an M5 Pro); there is no cloud backend (D-30). The phones and the Mac must be on the same Wi-Fi. Full walkthrough: [`docs/plan/prompts/mac-bringup.md`](docs/plan/prompts/mac-bringup.md); the live-demo commands, step by step: [`docs/demo-runbook.md`](docs/demo-runbook.md).
 
-**1. Tools.** `git`, Python 3.11, [`uv`](https://docs.astral.sh/uv/), Node 22 + npm, `ffmpeg`, Redis 7 (`brew install redis`, or Docker), the SpacetimeDB **2.13** CLI (`curl -sSf https://install.spacetimedb.com | sh`), and Caddy built with the Porkbun DNS module, at `~/.trophy/bin/caddy` (`xcaddy build --with github.com/caddy-dns/porkbun`).
+**1. Tools.** `git`, Python 3.11, [`uv`](https://docs.astral.sh/uv/), Node 22 + npm, `ffmpeg`, Redis 7 (`brew install redis`, or Docker), the SpacetimeDB **2.13** CLI (`curl -sSf https://install.spacetimedb.com | sh`), and Caddy built with the Porkbun DNS module at `~/.trophy/bin/caddy`: download it from `https://caddyserver.com/api/download?os=darwin&arch=arm64&p=github.com%2Fcaddy-dns%2Fporkbun` (or `xcaddy build --with github.com/caddy-dns/porkbun`) and check `caddy list-modules | grep porkbun`.
 
 **2. Code and secrets.**
 ```bash
@@ -52,15 +53,15 @@ Then stop that `spacetime`: `make dev` starts its own.
 ```bash
 make dev
 ```
-This (re)starts Redis, SpacetimeDB, the gateway, the recorder, the PWA, the dashboard, Trophy Watch and Caddy from the `Procfile`; `python3 scripts/dev.py --stop` stops them all. Check `curl -s http://127.0.0.1:8000/api/healthz`.
+This (re)starts Redis, SpacetimeDB, the gateway, the recorder, the engine, BlurBall (`flight`), the sport module (`live`), the announcer, the Droid compiler, the PWA, the dashboard, Trophy Watch and Caddy from the `Procfile`; `python3 scripts/dev.py --stop` stops them all, and `python3 scripts/dev.py engine compiler` restarts just those. Check `curl -s http://127.0.0.1:8000/api/healthz`. The `referee` entry (ask the ref) exits until `ANTHROPIC_API_KEY` is in `.env`; the engine turns Claude's vote on by itself once it is.
 
-**5. Point the domain at the Mac.** `python3 infra/dns/porkbun_set_ip.py` sets the `trophy.photo` A record to the Mac's LAN IP. Caddy gets a Let's Encrypt certificate through Porkbun DNS-01, so nothing has to be reachable from the internet.
+**5. Point the domain at the Mac.** `python3 infra/dns/porkbun_set_ip.py` sets the `trophy.photo` A record to the Mac's LAN IP (rerun it whenever DHCP changes the address). Caddy gets a Let's Encrypt certificate through Porkbun DNS-01, so nothing has to be reachable from the internet. Porkbun secret keys start with `sk1_` (lowercase): a capitalised prefix is rejected as "secret key does not match".
 
 **6. Open it.**
 | Who | URL |
 |---|---|
 | **Players' phones** (the camera) | **`https://trophy.photo/cam/`**: create or join a game, mount the phone side-on at the net line, landscape |
-| Judges' dashboard | `https://trophy.photo/` (or `http://127.0.0.1:5174/?demo=table_tennis` for the labelled-synthetic demo) |
+| Judges' dashboard | `https://trophy.photo/` or `http://127.0.0.1:5174/` on the Mac: **Start a game**, then **Play** a preloaded two-camera game or join phones; `?demo=table_tennis` shows the labelled-synthetic script |
 | Trophy Watch (post-game) | `https://trophy.photo/watch/` |
 
 Phones need HTTPS for the camera and microphone, which is why the domain exists. On campus or guest Wi-Fi, check that phones can reach the Mac: client isolation or DNS-rebind filtering blocks it, and a travel router avoids both.
@@ -69,6 +70,10 @@ Phones need HTTPS for the camera and microphone, which is why the domain exists.
 
 ## Cartesia
 Voice is how Trophy referees: every call is spoken, and players talk back to the ref.
+**Every call is spoken on the table speaker.** The engine appends each call to Redis `ev:calls`; `referee announce --speaker`
+(the Procfile's `announcer`) speaks it through Sonic with the calls voice: first audio 83-321 ms after the call, measured
+2026-10-24 on the Mac. The phones speak the same calls through their own Cartesia sockets.
+
 
 **Features used**
 - **Sonic TTS over one WebSocket** per phone (`sonic-3.6`, raw `pcm_f32le` at the device's sample rate, `max_buffer_delay_ms: 0`), opened when the game screen loads, so the first call doesn't pay for the handshake (`apps/pwa/src/lib/voice.ts`).
@@ -142,10 +147,48 @@ Pickup games are how strangers become regulars: a table in a dorm basement, a co
 **What players said** _[OPEN-8: quotes from real players at Cal Hacks go here, with their permission. None yet; we won't invent any.]_
 
 ## Factory Droid
-_TODO (Agent 3, with #19): where the Droid runs, its trigger (`house_rule` row / `calibrate_checks`), the sandbox and exactly what it may touch, the `replay_test` / `check_test` gate, what the dashboard shows, and measured Droid-rule end-to-end time._
+A Factory Droid (`@factory/droid-sdk`, `services/compiler`) is how a judge changes the rules mid-game. It is never in
+the per-call hot path.
+- **Trigger:** a `house_rule` row with status `pending` in Spacetime (the judge typed or said "first to 7, win by 1").
+  `trophy-droid watch` subscribes and starts a run. A second job, `calibrate_checks`, specialises the geometry check
+  library to a camera setup (D-36).
+- **The rules themselves are Droid-written, from the laws.** `trophy-droid compile-rules` gives the Droid the sport's laws
+  (`sports/<sport>/laws.md`, ITTF clause ids), the engine's vocabulary rendered from code (`trophy_engine.vocabulary`: every
+  event field, rally-state field and evidence parameter the engine can supply) and the labelled samples, and starts it from an
+  **empty** `rules:` list; it must cite a clause per rule and declare what it could not encode. A judge's correction on the
+  dashboard ("that was one rally, won by B") becomes a `correction` run: the engine fixes the score, exports the span as a
+  labelled sample, and the Droid repairs the pack against it (D-42).
+- **Sandbox:** a fresh git repository per run in `~/.trophy/droid_runs/<run_id>`, outside the repo, holding only the
+  pack to edit, its schemas, labelled synthetic samples, the brief and one gate script. Three layers enforce it: a
+  PreToolUse hook (`hooks/guard.py`) that allows edits to the job's allowlisted files, reads only inside the sandbox,
+  and exactly one command, the bare `./replay_test` or `./check_test`; a git audit after each turn that fails the run if anything else changed (or
+  nothing did); and the gate itself, which runs the Droid-written code with a clean environment, no network and no
+  writes outside the sandbox (`sandbox-exec` on macOS).
+- **Gate and approval:** `replay_test` replays the labelled fixtures through the candidate module and the rule engine
+  (event counts, timing, the labelled rally winners). On `ready` the dashboard's Droid panel shows the plan, every
+  step, the diff, the gate table and the calls that would change. The judge clicks Approve; the engine loads the pack
+  **from the gated commit** (`git show`), never from the working tree, and hot-loads it.
+- **Measured (this Mac, `claude-sonnet-5`, effort low, single runs):** "a serve that clips the net and lands in is a let"
+  went pending → **ready in 27.5–30.6 s** (first attempt, gate 19/19 in 270 ms), **65.5 s** once under load; approve →
+  hot-load in **0.5–0.8 s**. On the synthetic 3D fixtures, `calibrate_checks` was **ready in 86.9 s** (inside the 90 s cap, over the 60 s target), and a referee `new_check` ("how fast was the ball in that rally") was **ready in 37.2 s** with its answer gated on the session's own track.
 
 ## Anthropic
-_TODO (Agent 3, with #19): our community and its problem, how Claude is used (ask-the-ref phrasing grounded in `rules.yaml` + house rules, the challenge voter), **where it could go wrong** and how we contain it._
+Pickup games have no referee, so close calls end in arguments or a replayed point. Trophy measures what sensors can
+measure and lets the players decide the rest, honestly labelled.
+- **How Claude is used:** the referee voice (`services/referee`) routes a spoken question and phrases the answer from a
+  geometry check's numbers; rules questions are answered only from the sport's `rules.yaml` plus approved house rules;
+  Claude is one of three background voters on a challenged BETA call (`decide()`), and writes post-game commentary
+  from the moment's facts. The Factory Droid runs on a Claude model too.
+- **Where it could go wrong, and the containment:**
+  - *A made-up line call.* Claude never makes one: geometry decides, Claude only phrases, and a vote is shown next to
+    the measurement, labelled uncalibrated.
+  - *A wrong number in a spoken answer.* Every digit Claude says must be one it was given; otherwise the deterministic
+    rendering of the same measurement is used, labelled `template`.
+  - *A confident but unsupported rules answer.* Answers are grounded only in the pack the engine enforces; weak
+    grounding says so instead of guessing.
+  - *A house rule that does something else.* The Droid's sandbox, gate and the judge's approval of a visible diff.
+- **Not yet measured:** no `ANTHROPIC_API_KEY` has been available on the demo Mac, so phrasing latency (budget
+  0.5–1.5 s) and live votes have only been tested against recorded API response shapes.
 
 ## License
 MIT (see [LICENSE](LICENSE)). Third-party code, models and media keep their own terms: see [docs/licenses.md](docs/licenses.md).

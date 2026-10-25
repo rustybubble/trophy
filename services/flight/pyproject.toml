@@ -1,0 +1,38 @@
+[project]
+name = "flight"
+version = "0.1.0"
+description = "Trophy flight: BlurBall on live camera streams, ball tracks, the field-frame 3D map for table tennis."
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "numpy==1.26.4",
+    "opencv-python-headless==4.10.0.84",
+    # flight.live: BlurBall on MPS (the adapter + weights live in spikes/serve-analysis, Mu's validated pins)
+    "torch==2.9.0",
+    "pyyaml==6.0.3",
+    "redis>=5",
+    "trophy",
+]
+
+[tool.uv.sources]
+trophy = { path = "../../packages/py-trophy", editable = true }
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff==0.14.5"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["flight"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

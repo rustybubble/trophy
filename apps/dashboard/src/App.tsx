@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MockScript } from "@trophy/state-client";
-import { createGame, joinDashboard, type Session } from "./lib/api.ts";
+import { createGame, ctl, joinDashboard, watchLink, type Session } from "./lib/api.ts";
 import { useDashboard, type Source } from "./lib/useDashboard.ts";
 import { AskPanel } from "./components/AskPanel.tsx";
 import { CallFeed } from "./components/CallFeed.tsx";
 import { CameraHealth } from "./components/CameraHealth.tsx";
+import { LiveClipsPanel } from "./components/LiveClipsPanel.tsx";
 import { DroidPanel } from "./components/DroidPanel.tsx";
 import { JoinCard } from "./components/JoinCard.tsx";
 import { Scoreboard } from "./components/Scoreboard.tsx";
@@ -12,9 +13,10 @@ import { SportWall } from "./components/SportWall.tsx";
 import { VotesPanel } from "./components/VotesPanel.tsx";
 import { WorldView } from "./components/WorldView.tsx";
 
+// Only ping pong has a vision module and a rule pack; basketball exists as a labelled-synthetic script for UI work.
 const SPORTS = [
-  { id: "table_tennis", name: "Ping pong" },
-  { id: "basketball", name: "Basketball (recorded clip)" },
+  { id: "table_tennis", name: "Ping pong", live: true },
+  { id: "basketball", name: "Basketball (synthetic demo only · not built)", live: false },
 ];
 
 async function loadDemo(sport: string): Promise<MockScript> {
@@ -32,6 +34,8 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string>();
   const [sport, setSport] = useState("table_tennis");
+  const [ending, setEnding] = useState(false);
+  const canStart = SPORTS.find((s) => s.id === sport)?.live ?? false;
 
   // reopen a game from the URL: /?g=<game_id>&k=<join_key>
   useEffect(() => {
@@ -81,7 +85,8 @@ export function App() {
           </select>
           <button
             className="primary"
-            disabled={busy}
+            disabled={busy || !canStart}
+            title={canStart ? undefined : "Not built this weekend: watch the synthetic demo instead"}
             onClick={() =>
               void open(async () => {
                 const g = await createGame(sport);
@@ -119,14 +124,31 @@ export function App() {
               : "connecting…"}
         </span>
         {v.error && <span className="bad">Live state unavailable: {v.error}</span>}
+        {session && v.game?.status === "live" && (
+          <button
+            disabled={ending}
+            onClick={() => {
+              setEnding(true);
+              void ctl(session, "end_game").finally(() => setEnding(false));
+            }}
+          >
+            End game
+          </button>
+        )}
+        {session && v.game?.status === "ended" && (
+          <a className="button" href={watchLink(session.gameId, session.joinKey)} target="_blank" rel="noreferrer">
+            Open Trophy Watch ↗
+          </a>
+        )}
         <button className="ghost" onClick={() => location.assign("/")}>
           New game
         </button>
       </header>
+      {session && <LiveClipsPanel session={session} />}
       <section className="grid">
         <div className="col">
           <Scoreboard scores={v.scores} teams={teams} server={v.game?.server_team_id ?? undefined} />
-          <CallFeed calls={v.calls} challenges={v.challenges} session={session} />
+          <CallFeed calls={v.calls} challenges={v.challenges} cameras={v.cameras} votes={v.votes} session={session} />
         </div>
         <div className="col">
           <WorldView sport={v.game?.sport} observations={v.observations} trail={v.trail} />
