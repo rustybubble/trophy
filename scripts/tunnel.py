@@ -47,16 +47,21 @@ def main() -> int:
         ORIGIN_FILE.unlink(missing_ok=True)
         proc.terminate()
 
-    signal.signal(signal.SIGTERM, stop)
-    signal.signal(signal.SIGINT, stop)
+    # closing the terminal (SIGHUP) must clean up too, or the next run's links point at this dead address
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(sig, stop)
     ORIGIN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    # a file left by a run that was killed names a dead tunnel: never keep it (it used to block the new address)
+    ORIGIN_FILE.unlink(missing_ok=True)
+    published = ""
     try:
         assert proc.stdout
         for line in proc.stdout:
             sys.stdout.write(line)
             m = URL_RE.search(line)
-            if m and not ORIGIN_FILE.exists():
-                ORIGIN_FILE.write_text(m.group(0) + "\n", "utf8")
+            if m and m.group(0) != published:
+                published = m.group(0)
+                ORIGIN_FILE.write_text(published + "\n", "utf8")
                 print(f"\ntunnel: phones join at {m.group(0)}/cam/  (dashboard: {m.group(0)}/)\n", flush=True)
     finally:
         ORIGIN_FILE.unlink(missing_ok=True)

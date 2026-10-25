@@ -12,7 +12,8 @@ export default defineConfig({
     port: 5175,
     strictPort: true,
     allowedHosts: [domain, "localhost", "127.0.0.1"],
-    hmr: { protocol: "wss", host: domain, clientPort: 443 },
+    // no `hmr` option: HMR uses the page's own origin (Caddy at trophy.photo, a public tunnel, or 127.0.0.1).
+    // Pinning trophy.photo made every page loaded through `make tunnel` open a socket that can't connect.
     // the same routes Caddy serves, for testing on http://127.0.0.1:5175/watch/
     proxy: {
       "/api": { target: "http://127.0.0.1:8000", ws: true },

@@ -86,8 +86,10 @@ export function useDashboard(source: Source | undefined): DashboardView {
     const byNewest = <T extends { created_at_ms: number }>(a: T, b: T) => b.created_at_ms - a.created_at_ms;
 
     const offs = [
-      // rows arriving means the live state works, even if the subscription was slow to confirm
-      state.onGame((game) => set(() => ({ game, error: undefined, synthetic: state.synthetic, label: state.label }))),
+      // rows arriving means the live state works, even if the subscription was slow to confirm or needed a retry
+      state.onGame((game) =>
+        set(() => ({ game, ready: true, error: undefined, synthetic: state.synthetic, label: state.label })),
+      ),
       state.onScore((scores) => set(() => ({ scores }))),
       state.onCameras((cameras) => set(() => ({ cameras }))),
       state.onFeeds((feeds) => set(() => ({ feeds: [...feeds].sort((a, b) => a.label.localeCompare(b.label)) }))),

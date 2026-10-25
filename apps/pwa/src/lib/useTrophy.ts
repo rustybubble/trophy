@@ -136,8 +136,10 @@ export function useTrophy(
     const set = (patch: Partial<TrophyView> | ((p: TrophyView) => Partial<TrophyView>)) =>
       setV((p) => ({ ...p, ...(typeof patch === "function" ? patch(p) : patch) }));
     const offs = [
-      // rows arriving means the live state works, even if the subscription was slow to confirm
-      state.onGame((game) => set({ game, error: undefined, synthetic: state.synthetic, label: state.label })),
+      // rows arriving means the live state works, even if the subscription was slow to confirm or needed a retry
+      state.onGame((game) =>
+        set({ game, ready: true, error: undefined, synthetic: state.synthetic, label: state.label }),
+      ),
       state.onScore((scores) => set({ scores })),
       state.onCameras((cameras) => set({ cameras })),
       state.onFeeds((feeds) => set({ feeds })),
