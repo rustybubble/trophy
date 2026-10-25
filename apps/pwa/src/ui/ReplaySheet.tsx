@@ -61,9 +61,7 @@ function ReplayAngle({ feed, win, backend, rate }: { feed: Feed; win: ClipWindow
         preload="auto"
         onError={() => !useFile && setUseFile(true)}
       />
-      <span className="src">
-        {useFile ? "scenario file" : "recorder clip"} · {win.t0_s.toFixed(1)}–{win.t1_s.toFixed(1)} s
-      </span>
+      <span className="src">{feed.label}</span>
     </div>
   );
 }
@@ -80,7 +78,6 @@ export function ReplaySheet(props: {
   const { challenge, calls, votes, backend } = props;
   const call = calls.find((c) => c.id === challenge.call_id);
   const feeds = useMemo(() => sortFeeds(props.feeds), [props.feeds]);
-  const [cam, setCam] = useState<string>();
   const [rate, setRate] = useState(1);
   const verdict = verdictOf(challenge);
   const { text: explanation, replacement } = explanationFor(challenge, calls);
@@ -95,36 +92,21 @@ export function ReplaySheet(props: {
         : [],
     [call, feeds],
   );
-  const active = feeds.find((f) => f.cam_id === cam) ?? feeds[0];
-  const win = windows.find((w) => w.cam_id === active?.cam_id);
   const top = claude?.probs ? Object.entries(claude.probs).sort((a, b) => b[1] - a[1])[0] : undefined;
 
   return (
     <Sheet title="Replay" onClose={props.onClose} tall>
       {call && (
         <div className="small muted">
-          Challenged: <b style={{ color: "var(--fg)" }}>{call.text}</b> · {tierLabel(call)}
-          {call.at_fault ? ` · on ${call.at_fault.name}` : ""}
-          {call.source === "annotated" ? " · annotated" : ""}
+          <b style={{ color: "var(--fg)" }}>{call.text}</b> · {tierLabel(call)}
         </div>
       )}
-      {feeds.length > 1 && (
-        <div className="seg" role="tablist" aria-label="Camera angle">
-          {feeds.map((f) => (
-            <button
-              key={f.cam_id}
-              role="tab"
-              aria-selected={f.cam_id === active?.cam_id}
-              className={f.cam_id === active?.cam_id ? "pill on" : "pill"}
-              onClick={() => setCam(f.cam_id)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {active && win ? (
-        <ReplayAngle key={active.cam_id} feed={active} win={win} backend={backend} rate={rate} />
+      {/* every angle at once, so everyone sees the same play from both sides */}
+      {windows.length ? (
+        windows.map((w) => {
+          const f = feeds.find((x) => x.cam_id === w.cam_id);
+          return f ? <ReplayAngle key={f.cam_id} feed={f} win={w} backend={backend} rate={rate} /> : null;
+        })
       ) : (
         <div className="replay-video">
           <div className="overlay">
@@ -143,7 +125,7 @@ export function ReplaySheet(props: {
       <div className={`verdict ${verdict}`} aria-live="assertive">
         {verdict === "reviewing" ? (
           <div className="note" style={{ color: "var(--fg)", fontSize: 17 }}>
-            <span className="spinner" /> Reviewing… geometry and Claude re-check the play
+            <span className="spinner" /> Reviewing…
           </div>
         ) : (
           <>
@@ -155,10 +137,8 @@ export function ReplaySheet(props: {
               </div>
             )}
             <div className="small muted">
-              {challenge.decided_by === "judge" ? "Decided by the judge" : "Decided automatically"}
-              {typeof challenge.p_original === "number"
-                ? ` · ${Math.round(challenge.p_original * 100)}% the original call was right (uncalibrated)`
-                : ""}
+              {challenge.decided_by === "judge" ? "Judge" : "Auto"}
+              {typeof challenge.p_original === "number" ? ` · ${Math.round(challenge.p_original * 100)}%` : ""}
             </div>
           </>
         )}
@@ -185,9 +165,6 @@ export function ReplaySheet(props: {
                 </>
               )}
               {claude.rationale && <div className="small muted">{claude.rationale}</div>}
-              <div className="small muted">
-                {claude.model} · {(claude.latency_ms / 1000).toFixed(1)} s
-              </div>
             </>
           )
         ) : (

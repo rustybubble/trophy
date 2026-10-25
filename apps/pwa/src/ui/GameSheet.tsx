@@ -47,7 +47,7 @@ export function GameSheet(props: {
     setBusy(true);
     try {
       await backend.goLive(chosen);
-      say("Going live: every phone starts in a few seconds");
+      say("Going live");
       props.onClose();
     } catch (e) {
       say(
@@ -123,7 +123,6 @@ export function GameSheet(props: {
             {busy ? "Starting…" : "Go live"}
           </button>
         )}
-        <p className="fine">The laptop replays the recording as if live; each phone shows one angle in sync.</p>
       </section>
 
       <section className="section">

@@ -62,7 +62,8 @@ export function Main(props: {
   const api = useMemo(() => new Api(session), [session]);
   const backend: Backend = useMemo(() => mock ?? new GatewayBackend(api), [mock, api]);
   const state = useMemo(
-    () => mock?.state ?? createState("spacetime", { uri: session.stdb.uri, module: session.stdb.module }),
+    () =>
+      mock?.state ?? createState("spacetime", { uri: session.stdb.uri, module: session.stdb.module, timeoutMs: 30000 }),
     [mock, session.stdb.uri, session.stdb.module],
   );
   const voice = useMemo(() => (mock ? undefined : new Voice(api)), [api, mock]);
@@ -351,7 +352,7 @@ export function Main(props: {
               <p>
                 <b>{v.error ? "Can't reach the game state" : v.ready ? "No scenario is live" : "Connecting…"}</b>
               </p>
-              <p className="small muted">{v.error ?? "Pick a recording, then press Go live."}</p>
+              {v.error && <p className="small muted">{v.error}</p>}
               {v.ready && (
                 <p>
                   <button className="btn primary" onClick={() => setSheet("game")}>

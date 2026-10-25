@@ -102,7 +102,6 @@ export function NetworkPanel({
   }
 
   const playing = feeds.some((f) => f.status === "playing");
-  const credit = feeds.find((f) => f.credit)?.credit;
   const lastBall = (cam: string) => [...trail].reverse().find((s) => s.cam_id === cam);
   const camOf = (id: string) => cameras.find((c) => c.cam_id === id);
   const labelOf = (cam: string) => feeds.find((f) => f.cam_id === cam)?.label ?? cam;
@@ -143,11 +142,6 @@ export function NetworkPanel({
         )}
       </div>
       {err && <p className="bad">{err}</p>}
-      {feeds.length > 0 && (
-        <p className="muted small">
-          Replayed feed: recorded footage streamed as if live.{credit ? ` Footage: ${credit}` : ""}
-        </p>
-      )}
       <div className="angles">
         {session && feeds.map((f) => <SyncedVideo key={f.cam_id} feed={f} token={session.token} offsetMs={offsetMs} />)}
       </div>
@@ -158,7 +152,6 @@ export function NetworkPanel({
               <th>Angle</th>
               <th className="num">fps to referee</th>
               <th>ball</th>
-              <th>calibration</th>
             </tr>
           </thead>
           <tbody>
@@ -170,9 +163,6 @@ export function NetworkPanel({
                   <td>{f.label}</td>
                   <td className="num">{cam ? cam.fps_in.toFixed(1) : "—"}</td>
                   <td className={ball ? "ok" : "muted"}>{ball ? `seen @ ${ball.t_game_s.toFixed(1)} s` : "—"}</td>
-                  <td className={f.annotated ? "muted" : f.calibrated ? "warn" : "muted"}>
-                    {f.annotated ? "annotated events" : f.calibrated ? "tapped corners (untrusted)" : "none"}
-                  </td>
                 </tr>
               );
             })}
@@ -200,8 +190,7 @@ export function NetworkPanel({
         </tbody>
       </table>
       <p className="muted small">
-        Each phone reads the same <code>feed</code> row and plays its angle at the scheduled server time, then reports
-        its drift back as a <code>viewer</code> row.
+        Every phone plays from the same <code>feed</code> row and reports its drift as a <code>viewer</code> row.
       </p>
     </div>
   );

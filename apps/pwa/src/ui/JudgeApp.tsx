@@ -46,9 +46,7 @@ function Landing() {
         <TrophyIcon />
         <h1>Trophy</h1>
       </div>
-      <p className="lede">
-        An AI referee. Each phone shows one camera angle of the game, in sync with every other phone.
-      </p>
+      <p className="lede">Every phone is a camera angle.</p>
       <button className="btn primary big block" disabled={busy} onClick={() => void start()}>
         {busy ? "Creating…" : "Start a new game"}
       </button>
@@ -84,7 +82,7 @@ function Join(props: { gameId: string; mock: boolean; hasKey: boolean; onJoin: (
         <TrophyIcon />
         <h1>Join the game</h1>
       </div>
-      <p className="lede">This phone becomes one camera angle. Calls are spoken, so turn the sound up.</p>
+      <p className="lede">Calls are spoken. Turn your sound up.</p>
       <form
         className="section"
         onSubmit={(e) => {

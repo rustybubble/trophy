@@ -177,7 +177,7 @@ export function NetworkSheet(props: {
         {props.reportError && <p className="small err">This phone can't report its drift: {props.reportError}</p>}
         {props.clock && (
           <p className="small muted">
-            Clock: {props.clock.connected ? "synced to the referee laptop" : "connecting…"}
+            Clock: {props.clock.connected ? "synced" : "connecting…"}
             {props.clock.offsetMs !== null ? ` · offset ${props.clock.offsetMs.toFixed(1)} ms` : ""}
             {props.clock.syncErrMs !== null ? ` ± ${props.clock.syncErrMs.toFixed(1)} ms` : ""}
           </p>

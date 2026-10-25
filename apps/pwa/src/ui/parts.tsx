@@ -25,7 +25,6 @@ export function CallCard({ call, fresh }: { call?: Call; fresh: boolean }) {
         <div className="call-text" style={{ fontSize: 18 }}>
           No calls yet
         </div>
-        <div className="small">Every call appears here, beeps, and is spoken with who is at fault.</div>
       </div>
     );
   }
@@ -52,7 +51,6 @@ export function CallCard({ call, fresh }: { call?: Call; fresh: boolean }) {
 }
 
 export function TopBar(props: { game?: Game; scores: Score[]; feed?: Feed; synthetic: boolean; onMenu: () => void }) {
-  const [creditOpen, setCreditOpen] = useState(false);
   const teams = props.game?.teams?.length
     ? props.game.teams
     : [
@@ -61,7 +59,6 @@ export function TopBar(props: { game?: Game; scores: Score[]; feed?: Feed; synth
       ];
   const pts = (id: string) => props.scores.find((s) => s.team_id === id)?.points ?? 0;
   const [a, b] = [teams[0]!, teams[1] ?? { team_id: "B", name: "B" }];
-  const f = props.feed;
   return (
     <header className="bar">
       <div className="bar-row">
@@ -82,24 +79,9 @@ export function TopBar(props: { game?: Game; scores: Score[]; feed?: Feed; synth
           <MoreIcon />
         </button>
       </div>
-      {(f || props.synthetic) && (
+      {props.synthetic && (
         <div className="chips">
-          {f && f.status === "playing" && (
-            <span className="chip">
-              <span className="pulse" /> Replayed feed
-            </span>
-          )}
-          {f && f.status !== "playing" && <span className="chip">Replayed feed · {f.status}</span>}
-          {props.synthetic && <span className="chip warn">Mock data</span>}
-          {f?.source === "cc_by_online" && f.credit && (
-            <button
-              className={`chip credit${creditOpen ? " open" : ""}`}
-              title={f.credit}
-              onClick={() => setCreditOpen((o) => !o)}
-            >
-              {f.credit}
-            </button>
-          )}
+          <span className="chip warn">Mock data</span>
         </div>
       )}
     </header>
@@ -163,7 +145,7 @@ export function HoldToTalk(props: {
       <button
         className={`mic ${state}${props.small ? " small" : ""}`}
         aria-label={props.voice ? "Hold to talk" : "Voice is unavailable"}
-        title={props.voice ? props.hint : "Voice needs the referee laptop (not available in mock mode)"}
+        title={props.voice ? props.hint : "Voice isn't available in mock mode"}
         disabled={!props.voice}
         onPointerDown={down}
         onPointerUp={() => void up()}

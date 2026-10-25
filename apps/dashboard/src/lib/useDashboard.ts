@@ -81,12 +81,13 @@ export function useDashboard(source: Source | undefined): DashboardView {
     const state: TrophyState =
       source.kind === "mock"
         ? createState("mock", { script: source.script, loop: true })
-        : createState("spacetime", { uri: source.uri, module: source.module });
+        : createState("spacetime", { uri: source.uri, module: source.module, timeoutMs: 30000 });
     const set = (patch: (p: DashboardView) => Partial<DashboardView>) => setV((p) => ({ ...p, ...patch(p) }));
     const byNewest = <T extends { created_at_ms: number }>(a: T, b: T) => b.created_at_ms - a.created_at_ms;
 
     const offs = [
-      state.onGame((game) => set(() => ({ game, synthetic: state.synthetic, label: state.label }))),
+      // rows arriving means the live state works, even if the subscription was slow to confirm
+      state.onGame((game) => set(() => ({ game, error: undefined, synthetic: state.synthetic, label: state.label }))),
       state.onScore((scores) => set(() => ({ scores }))),
       state.onCameras((cameras) => set(() => ({ cameras }))),
       state.onFeeds((feeds) => set(() => ({ feeds: [...feeds].sort((a, b) => a.label.localeCompare(b.label)) }))),

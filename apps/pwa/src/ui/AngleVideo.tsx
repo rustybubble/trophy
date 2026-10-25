@@ -181,7 +181,6 @@ export function AngleVideo(props: {
               <div className="countdown" key={count}>
                 {count}
               </div>
-              <p className="muted">Every phone starts together</p>
             </div>
           ) : (
             <p>Starting in {count} s</p>
