@@ -21,9 +21,10 @@ Read this file, then your brief in `docs/plan/prompts/agent-{1,2,3}.md`. Explici
 **Prize tracks:** Factory Droid SDK, Cartesia, Spacetime, Anthropic, Meta, MLH (GoDaddy/.Tech domain, Commit Fellowship), Cal Hacks overall. **Dropped (the user, 2026-10-24):** Moss, Apify, Vultr, Gemini, Bitdeer (D-41). Not used: SubQ, Firecrawl, Deepgram, Convex.
 
 ## Where things stand (2026-10-24, evening)
-- **On `main`:** contracts + codegen + py-trophy + state client (C0, tag `wk-c0`); Spacetime module (world, game, post-game and Droid tables, identity-checked writers); gateway (games, cam tokens, frames + clock WS, ctl, calibrate stub, voice token, ask proxy, replay/Watch APIs); recorder (HLS + source JPEGs); capture PWA (+ phone-recorded challenge clips, table crop); judges' dashboard; Trophy Watch; `make dev` / `make e2e` (transport only: calls are PENDING); `trophy.photo` HTTPS via Caddy + Porkbun DNS-01; Mac bring-up prompt.
-- **On rustybubble/trophy#19 (`demo/integration`, open, conflicts with main, changes requested):** `services/engine` (rule engine, scoring, gate, decide() voters, moments, commentary, 3D checks, ask), `services/compiler` (Factory Droid, live runs pass), `services/flight` (classical detector, 2D/3D track, events; synthetic numbers only), `services/referee` (ask the ref + server-side Cartesia), `sports/table_tennis/` (golden module + check library), a localhost clip-upload demo, `make e2e-synthetic`, decisions D-33..D-37. **Landing #19 is the critical path**; nothing referees a point on `main` until it does.
-- **Not built anywhere:** BlurBall on MPS and a live flight loop reading `frames:{cam}`; any accuracy measured on real footage; the engine's `run_check` / `request_check` handlers; live Claude calls; the README prize sections, video and writeup.
+- **On `main`:** contracts + codegen + py-trophy + state client (C0, tag `wk-c0`); Spacetime module (world, game, post-game and Droid tables, identity-checked writers); gateway (games, cam tokens, frames + clock WS, ctl, calibrate stub, voice token, ask proxy, replay/Watch APIs); recorder (HLS + source JPEGs); capture PWA (+ phone-recorded challenge clips, table crop); judges' dashboard; Trophy Watch; `make dev` / `make e2e` (transport only: calls are PENDING; hop 5 `make e2e-calls` is ready behind a flag); the `ask` columns `speech, kind, check, p, calibrated`; README setup + Cartesia/Spacetime/Meta sections; the video script and Devpost outline (`docs/submission.md`); `trophy.photo` HTTPS via Caddy + Porkbun DNS-01; Mac bring-up prompt.
+- **On rustybubble/trophy#19 (`demo/integration`, open, conflicts with main, changes requested):** `services/engine` (rule engine, scoring, gate, decide() voters, moments, commentary, 3D checks, ask), `services/compiler` (Factory Droid, live runs pass), `services/flight` (classical detector, 2D/3D track, events; synthetic numbers only; its own `live.py`/`blurball.py` and the engine's `trophy-live` are to be removed, see below), `services/referee` (ask the ref + server-side Cartesia), `sports/table_tennis/` (golden module + check library), a localhost clip-upload demo, `stream_clips.py` (recorded clips as live cameras), `make e2e-synthetic`, decisions D-33..D-39. Agent 3 reports all six review blockers fixed (head `1306a50`). **Landing #19 is the critical path**; nothing referees a point on `main` until it does.
+- **The live loop (the user, 2026-10-24): keep Agent 2's ball tracking.** Agent 2's `flight.live` (branch `a2/flight-live`, PR to come; BlurBall on MPS) is **the one live loop**: it reads `frames:{cam}`, runs `sports/<sport>/events.py` itself over all of a game's cameras, and publishes `ev:flight` + Spacetime `observation`. The engine's input is unchanged. #19 drops its own `flight/live.py`, `flight/blurball.py` and `trophy-live`; Agent 2's `flight:` Procfile line replaces #19's. Agent 2's D-40 records this. White-ball footage from a fixed mount has been filmed (Agent 2 has it).
+- **Not built anywhere:** any accuracy measured on real footage; live Claude calls; Agent 3's README sections; the recorded video and the final writeup.
 - **Status per agent:** `docs/status/a{1,2,3}.md`. Measured numbers: `docs/progress.md`.
 
 ## Read these
@@ -31,7 +32,7 @@ Read this file, then your brief in `docs/plan/prompts/agent-{1,2,3}.md`. Explici
 - `docs/plan/three-agent-plan.md`: scope, tracks, architecture, checkpoints C0–C4.
 - `docs/plan/interfaces-v1.md`: wire contracts (ids, time, coordinates, frame bus, calibration, events, calls, Spacetime tables, replay, gateway API, voice, Droid). §17 (Apify → Moss) is dropped.
 - `docs/plan/trophy-watch-postgame.md`, `docs/plan/clip-library.md`, `docs/demo-setup.md` (filming setup and labelling).
-- `docs/decisions.md`: why things are the way they are. Record significant changes there; D-33..D-37 arrive with #19, so the next free number after it lands is **D-38**.
+- `docs/decisions.md`: why things are the way they are. Record significant changes there; D-33..D-39 arrive with #19, D-40 with Agent 2's flight PR, and D-41 is on main, so the next free number is **D-42**.
 - `docs/research/`: dated integration cards with pins, shapes and known bugs. **Check here before guessing an API**, and re-verify.
 - `docs/rules-compliance.md`, `docs/licenses.md`: reuse, media and model permissions.
 
@@ -67,7 +68,7 @@ Spacetime ─subscriptions─▶ phones (voice, banner, replay), dashboard (scor
 |---|---|---|---|---|
 | gateway (frames, clock, ctl, calibrate stub, voice token, ask proxy, replay, demo upload) | `services/gateway` | 8000 | py3.11 FastAPI | main |
 | recorder | `services/recorder` | — | py3.11 + ffmpeg | main |
-| flight (ping-pong vision) | `services/flight` | — | py3.11, numpy 1.26.4, opencv 4.10.0.84; BlurBall: torch (MPS) | #19 (classical); BlurBall not built |
+| flight (ping-pong vision; `flight.live` is the one live loop) | `services/flight` | — | py3.11, numpy 1.26.4, opencv 4.10.0.84; BlurBall: torch (MPS) | #19 (classical, offline); `flight.live` + BlurBall on `a2/flight-live` (Agent 2, PR to come) |
 | engine (+ `decide/`, `checks/`, `ask/`) | `services/engine` | — | py3.11, cel-python | #19 |
 | compiler | `services/compiler` | — | Node 20+, `@factory/droid-sdk` 0.10 | #19 |
 | referee (ask the ref, server-side voice) | `services/referee` | 8100 | py3.11 FastAPI | #19 |
