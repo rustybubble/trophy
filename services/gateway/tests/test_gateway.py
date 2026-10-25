@@ -1,5 +1,7 @@
+import asyncio
 import json
 import struct
+import time
 
 import fakeredis
 import httpx
@@ -58,6 +60,24 @@ class Upstream:
         return httpx.Response(404)
 
 
+class SlowBusRedis(fakeredis.FakeAsyncRedis):
+    """A bus write that yields for a while, like a real Redis round trip on a busy CI runner."""
+
+    async def xadd(self, *args, **kwargs):
+        await asyncio.sleep(0.02)
+        return await super().xadd(*args, **kwargs)
+
+
+@pytest.fixture(params=["fast_bus", "slow_bus"])
+def frames_env(request, tmp_path):
+    r = SlowBusRedis() if request.param == "slow_bus" else fakeredis.FakeAsyncRedis()
+    up = Upstream()
+    st = Settings(token_secret=SECRET, cartesia_api_key="sk_test", data_dir=tmp_path)
+    app = create_app(st, r=r, http=httpx.AsyncClient(transport=httpx.MockTransport(up)))
+    with TestClient(app) as client:
+        yield client, r, up
+
+
 @pytest.fixture
 def env(tmp_path):
     r = fakeredis.FakeAsyncRedis()
@@ -71,6 +91,25 @@ def env(tmp_path):
 def ctl_cmds(client, r):
     rows = client.portal.call(r.xrange, "ctl:engine")
     return [json.loads(f[b"json"]) for _, f in rows]
+
+
+def close_frames(client, r, ws, cam_id, timeout_s=5.0):
+    """Close a frames socket and wait until the server has handled every frame sent before the close.
+
+    Leaving ``websocket_connect`` sends the disconnect and then cancels the server task straight away, so
+    frames still queued behind a slow ``xadd`` were dropped (3 rows instead of 4 on CI). The frames socket
+    never answers, so the barrier is the handler's last act: the ``camera_health`` connected=false command.
+    """
+    ws.close(1000)
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        cmds = ctl_cmds(client, r)
+        if any(
+            c["cmd"] == "camera_health" and c["args"]["cam_id"] == cam_id and not c["args"]["connected"] for c in cmds
+        ):
+            return
+        time.sleep(0.005)
+    raise AssertionError(f"frames handler for {cam_id} did not finish within {timeout_s} s")
 
 
 def new_game(client, role="cam"):
@@ -142,8 +181,8 @@ def test_create_join_and_ctl_allowlist(env):
 
 
 # ---------------------------------------------------------------- frames + clock
-def test_frames_ws_writes_bus_and_still(env):
-    client, r, _ = env
+def test_frames_ws_writes_bus_and_still(frames_env):
+    client, r, _ = frames_env
     g, j = new_game(client)
     jpeg = make_jpeg()
     with client.websocket_connect(f"/api/ws/frames?token={j['cam_token']}") as ws:
@@ -151,6 +190,7 @@ def test_frames_ws_writes_bus_and_still(env):
             ws.send_bytes(pack_header(seq, now_ms()) + jpeg)
         ws.send_bytes(b"garbage")  # ignored, connection survives
         ws.send_bytes(pack_header(3, now_ms()) + jpeg)
+        close_frames(client, r, ws, j["cam_id"])
     rows = client.portal.call(r.xrange, f"frames:{j['cam_id']}")
     assert len(rows) == 4
     f = rows[-1][1]
@@ -164,12 +204,13 @@ def test_frames_ws_writes_bus_and_still(env):
     assert health and health[-1]["args"]["connected"] is False
 
 
-def test_cropped_frames_carry_their_crop(env):
-    client, r, _ = env
+def test_cropped_frames_carry_their_crop(frames_env):
+    client, r, _ = frames_env
     g, j = new_game(client)
     jpeg = make_jpeg()
     with client.websocket_connect(f"/api/ws/frames?token={j['cam_token']}") as ws:
         ws.send_bytes(pack_header(0, now_ms(), 0, crop=(0.125, 0.25, 0.5, 0.5)) + jpeg)
+        close_frames(client, r, ws, j["cam_id"])
     f = client.portal.call(r.xrange, f"frames:{j['cam_id']}")[-1][1]
     assert f[b"crop"] == b"0.125,0.25,0.5,0.5" and f[b"data"] == jpeg
     still = client.get(f"/api/cams/{j['cam_id']}/still", headers={"Authorization": f"Bearer {j['cam_token']}"})
@@ -216,8 +257,6 @@ def test_ctl_ws_clock_fit_then_onsets_and_acks(env, tmp_path):
     assert abs(ev["t_game_s"] - ((t_onset_phone + offset) - t0_ms) / 1000) < 0.05
     cam = client.portal.call(r.hgetall, f"cam:{j['cam_id']}")
     assert cam[b"phone_battery"] == b"0.8" and b"phone_evil" not in cam and b"sync_err_ms" in cam
-    import time
-
     for _ in range(50):  # the ack lookup runs as a background task
         p = tmp_path / "logs" / "call_ack.jsonl"
         if p.exists():
