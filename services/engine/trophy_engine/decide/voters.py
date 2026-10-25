@@ -34,7 +34,16 @@ VOTE_SCHEMA = {
     "type": "object",
     "properties": {
         "choice": {"type": "string"},
-        "probs": {"type": "object", "additionalProperties": {"type": "number"}},
+        # structured output rejects free-form maps (additionalProperties must be false), so probabilities are a list
+        "probs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"option": {"type": "string"}, "p": {"type": "number"}},
+                "required": ["option", "p"],
+                "additionalProperties": False,
+            },
+        },
         "rationale": {"type": "string"},
     },
     "required": ["choice", "probs", "rationale"],
@@ -45,20 +54,24 @@ VOTE_SCHEMA = {
 def _prompt(request: dict[str, Any], options: list[str]) -> str:
     obs = json.dumps(request.get("observations") or [], separators=(",", ":"))[:4000]
     return (
-        "You are one of three second-opinion voters for an AI referee at a pickup game. Answer only from the images, "
+        "You are the second-opinion voter for an AI referee at a pickup game. Answer only from the images, "
         "the measurements and the event facts below; the geometry already made a provisional call and your vote is "
         "advisory. Pick exactly one option and give a probability for every option (they sum to 1).\n\n"
         f"Question: {request['question']}\nOptions: {json.dumps(options)}\nFacts: {request.get('context', '')}\n"
         f"Observations (trophy.event.v1 rows): {obs}\n"
-        'Reply as JSON {"choice": <option>, "probs": {<option>: p, ...}, "rationale": <= 140 chars}.'
+        'Reply as JSON {"choice": <option>, "probs": [{"option": <option>, "p": p}, ...], '
+        '"rationale": <= 140 chars, plain words a player would understand}.'
     )
 
 
 def _normalise(raw: dict[str, Any], options: list[str]) -> tuple[str | None, dict[str, float], str]:
+    given = raw.get("probs") or {}
+    if isinstance(given, list):  # [{"option": o, "p": p}] (the structured-output shape)
+        given = {str(d.get("option")): d.get("p", 0.0) for d in given if isinstance(d, dict)}
     probs = {}
     for o in options:
         try:
-            probs[o] = max(0.0, float((raw.get("probs") or {}).get(o, 0.0)))
+            probs[o] = max(0.0, float(given.get(o, 0.0)))
         except (TypeError, ValueError):
             probs[o] = 0.0
     s = sum(probs.values())

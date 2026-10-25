@@ -371,8 +371,9 @@ class Engine:
             "p_geometry": p_geo,
             "timeout_s": 4,
         }
-        if challenge_id:
+        if challenge_id:  # a challenge is not on the call's clock: give the voter a little longer
             req["challenge_id"] = challenge_id
+            req["timeout_s"] = 6
             # the option that means "the call was right": the outcome itself, else the first option (geometry's pick)
             req["original_option"] = call["outcome"] if call["outcome"] in options else options[0]
         g.decided.add(call["id"])
@@ -691,7 +692,7 @@ class Engine:
             "overturned": f"Overturned: {what} is reversed. Replay the point.",
             "players_decide": f"Too close to call: {what}. Players decide.",
         }[result]
-        facts = [f"Replay shows {call['why']}." if call.get("why") else ""]
+        facts = [f"Replay shows {self._plain(g, call['why'])}." if call.get("why") else ""]
         if call.get("source") == "annotated":
             facts.append("From the marked events on the recording.")
         if claude:
@@ -710,6 +711,20 @@ class Engine:
                 "p_original": round(p_orig, 3),
             },
         }
+
+    @staticmethod
+    def _plain(g: GameState, why: str) -> str:
+        """Measurement facts in words a player would say: line names and sigma spelled out."""
+        a, b = g.sides
+        words = {
+            "end_A": f"{g.team(a).get('name', a)}'s end line",
+            "end_B": f"{g.team(b).get('name', b)}'s end line",
+            "side_left": "the left sideline",
+            "side_right": "the right sideline",
+        }
+        for k, v in words.items():
+            why = why.replace(k, v)
+        return re.sub(r",?\s*σ\s*(\d+)\s*cm", r", give or take \1 cm", why)
 
     def challenge_verdict(self, req: dict[str, Any], res: dict[str, Any]) -> None:
         """From the decider's thread: queue the verdict for the loop (the engine is single-threaded)."""

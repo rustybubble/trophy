@@ -331,6 +331,7 @@ def scenario_router(st: Settings) -> APIRouter:
         args = [
             "--game", game_id, "--join-key", g["join_key"], "--mode", "simultaneous",
             "--speed", str(body.speed), "--start-in", str(START_IN_S), "--sport", s.get("sport", "table_tennis"),
+            "--gateway", f"http://127.0.0.1:{st.port}",
         ]  # fmt: skip
         for a, f in zip(s["angles"], files, strict=True):
             corners = ",".join(f"{v:.6f}" for xy in a.get("corners_norm") or [] for v in xy[:2])
