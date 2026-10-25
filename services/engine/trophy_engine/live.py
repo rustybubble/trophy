@@ -30,6 +30,7 @@ from trophy.events import parse_event
 from trophy.streams import calib_key, cam_key, publish_event
 
 from .sportmod.api import BallSample, Camera
+from .sportmod.completion import fill_short_gaps
 from .sportmod.loader import SportModule, load_module
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -75,6 +76,8 @@ class GameWindow:
     stream_t: float = float("-inf")
     published: list[tuple[str, float, str]] = field(default_factory=list)  # (type, t, side) recently sent
     n_events: int = 0
+    fill_gaps_s: float = 0.0  # > 0: complete short per-camera dropouts first (sportmod.completion, D-39)
+    n_filled: int = 0
 
     def add(self, s: BallSample) -> None:
         self.samples.append(s)
@@ -89,7 +92,15 @@ class GameWindow:
             return []
         lo = max(self.cut - max_window_s, self.stream_t - max_window_s)
         self.samples = [s for s in self.samples if s.t_s >= lo]
-        obs = [*self.cams.values(), *sorted(self.samples, key=lambda s: (s.t_s, s.cam_id))]
+        samples = sorted(self.samples, key=lambda s: (s.t_s, s.cam_id))
+        if self.fill_gaps_s > 0:
+            done: list[BallSample] = []
+            for cam_id in self.cams:
+                filled, n = fill_short_gaps([s for s in samples if s.cam_id == cam_id], max_gap_s=self.fill_gaps_s)
+                done += filled
+                self.n_filled = n  # in the current window
+            samples = sorted(done, key=lambda s: (s.t_s, s.cam_id))
+        obs = [*self.cams.values(), *samples]
         state = self.module.state(self.game_id, calib_trusted=all(c.trusted for c in self.cams.values()))
         out = []
         for ev in self.module.events(iter(obs), state):
@@ -112,9 +123,17 @@ class GameWindow:
 
 class Live:
     def __init__(
-        self, r: redis.Redis, modules_dir: Path, lag: float, period: float, window_s: float, world,
-    ) -> None:  # fmt: skip
+        self,
+        r: redis.Redis,
+        modules_dir: Path,
+        lag: float,
+        period: float,
+        window_s: float,
+        world,
+        fill_gaps_s: float = 0.25,
+    ) -> None:
         self.r = r
+        self.fill_gaps_s = fill_gaps_s
         self.modules_dir = modules_dir
         self.lag = lag
         self.period = period
@@ -150,7 +169,7 @@ class Live:
                 self.streams[key] = tail[0][0].decode() if tail else "0-0"  # only what arrives from now on
                 self.cam_game[cam_id] = gid
                 if gid not in self.games:
-                    self.games[gid] = GameWindow(gid, self.module(sport))
+                    self.games[gid] = GameWindow(gid, self.module(sport), fill_gaps_s=self.fill_gaps_s)
                     log.info(json.dumps({"svc": "live", "msg": "game", "game_id": gid, "sport": sport}))
                 log.info(json.dumps({"svc": "live", "msg": "camera", "cam_id": cam_id, "game_id": gid}))
             g = self.games.get(self.cam_game.get(cam_id, ""))
@@ -244,6 +263,12 @@ def run(argv: list[str] | None = None) -> int:
     ap.add_argument("--window", type=float, default=12.0, help="max seconds of samples kept per game")
     ap.add_argument("--modules", type=Path, default=ROOT / "sports")
     ap.add_argument("--no-world", action="store_true", help="don't mirror events into Spacetime observation")
+    ap.add_argument(
+        "--fill-gaps",
+        type=float,
+        default=0.25,
+        help="complete per-camera dropouts up to this long before the module runs (PCHIP, D-39); 0 disables",
+    )
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     env = {**_dotenv(), **os.environ}
@@ -253,8 +278,10 @@ def run(argv: list[str] | None = None) -> int:
         from trophy.world import ObservationWriter, SpacetimeClient
 
         world = ObservationWriter(SpacetimeClient(token=env["SPACETIME_VISION_TOKEN"]))
-    live = Live(r, a.modules, a.lag, a.period, a.window, world)
-    log.info(json.dumps({"svc": "live", "msg": "started", "lag_s": a.lag, "period_s": a.period}))
+    live = Live(r, a.modules, a.lag, a.period, a.window, world, fill_gaps_s=a.fill_gaps)
+    log.info(
+        json.dumps({"svc": "live", "msg": "started", "lag_s": a.lag, "period_s": a.period, "fill_gaps_s": a.fill_gaps})
+    )
     stop = False
 
     def _stop(*_):
