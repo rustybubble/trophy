@@ -356,7 +356,9 @@ def _prod(values: Iterable[float]) -> float:
     return p
 
 
-def _tracked_times(samples: dict[str, list[BallSample]], min_run: int, max_jump_px: float, max_seq_gap: int) -> list[float]:
+def _tracked_times(
+    samples: dict[str, list[BallSample]], min_run: int, max_jump_px: float, max_seq_gap: int
+) -> list[float]:
     """Game times at which some camera had the ball *tracked*: inside a run of >= min_run consecutive detections
     (seq gap <= max_seq_gap) whose pixel jump is <= max_jump_px (0 = any). Sorted, all cameras together."""
     out: list[float] = []
