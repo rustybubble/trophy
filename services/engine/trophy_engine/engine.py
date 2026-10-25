@@ -6,8 +6,6 @@ from __future__ import annotations
 
 import logging
 import queue
-import re
-import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -17,12 +15,13 @@ import yaml
 from trophy.ids import new_ulid
 
 from .calls import build_call, render
+from .droid import DroidMixin, gated_file, placeholder_pack  # noqa: F401 - gated_file is re-exported
 from .gate import gate
 from .moments import best_play, moment_from_call, rescore_for_challenge
 from .rally import RallyState
 from .rules.cel import CelError, RuleSet, compile_rules, evaluate, when_true
 from .scoring import GameScore, ScoringParams, replay_score, score_rows
-from .sportmod.loader import LoadError, SportModule, load_module, validate_against
+from .sportmod.loader import SportModule, load_module
 from .state import StateWriter
 
 log = logging.getLogger("trophy.engine")
@@ -71,6 +70,14 @@ class GameState:
     # DEAD_AFTER_POINT_S at most: players pick the ball up and knock it around, and those bounces are not a new rally
     dead_since_t_s: float | None = None
     rally_hit_seen: bool = False  # a racket hit was seen in the current rally (server_from_first_hit)
+    # D-43: the pack's YAML as loaded (the Droid's next house rule starts from it: rules stack), every event of the
+    # session (re-judged when a rule is applied), the applied house rules/interpreters (newest last: revert pops),
+    # and the interpreter run this game waits for (a sport with no approved interpreter)
+    pack_text: str = ""
+    session_events: list[dict[str, Any]] = field(default_factory=list)
+    applied: list[dict[str, Any]] = field(default_factory=list)
+    needs_interpreter: bool = False
+    interpreter_run: str | None = None
 
     @property
     def sides(self) -> tuple[str, str]:
@@ -87,7 +94,7 @@ class GameState:
         return replay_score(self.calls, self.scoring, self.first_server, self.sides)
 
 
-class Engine:
+class Engine(DroidMixin):
     def __init__(
         self,
         state: StateWriter,
@@ -98,8 +105,14 @@ class Engine:
         labels_dir: Path | None = None,
         dead_after_point_s: float = DEAD_AFTER_POINT_S,
         server_from_first_hit: bool = False,
+        approved_dir: Path | None = None,
+        sessions_dir: Path | None = None,
     ) -> None:
         self.state = state
+        # D-43 (set by the live loop; None in tests unless given): approved interpreters (data/local/modules/<sport>/
+        # v<n>, newest wins over sports/<sport>) and where the session snapshots for the Droid go (data/local/sessions)
+        self.approved_dir = approved_dir
+        self.sessions_dir = sessions_dir
         # The ball stays dead after a point called on a bounce until a ball_dead event (or this many seconds; 0 turns
         # it off). server_from_first_hit (real play; off for the hand-written sequences of the tests and the gate):
         # the first racket hit of a rally names the server (a serve is a hit, ITTF 2.6.3); when that hit was not
@@ -134,9 +147,18 @@ class Engine:
         teams: list[dict[str, Any]] | None = None,
         params: dict[str, Any] | None = None,
         module_dir: Path | None = None,
+        pack: dict[str, Any] | None = None,
     ) -> GameState:
-        mod = load_module(module_dir or self.modules_dir / sport)
-        pack = mod.rules
+        mdir = module_dir or self.module_dir_for(sport)
+        mod = load_module(mdir, rules_optional=True)
+        pack_text = (mdir / "rules.yaml").read_text("utf8") if pack is None and (mdir / "rules.yaml").is_file() else ""
+        if pack is None:
+            pack = mod.rules
+        needs_interpreter = not pack  # an annotated sport whose interpreter the Droid has not written yet (D-43)
+        if needs_interpreter:
+            pack = placeholder_pack(sport)
+        if not pack_text:
+            pack_text = yaml.safe_dump(pack, sort_keys=False)
         params = dict(params or {})
         variant = params.pop("variant", None)
         merged = dict(pack.get("params") or {})
@@ -175,6 +197,8 @@ class Engine:
             rule_version=str(pack.get("version", "1")),
             params=merged,
             scoring=ScoringParams.from_pack(pack, merged),
+            pack_text=pack_text,
+            needs_interpreter=needs_interpreter,
         )
         self.games[game_id] = g
         self.state.upsert_game(game)
@@ -187,6 +211,8 @@ class Engine:
         g.game["status"] = "live"
         g.game["server_team_id"] = g.score().server
         self.state.upsert_game(g.game)
+        if g.needs_interpreter:
+            self.request_interpreter(g, "sport_module", f"no approved interpreter for {g.game['sport']}")
 
     # ------------------------------------------------------------ events
 
@@ -204,7 +230,7 @@ class Engine:
         if _pre_serve_floor_bounce(ev, g):
             return []  # the ball bounced on the floor before the serve (players do that): not part of a rally
         if g.rally is None:
-            if ev.get("type") not in RALLY_OPENERS:
+            if ev.get("type") not in (g.pack.get("rally_openers") or RALLY_OPENERS):
                 return []
             self._open_rally(g, t)
         assert g.rally is not None
@@ -850,104 +876,6 @@ class Engine:
             bp["is_best_play"] = True
             self._post_game(self.state.set_best_play, game_id, bp["moment_id"], list(bp.get("reasons", [])))
 
-    def _ctl_submit_house_rule(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
-        now = self.now_ms()
-        row = {
-            "rule_version": new_ulid(),
-            "game_id": g.game["game_id"],
-            "sport": g.game["sport"],
-            "text": a["text"],
-            "source": a.get("source", "typed"),
-            "status": "pending",
-            "backend": "droid",
-            "plan_md": "",
-            "steps": [],
-            "diff": "",
-            "results": None,
-            "pack_path": None,
-            "error": None,
-            "created_at_ms": now,
-            "updated_at_ms": now,
-        }
-        g.house_rules[row["rule_version"]] = row
-        self.state.insert_house_rule(row)
-
-    def _ctl_approve_house_rule(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
-        rv = a["rule_version"]
-        row = g.house_rules.get(rv) or {}
-        fetch = getattr(self.state, "get_house_rule", None)
-        if fetch is not None:
-            fetched = fetch(rv)
-            if fetched:
-                row = {**row, **fetched}
-        # Only what the compiler gated counts (review blocker 7): never a pack_path from the command's args, only a
-        # row the compiler marked ready, and the file as it was at the gated commit, not the sandbox's working tree.
-        pack_path = row.get("pack_path")
-        if row.get("status") != "ready" or not pack_path:
-            self.state.set_house_rule_status(
-                {
-                    "rule_version": rv,
-                    "status": "failed",
-                    "error": f"not approvable: status {row.get('status')!r}, "
-                    f"pack_path {'set' if pack_path else 'missing'} (the compiler must report ready)",
-                }
-            )
-            return
-        try:
-            pack = yaml.safe_load(gated_file(str(pack_path)))
-            errs = validate_against("rules", pack)
-            if errs:
-                raise LoadError(errs)
-            rules = compile_rules(pack)
-        except (OSError, yaml.YAMLError, LoadError, CelError, ValueError) as e:
-            self.state.set_house_rule_status(
-                {"rule_version": rv, "status": "failed", "error": f"hot-load failed: {e}"[:400]}
-            )
-            return
-        g.pack, g.rules, g.rule_version = pack, rules, rv
-        g.params = {
-            **(pack.get("params") or {}),
-            **{k: v for k, v in g.params.items() if k not in (pack.get("params") or {})},
-        }
-        g.scoring = ScoringParams.from_pack(pack, g.params)
-        g.game["pack_version"] = rv
-        self.state.upsert_game(g.game)
-        self.state.set_house_rule_status({"rule_version": rv, "status": "approved", "pack_path": str(pack_path)})
-        self._recompute(g)
-        self._info(
-            g,
-            f"House rule added: {row.get('text', rv)}"[:80],
-            speech=f"House rule added: {row.get('text', '')}",
-            rule_id="house_rule",
-        )
-        self._house_rule_moment(g, row)
-
-    def _house_rule_moment(self, g: GameState, row: dict[str, Any]) -> None:
-        m = {
-            "moment_id": new_ulid(),
-            "game_id": g.game["game_id"],
-            "kind": "house_rule",
-            "t_game_s": g.last_t_s,
-            "t_start_s": g.last_t_s,
-            "t_end_s": g.last_t_s,
-            "label": f"House rule: {row.get('text', '')}"[:80],
-            "team_id": None,
-            "track_id": None,
-            "call_id": None,
-            "rally_no": g.rally_no or None,
-            "score_after": g.score().display(*g.sides),
-            "tags": ["house_rule"],
-            "highlight_score": 0.0,
-            "reasons": [],
-            "is_best_play": False,
-            "thumb_t_s": g.last_t_s,
-        }
-        g.moments[m["moment_id"]] = m
-        self._post_game(self.state.upsert_moment, m)
-
-    def _ctl_reject_house_rule(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
-        self.state.set_house_rule_status({"rule_version": a["rule_version"], "status": "rejected"})
-
     def _ctl_ask_logged(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         self.state.post_ask(
             {
@@ -1127,29 +1055,8 @@ class Engine:
 
     def feed(self, ev: dict[str, Any]) -> list[dict[str, Any]]:
         self.remember_event(ev)
+        self.record_session_event(ev)
         return self.handle_event(ev)
-
-
-def gated_file(pack_path: str) -> str:
-    """`<repo>/<file>@<commit>` -> the file's text at that commit (`git show`), so an edit made in the sandbox after the
-    gate passed can never be what gets approved. Raises ValueError without a commit or outside a git repository."""
-    path_s, sep, commit = pack_path.rpartition("@")
-    if not sep or not re.fullmatch(r"[0-9a-f]{7,40}", commit):
-        raise ValueError(f"pack_path has no gated commit: {pack_path!r}")
-    path = Path(path_s).resolve()
-    top = subprocess.run(
-        ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"], capture_output=True, text=True, timeout=10
-    )
-    if top.returncode != 0:
-        raise ValueError(f"not in a git repository: {path.parent}")
-    repo = Path(top.stdout.strip()).resolve()
-    rel = path.relative_to(repo).as_posix()
-    out = subprocess.run(
-        ["git", "-C", str(repo), "show", f"{commit}:{rel}"], capture_output=True, text=True, timeout=10
-    )
-    if out.returncode != 0:
-        raise ValueError(f"{rel} is not in commit {commit}: {out.stderr.strip()[:200]}")
-    return out.stdout
 
 
 def _pre_serve_floor_bounce(ev: dict[str, Any], g: GameState) -> bool:

@@ -270,6 +270,23 @@ def make_new_check_starter(store: TrackStore, field_path: Path, sport: str, time
     return start
 
 
+def start_droid_poller(engine: Engine, every_s: float = 1.0) -> threading.Thread:
+    """D-43: read back the compiler's house_rule / droid_run rows once a second (only rows still open) and queue the
+    results for the loop thread (engine.inbox -> drain()), where a passing house rule is applied and re-judged."""
+
+    def work() -> None:
+        while True:
+            time.sleep(every_s)
+            try:
+                engine.poll_droid()
+            except Exception:  # noqa: BLE001 - a Spacetime hiccup must not stop the poller
+                log.exception("droid poll failed")
+
+    t = threading.Thread(target=work, name="droid-poller", daemon=True)
+    t.start()
+    return t
+
+
 def run(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="trophy-engine", description="Trophy rule engine: events + ctl in, calls out")
     ap.add_argument("--redis", default=None, help="REDIS_URL (default from env/.env)")
@@ -316,6 +333,9 @@ def run(argv: list[str] | None = None) -> int:
         modules_dir=a.modules,
         dead_after_point_s=a.dead_after_point,
         server_from_first_hit=a.server_from_first_hit,
+        # D-43: approved Droid interpreters and the session snapshots the Droid's house-rule runs start from
+        approved_dir=ROOT / "data" / "local" / "modules",
+        sessions_dir=ROOT / "data" / "local" / "sessions",
     )
     if a.votes:
         try:
@@ -394,6 +414,8 @@ def run(argv: list[str] | None = None) -> int:
         r.expire(stream, 300)
 
     engine.reply = reply
+    if a.state == "spacetime":
+        start_droid_poller(engine)
     log.info(
         json.dumps(
             {"svc": "engine", "msg": "started", "state": a.state, "votes": a.votes, "track3d": a.field is not None}

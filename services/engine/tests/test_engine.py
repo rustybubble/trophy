@@ -327,10 +327,12 @@ def test_house_rule_submit_and_approve_hot_loads_the_pack(tmp_path: Path) -> Non
     commit, p = _gated_sandbox(tmp_path, pack)
     st.set_house_rule_status({"rule_version": hr["rule_version"], "status": "ready", "pack_path": f"{p}@{commit}"})
     eng.handle_ctl({"cmd": "approve_house_rule", "game_id": GAME, "args": {"rule_version": hr["rule_version"]}})
-    assert st.tables["house_rule"][hr["rule_version"]]["status"] == "approved"
+    # the judge's override goes through the same apply path as the Droid's decision (D-43)
+    row = st.tables["house_rule"][hr["rule_version"]]
+    assert row["status"] == "applied" and row["decision"]["decided_by"] == "judge"
     g = eng.games[GAME]
     assert g.scoring.points_to_win == 7 and g.rule_version == hr["rule_version"]
-    assert any("House rule added" in c["text"] for c in st.rows("call"))
+    assert any("House rule applied" in c["text"] for c in st.rows("call"))
     for i in range(7):  # 4 s apart: a point's trailing ball is dead for DEAD_AFTER_POINT_S (blocker 4)
         eng.feed(point_call(10 + i * 4, "A"))
         eng.feed(point_call(10.5 + i * 4, "B"))
@@ -567,7 +569,7 @@ def test_approval_loads_the_gated_commit_and_ignores_args_and_unready_rows(tmp_p
     p.write_text(yaml.safe_dump({**pack, "scoring": {**pack["scoring"], "params": {"points_to_win": 1}}}))
     st.set_house_rule_status({"rule_version": rv, "status": "ready", "pack_path": f"{p}@{commit}"})
     eng.handle_ctl({"cmd": "approve_house_rule", "game_id": GAME, "args": {"rule_version": rv}})
-    assert st.tables["house_rule"][rv]["status"] == "approved"
+    assert st.tables["house_rule"][rv]["status"] == "applied"
     assert eng.games[GAME].scoring.points_to_win == 7
 
 
