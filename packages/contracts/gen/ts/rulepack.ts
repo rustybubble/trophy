@@ -32,6 +32,10 @@ export interface RulePack {
   detectors?: {};
   scoring: Scoring;
   rules: Rule[];
+  /**
+   * Event types that open a rally when none is open (default: bounce, contact, serve_toss, shot). Annotated sports whose plays start with another event (e.g. reach_over_net, player_contact) list them here.
+   */
+  rally_openers?: string[];
   coach?: {};
   calibration?: {
     T?: number;
@@ -133,6 +137,10 @@ export interface Rule {
    * CEL expression for the favoured team_id
    */
   team?: string;
+  /**
+   * CEL expression for the team_id that committed the fault (call.at_fault); default: the team opposite `team` for point/violation/line calls, none for a let. text/speech templates may use {at_fault} (that team's name).
+   */
+  at_fault?: string;
   points?: number;
   /**
    * Display template

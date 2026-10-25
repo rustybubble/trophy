@@ -24,7 +24,7 @@ export interface DroidRun {
    * The reference module a compile derives from
    */
   base_sport?: string | null;
-  kind: "compile" | "house_rule" | "retune";
+  kind: "compile" | "house_rule" | "retune" | "calibrate_checks" | "new_check" | "interpreter";
   trigger: DroidRunTrigger;
   status: DroidRunStatus;
   backend: "droid" | "claude-fallback";
@@ -64,6 +64,10 @@ export interface DroidRun {
    * replay_test wall time per attempt
    */
   gate_ms?: number[];
+  /**
+   * house_rule runs: the Droid's decision (decision.json in the sandbox, validated by the runner)
+   */
+  decision?: DroidRunDecision | null;
   token_usage?: {
     input?: number;
     output?: number;
@@ -74,7 +78,14 @@ export interface DroidRun {
  * via the `definition` "DroidRunTrigger".
  */
 export interface DroidRunTrigger {
-  source: "cli" | "house_rule" | "session" | "health_stat";
+  /**
+   * sport_module: a game started for a sport with no approved interpreter (an event: the engine's request); user: 'Regenerate interpreter' (a judge's action)
+   */
+  source: "cli" | "house_rule" | "session" | "health_stat" | "sport_module" | "user";
+  /**
+   * The service that queued the run through request_droid_run (engine)
+   */
+  requested_by?: string;
   /**
    * house_rule.rule_version when source = house_rule
    */
@@ -155,6 +166,18 @@ export interface DroidRunTest {
 export interface DroidRunCallChange {
   rally_no: number;
   call_id?: string;
+  /**
+   * Game time of the play (session replays)
+   */
+  t_s?: number;
   before: string;
   after: string;
+}
+/**
+ * This interface was referenced by `DroidRun`'s JSON-Schema
+ * via the `definition` "DroidRunDecision".
+ */
+export interface DroidRunDecision {
+  applies: boolean;
+  rationale: string;
 }

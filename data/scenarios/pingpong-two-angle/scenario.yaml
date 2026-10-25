@@ -1,0 +1,42 @@
+# Judging-demo scenario (docs/plan/judging-demo.md). Media is local and ignored: copy the team's takes into
+# data/local/scenarios/pingpong-two-angle/ (sources below). Angle timing: start_s = time in that file where the
+# streamed segment starts; the gateway trims every angle to [start_s, start_s + duration_s] and plays all angles from
+# one wall0, so offset_s stays 0 and the measured offset lives in start_s.
+id: pingpong-two-angle
+title: Ping pong · 2 angles
+sport: table_tennis
+teams:
+  - {team_id: A, name: Left end, note: "short dark hair, black jacket; the left player in the Side angle, facing the Diagonal camera"}
+  - {team_id: B, name: Right end, note: "curly hair, dark hoodie, glasses; the right player in the Side angle, back to the Diagonal camera"}
+source: team_recording
+credit: "Trophy team recording, 2026-10-24, two phones (team footage with consent)"
+annotated: false               # real perception (BlurBall) makes the calls
+events: null
+sync:
+  method: >-
+    Audio cross-correlation of the two tracks (mono 8 kHz, 1 ms high-pass envelope, normalised): global peak 0.71 vs
+    0.27 at the 99th percentile; seven 5 s windows agree on 0.067-0.070 s. Both files carry creation_time
+    2026-10-24T23:23:15Z (1 s resolution), which is consistent.
+  diagonal_minus_side_s: 0.068   # a sound at Diagonal file time t is at Side file time t - 0.068
+  uncertainty_s: 0.002
+angles:
+  - label: Side
+    file: data/local/scenarios/pingpong-two-angle/20261024_232315000_iOS.MOV
+    source_file: ~/Downloads/20261024_232315000_iOS.MOV   # 3840x2160 60 fps, 39.2 s
+    start_s: 2.0
+    duration_s: 34.0
+    offset_s: 0
+    # A_right, B_right, B_left, A_left, normalised to the 1280x720 stream frame (16:9, no padding). From
+    # suggest_table_corners.py (6/6 frames agree, spread 11 px), checked by eye on a frame at 10 s: on the table-top corners.
+    corners_norm: [[0.2076, 0.7927], [0.7613, 0.7967], [0.6812, 0.7471], [0.2757, 0.7452]]
+  - label: Diagonal
+    file: data/local/scenarios/pingpong-two-angle/IMG_4345.MOV
+    source_file: ~/Downloads/IMG_4345.MOV                 # 3840x2160 60 fps, 44.1 s
+    start_s: 2.068
+    duration_s: 34.0
+    offset_s: 0
+    # The suggester was off here (its near-left corner landed on the floor behind the B player). We marked A_right,
+    # A-end centre, A_left, B_left and B-end centre by eye on the frame at 10.068 s, fitted a homography (residual
+    # <= 2.7 px) and projected B_right, which the B player hides (about +-30 px).
+    corners_norm: [[0.4773, 0.5165], [0.2041, 0.6920], [0.5543, 0.8093], [0.7040, 0.5481]]
+window_note: "Play runs from about 3 s to 35.5 s in the Side file; the overlap of the two files is 39.2 s."

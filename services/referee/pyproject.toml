@@ -1,0 +1,50 @@
+[project]
+name = "trophy-referee"
+version = "0.1.0"
+description = "Trophy referee voice: judge question -> route -> session check (engine) -> Claude phrases -> Cartesia speaks; transcript via ask_logged (D-36 §5, D-37)."
+requires-python = ">=3.11"
+dependencies = [
+    "trophy",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "httpx>=0.27",
+    "redis>=5",
+    "websockets>=15,<16",
+    "anthropic>=2.3,<3",
+    "pyyaml>=6",
+]
+
+[project.optional-dependencies]
+speaker = ["sounddevice>=0.5"]
+
+[project.scripts]
+referee = "referee.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "ruff==0.14.5",
+    "fakeredis>=2.26",
+]
+
+[tool.uv.sources]
+trophy = { path = "../../packages/py-trophy", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["referee"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

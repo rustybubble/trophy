@@ -395,7 +395,7 @@ class Event(BaseModel):
         "touch",
         "heartbeat",
     ] = Field(..., title="EventType")
-    source: Literal["flight", "players", "possession", "audio", "manual", "synthetic", "file"] = Field(
+    source: Literal["flight", "players", "possession", "audio", "manual", "synthetic", "file", "annotated"] = Field(
         ..., title="EventSource"
     )
     cams: list[str]

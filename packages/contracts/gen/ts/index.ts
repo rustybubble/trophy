@@ -7,6 +7,8 @@ export type * from "./droidrun.ts";
 export type * from "./event.ts";
 export type * from "./frame.ts";
 export type * from "./rulepack.ts";
+export type * from "./scene.ts";
 export type * from "./sportmodule.ts";
 export type * from "./state.ts";
+export type * from "./track3d.ts";
 export type * from "./tracks.ts";

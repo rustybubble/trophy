@@ -32,11 +32,13 @@ from trophy.contracts import (
     CtlCommand,
     EmptyArgs,
     HouseRuleVersionArgs,
+    RegenerateInterpreterArgs,
     ResolveChallengeArgs,
     ReviewCallArgs,
     SetServerArgs,
     StartGameArgs,
     SubmitHouseRuleArgs,
+    ViewerStatusArgs,
 )
 from trophy.events import event_json, make_event
 from trophy.framebus import FRAMES_MAXLEN, frame_fields, parse_message
@@ -57,7 +59,9 @@ from trophy.timebase import ClockFit, now_ms
 
 from . import calib_stub
 from .config import Settings
+from .demo import demo_router
 from .replay import replay_router
+from .scenarios import scenario_router
 from .tokens import Claims, TokenError, mint, normalize_role, verify
 
 log = logging.getLogger("trophy.gateway")
@@ -86,6 +90,9 @@ CLIENT_ARGS = {
     "bookmark": BookmarkArgs,
     "clip_that": ClipThatArgs,
     "review_call": ReviewCallArgs,
+    "revert_house_rule": HouseRuleVersionArgs,
+    "regenerate_interpreter": RegenerateInterpreterArgs,
+    "viewer_status": ViewerStatusArgs,
 }
 
 
@@ -121,6 +128,9 @@ class CtlBody(BaseModel):
 class AskBody(BaseModel):
     question: str = Field(min_length=1, max_length=300)
     sport: str | None = None
+    # The phone's view of the game (scores, teams, the newest calls, rally, server, house rules): the referee resolves
+    # "that" to the newest call and answers the score from it, without a Spacetime read (interfaces-v1 §20).
+    context: dict[str, Any] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------- per-camera runtime state
@@ -236,7 +246,7 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
             args["params"] = body.params
         await publish(make_ctl("create_game", gid, args))
         jlog("game created", game_id=gid, sport=body.sport)
-        return {"game_id": gid, "join_key": key, "join_url": f"https://{st.domain}/cam/?g={gid}&k={key}", "t0_ms": t0}
+        return {"game_id": gid, "join_key": key, "join_url": f"{st.public_origin()}/cam/?g={gid}&k={key}", "t0_ms": t0}
 
     @app.get("/api/games/{gid}/public")
     async def game_public(gid: str) -> dict[str, Any]:
@@ -246,7 +256,8 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
             "sport": g["sport"],
             "status": g.get("status", "lobby"),
             "t0_ms": float(g["t0_ms"]),
-            "stdb": {"uri": st.stdb_public_uri, "module": st.stdb_module},
+            "stdb": {"uri": st.stdb_uri(), "module": st.stdb_module},
+            "public_origin": st.public_origin(),
         }
 
     @app.post("/api/games/{gid}/join")
@@ -288,7 +299,8 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
             "cam_token": token,
             "exp_ms": exp,
             "t0_ms": float(g["t0_ms"]),
-            "stdb": {"uri": st.stdb_public_uri, "module": st.stdb_module},
+            "stdb": {"uri": st.stdb_uri(), "module": st.stdb_module},
+            "public_origin": st.public_origin(),
             "frame": FRAME_DEFAULTS,
         }
 
@@ -582,14 +594,15 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         except (httpx.HTTPError, KeyError, ValueError) as e:
             jlog("voice token failed", cam_id=c.cam_id, error=type(e).__name__)
             raise HTTPException(502, "could not mint a voice token") from None
-        default_voice = "a0e99841-438c-4a64-b679-ae501e7d6091"
+        # Cartesia library voices, the same defaults as services/referee: Daniel (calls), Gemma (ref)
+        default_calls, default_ref = "47c38ca4-5f35-497b-b1a3-415245fb35e1", "62ae83ad-4f6a-430b-af41-a9bede9286ca"
         return {
             "access_token": token,
             "expires_at_ms": now_ms() + st.voice_token_ttl_s * 1000,
             "cartesia_version": st.cartesia_version,
             "voices": {
-                "calls": st.cartesia_voice_calls or default_voice,
-                "ref": st.cartesia_voice_ref or default_voice,
+                "calls": st.cartesia_voice_calls or default_calls,
+                "ref": st.cartesia_voice_ref or default_ref,
             },
         }
 
@@ -599,13 +612,26 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         sport = body.sport or g["sport"]
         t = time.perf_counter()
         try:
-            resp = await app.state.http.post(f"{st.rules_url}/ask", json={"question": body.question, "sport": sport})
+            resp = await app.state.http.post(
+                f"{st.rules_url}/ask",
+                json={
+                    "question": body.question,
+                    "sport": sport,
+                    "game_id": c.game_id,
+                    "by_cam_id": c.cam_id,
+                    "context": body.context,
+                },
+                timeout=30.0,
+            )
             resp.raise_for_status()
             out = resp.json()
         except (httpx.HTTPError, ValueError) as e:
             jlog("ask failed", game_id=c.game_id, error=type(e).__name__)
-            raise HTTPException(503, "the rules service is unavailable") from None
+            raise HTTPException(503, "the referee service is unavailable") from None
         out.setdefault("latency_ms", round((time.perf_counter() - t) * 1000, 1))
+        if out.get("kind") == "pending":
+            # the referee answers later (a Droid writes the check) and logs the ask itself (§20)
+            return out
         args = {
             "question": body.question,
             "answer": str(out.get("answer", "")),
@@ -620,7 +646,7 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         try:
             await publish(make_ctl("ask_logged", c.game_id, args, by_cam_id=c.cam_id))
         except ValidationError:
-            jlog("ask_logged skipped: rules response doesn't match the contract", game_id=c.game_id)
+            jlog("ask_logged skipped: referee response doesn't match the contract", game_id=c.game_id)
         return out
 
     # ------------------------------------------------------------ challenge clips (phone-side high-quality recording)
@@ -748,6 +774,23 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         return FileResponse(path, media_type=mime, headers={"Cache-Control": "private, max-age=3600"})
 
     # ------------------------------------------------------------ health
+    @app.post("/api/client_log", status_code=204)
+    async def client_log(request: Request) -> Response:
+        """A phone's startup error (apps/pwa/index.html), so a blank page on a device we can't inspect is
+        diagnosable from the stack log. Unauthenticated, size-capped, never stored."""
+        raw = (await request.body())[:4000]
+        try:
+            d = json.loads(raw)
+        except ValueError:
+            d = {"msg": raw.decode("utf8", "replace")}
+        jlog(
+            "client error",
+            error=str(d.get("msg", ""))[:2000],
+            ua=str(d.get("ua", ""))[:300],
+            url=str(d.get("url", ""))[:200],
+        )
+        return Response(status_code=204)
+
     @app.get("/api/healthz")
     async def healthz() -> JSONResponse:
         async def probe(url: str) -> bool:
@@ -775,4 +818,6 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         return JSONResponse(body, status_code=200 if redis_ok else 503)
 
     app.include_router(replay_router(st))
+    app.include_router(demo_router(st))
+    app.include_router(scenario_router(st))
     return app

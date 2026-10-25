@@ -1,0 +1,177 @@
+{
+  "views": [
+    {
+      "video": "../../data/local/analysis-inputs/IMG_4345.MOV",
+      "table_corners_px": [
+        [
+          1836.0,
+          1110.0
+        ],
+        [
+          692.0,
+          1512.0
+        ],
+        [
+          2102.0,
+          1738.0
+        ],
+        [
+          2708.0,
+          1186.0
+        ]
+      ],
+      "player_rois_px": [
+        [
+          1903.0,
+          281.0,
+          2901.0,
+          1836.0
+        ],
+        [
+          585.0,
+          763.0,
+          2010.0,
+          2160.0
+        ]
+      ],
+      "focal_px": 0,
+      "calibration_mode": "automatic_demo",
+      "table_segmentation": {
+        "corners": [
+          [
+            1886.5655517578125,
+            1112.9859619140625
+          ],
+          [
+            701.476806640625,
+            1513.1168212890625
+          ],
+          [
+            2108.538818359375,
+            1741.9544677734375
+          ],
+          [
+            2704.986083984375,
+            1177.908447265625
+          ]
+        ],
+        "focal_px": 2496.0,
+        "calibration_mode": "automatic_demo",
+        "player_rois_px": [
+          [
+            1903,
+            281,
+            2901,
+            1836
+          ],
+          [
+            585,
+            763,
+            2010,
+            2160
+          ]
+        ],
+        "method": "Image line segments + tabletop color and boundary segmentation; demo appearance end ordering",
+        "edge_support": 0.847522497177124,
+        "surface_fraction": 0.99375,
+        "ranking_score": 0.0040304923616725,
+        "calibration": {
+          "table_corner_rmse_px": 8.502308456597083,
+          "focal_px": 2496.0,
+          "method": "Automatically segmented demo table; approximate pinhole"
+        },
+        "estimated": true
+      }
+    },
+    {
+      "video": "../../data/local/analysis-inputs/20261024_232315000_iOS.MOV",
+      "table_corners_px": [
+        [
+          788.0,
+          1708.0
+        ],
+        [
+          2916.0,
+          1708.0
+        ],
+        [
+          2636.0,
+          1610.0
+        ],
+        [
+          1050.0,
+          1610.0
+        ]
+      ],
+      "player_rois_px": [
+        [
+          204.0,
+          792.0,
+          1202.0,
+          2160.0
+        ],
+        [
+          2519.0,
+          796.0,
+          3518.0,
+          2160.0
+        ]
+      ],
+      "focal_px": 0,
+      "calibration_mode": "automatic_demo",
+      "table_segmentation": {
+        "corners": [
+          [
+            796.1651611328125,
+            1707.96728515625
+          ],
+          [
+            2955.4326171875,
+            1715.0692138671875
+          ],
+          [
+            2634.26708984375,
+            1605.727783203125
+          ],
+          [
+            1058.5216064453125,
+            1605.3267822265625
+          ]
+        ],
+        "focal_px": 3456.0,
+        "calibration_mode": "automatic_demo",
+        "player_rois_px": [
+          [
+            204,
+            792,
+            1202,
+            2160
+          ],
+          [
+            2519,
+            796,
+            3518,
+            2160
+          ]
+        ],
+        "method": "Image line segments + tabletop color and boundary segmentation; demo appearance end ordering",
+        "edge_support": 0.8385332822799683,
+        "surface_fraction": 1.0,
+        "ranking_score": 0.0006623201180989181,
+        "calibration": {
+          "table_corner_rmse_px": 6.322922600267416,
+          "focal_px": 3456.0,
+          "method": "Automatically segmented demo table; approximate pinhole"
+        },
+        "estimated": true
+      }
+    }
+  ],
+  "start_seconds": 0.0,
+  "duration_seconds": 15.0,
+  "device": "auto",
+  "sync_mode": "audio",
+  "offset_seconds": 0.0,
+  "threshold": 0.7,
+  "photometric": "rgb"
+}

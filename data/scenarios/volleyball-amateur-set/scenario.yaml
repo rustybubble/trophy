@@ -1,0 +1,22 @@
+# Judging-demo volleyball scenario: one close line call (the ball comes down on the sideline). Media is local and
+# ignored: data/local/scenarios/volleyball-amateur-set/corner-line.mp4.
+id: volleyball-amateur-set
+title: Volleyball · amateur set, ball on the line
+sport: volleyball
+teams:
+  - {team_id: A, name: Handymen (HND), note: "near court; white kits with blue and red, plus some dark shirts"}
+  - {team_id: B, name: AZIAN Mixed (AZM), note: "far court; black shirts"}
+source: cc_by_online
+credit: "\"Handymen vs AZIAN Mixed - Mixed Moscow Volleyball League (1st set)\" by Almost Volleyball, CC BY (Creative Commons Attribution), youtube.com/watch?v=kVpO4ypzPYU; segment 7:24-7:54, trimmed and re-encoded to 720p"
+source_url: https://www.youtube.com/watch?v=kVpO4ypzPYU
+source_segment_s: [444.0, 474.0]
+annotated: true
+events: evals/fixtures/annotated/volleyball/sideline-ball.events.jsonl
+labels: evals/fixtures/annotated/volleyball/sideline-ball.labels.json
+events_angle: Corner
+initial_score: {A: 11, B: 10}     # the clip's overlay at the segment start
+close_calls:
+  - {t_s: 22.35, what: "ball lands on the near court's right sideline (dark line under the right antenna)", margin_m: 0.025, sigma_m: 0.05, p_in: 0.69, expected: "in, point AZM, BETA (challengeable, p 0.69)"}
+angles:
+  - {label: Corner, file: data/local/scenarios/volleyball-amateur-set/corner-line.mp4, start_s: 0, duration_s: 30.0, offset_s: 0}
+window_note: "Serve at about 5 s; the rally ends with the ball on the sideline at 22.35 s; the overlay shows AZM 11-11 at about 27 s."

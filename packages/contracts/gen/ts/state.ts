@@ -9,7 +9,15 @@ export type GameStatus = "lobby" | "live" | "paused" | "ended";
  * This interface was referenced by `StateTables`'s JSON-Schema
  * via the `definition` "HouseRuleStatus".
  */
-export type HouseRuleStatus = "pending" | "compiling" | "ready" | "approved" | "rejected" | "failed";
+export type HouseRuleStatus =
+  | "pending"
+  | "compiling"
+  | "ready"
+  | "approved"
+  | "rejected"
+  | "failed"
+  | "applied"
+  | "reverted";
 /**
  * This interface was referenced by `StateTables`'s JSON-Schema
  * via the `definition` "MomentKind".
@@ -137,9 +145,21 @@ export interface Challenge {
   call_id: string;
   by_cam_id: string;
   status: "open" | "resolved";
-  result?: "upheld" | "overturned" | null;
+  result?: "upheld" | "overturned" | "players_decide" | null;
   created_at_ms: number;
   resolved_at_ms?: number | null;
+  /**
+   * auto = geometry + Claude (uncalibrated) re-check (D-44); judge = a person
+   */
+  decided_by?: "auto" | "judge" | null;
+  /**
+   * Blended probability that the original call was right (uncalibrated)
+   */
+  p_original?: number | null;
+  /**
+   * The spoken verdict and reason
+   */
+  explanation?: string | null;
 }
 /**
  * This interface was referenced by `StateTables`'s JSON-Schema
@@ -167,6 +187,23 @@ export interface HouseRule {
   error?: string | null;
   created_at_ms: number;
   updated_at_ms: number;
+  decision?: HouseRuleDecision | null;
+  /**
+   * The droid_run row of the run that compiled this rule
+   */
+  run_id?: string | null;
+  /**
+   * The pack version the run starts from (the last applied pack: house rules stack)
+   */
+  base_rule_version?: string | null;
+  /**
+   * The engine's copy of that pack's rules.yaml (the sandbox starts from it)
+   */
+  base_pack_path?: string | null;
+  /**
+   * The session's events so far (session.json), the gate's baseline for calls_changed
+   */
+  session_path?: string | null;
 }
 /**
  * This interface was referenced by `StateTables`'s JSON-Schema
@@ -204,6 +241,21 @@ export interface CallChange {
   call_id?: string;
   before: string;
   after: string;
+}
+/**
+ * The Droid's decision on a new house rule (D-43): whether it applies, why, and what it re-judged.
+ *
+ * This interface was referenced by `StateTables`'s JSON-Schema
+ * via the `definition` "HouseRuleDecision".
+ */
+export interface HouseRuleDecision {
+  applies: boolean;
+  rationale: string;
+  decided_by: "droid" | "judge";
+  rejudged_rallies?: number;
+  calls_changed?: number;
+  decided_at_ms?: number;
+  reverted_at_ms?: number;
 }
 /**
  * Keyed by (call_id, backend): votes start speculatively when a close call is posted, before any challenge exists (D-23); challenge_id is filled when one is opened. Probabilities are UNCALIBRATED.
@@ -344,4 +396,82 @@ export interface Commentary {
   validated: boolean;
   source: "claude" | "template";
   created_at_ms: number;
+}
+/**
+ * One camera angle replayed from a recording as if live (D-42). The Mac streams the clip into frames:{cam_id} for the referee; phones hosting the angle play the same clip locally, in sync with wall0_ms on the server clock.
+ *
+ * This interface was referenced by `StateTables`'s JSON-Schema
+ * via the `definition` "Feed".
+ */
+export interface Feed {
+  /**
+   * The camera the referee sees: frames:{cam_id}
+   */
+  cam_id: string;
+  game_id: string;
+  /**
+   * e.g. Side, Diagonal, Baseline
+   */
+  label: string;
+  status: "scheduled" | "playing" | "ended" | "failed";
+  scenario_id: string;
+  /**
+   * Gateway path of the phone-playable H.264 file (append ?token=)
+   */
+  video_url: string;
+  /**
+   * Clip time shown at wall0_ms
+   */
+  offset_s: number;
+  /**
+   * Seconds streamed from offset_s
+   */
+  duration_s: number;
+  /**
+   * Server epoch ms at which clip time offset_s plays
+   */
+  wall0_ms: number;
+  /**
+   * Game time at wall0_ms (game time of clip time t = t_game0_s + (t - offset_s))
+   */
+  t_game0_s: number;
+  source: "team_recording" | "cc_by_online" | "synthetic";
+  /**
+   * Attribution line for CC BY footage
+   */
+  credit?: string | null;
+  /**
+   * True when this angle's events come from hand annotations, not perception
+   */
+  annotated?: boolean;
+  calibrated?: boolean;
+  updated_at_ms: number;
+}
+/**
+ * A phone showing one angle (D-42). Phones report their playback drift against the feed schedule; every device sees every other device through Spacetime.
+ *
+ * This interface was referenced by `StateTables`'s JSON-Schema
+ * via the `definition` "Viewer".
+ */
+export interface Viewer {
+  /**
+   * The phone's own cam_id from its join token
+   */
+  viewer_id: string;
+  game_id: string;
+  /**
+   * The angle (Feed.cam_id) this phone shows
+   */
+  cam_id: string;
+  /**
+   * Short device name, e.g. iPhone
+   */
+  name?: string;
+  connected: boolean;
+  playing?: boolean;
+  /**
+   * Local video time minus scheduled time, ms (positive = ahead)
+   */
+  drift_ms: number;
+  last_seen_ms: number;
 }

@@ -100,8 +100,9 @@ class ResolveChallengeArgs(BaseModel):
         populate_by_name=True,
     )
     challenge_id: str
-    result: Literal["upheld", "overturned"]
+    result: Literal["upheld", "overturned", "players_decide"]
     replacement: Replacement | None = None
+    explanation: str | None = None
 
 
 class EmptyArgs(BaseModel):
@@ -135,7 +136,7 @@ class SubmitHouseRuleArgs(BaseModel):
 
 class HouseRuleVersionArgs(BaseModel):
     """
-    approve_house_rule, reject_house_rule
+    approve_house_rule, reject_house_rule, revert_house_rule
     """
 
     model_config = ConfigDict(
@@ -143,6 +144,67 @@ class HouseRuleVersionArgs(BaseModel):
         populate_by_name=True,
     )
     rule_version: str
+
+
+class CheckReply(BaseModel):
+    """
+    The referee reply (was CheckResult; renamed at the demo merge because track3d.schema.json owns CheckResult, the check function's own return). What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-36 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    check: str = Field(..., description="e.g. in_out")
+    verdict: str | None = Field(
+        None, description="e.g. in, out, edge, A, B, top_edge, side_face, legal, too_low, angled, yes, no"
+    )
+    p: float | None = Field(None, description="Probability of verdict, carrying the track sigma", ge=0.0, le=1.0)
+    evidence: dict[str, Any] | None = Field(
+        None, description="Check-specific numbers: margin_m, sigma_m, line, height_m, angle_deg, t_game_s, shots ..."
+    )
+    inputs: dict[str, Any] | None = Field(
+        None, description="The resolved arguments the check ran with (t_game_s, rally_no ...)"
+    )
+    calibrated: bool = Field(..., description="false on the unedited golden library or when sigma was a default")
+    tier: Literal["AUTO", "BETA", "PLAYERS"] | None = Field(None, description="The tier ceiling the engine applied")
+    error: str | None = Field(None, description="no_such_check | no_data | failed:<reason> | timeout")
+    latency_ms: float
+
+
+class RunCheckArgs(BaseModel):
+    """
+    Referee -> engine: run one session check and XADD a CheckReply to the Redis stream `reply_to` (D-36 §5).
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    check: str
+    args: dict[str, Any] = Field(
+        ...,
+        description="t_game_s (absolute, field clock) when known, else ref: last | last_rally | call:<call_id>; plus check-specific args",
+    )
+    reply_to: str = Field(..., description="Redis stream key reply:<req_id>; the engine XADDs {json: CheckReply} once")
+    question: str | None = Field(None, description="The spoken question, for the engine's transcript")
+
+
+class RequestCheckArgs(BaseModel):
+    """
+    Referee -> engine: no session check answers this question. The engine opens a droid_run of kind new_check (the Droid writes and gates it in 30-90 s), runs it, and replies on `reply_to` with a CheckReply, or one with `error` when the run failed.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    question: str
+    check_hint: str | None = Field(
+        None, description="The router's suggested signature, e.g. ball_speed(rally) -> max speed in m/s"
+    )
+    args: dict[str, Any] | None = None
+    reply_to: str
 
 
 class AskCitation(BaseModel):
@@ -239,6 +301,38 @@ class ReviewCallArgs(BaseModel):
     replacement: Replacement | None = None
 
 
+class FeedScheduleArgs(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    feeds: list[dict[str, Any]]
+
+
+class ViewerStatusArgs(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    cam_id: str
+    name: str | None = None
+    playing: bool | None = None
+    drift_ms: float | None = None
+    connected: bool | None = None
+
+
+class RegenerateInterpreterArgs(BaseModel):
+    """
+    regenerate_interpreter (judge): the Droid rewrites this game's sport interpreter (a droid_run of kind interpreter, trigger user)
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    reason: str | None = Field(None, max_length=200)
+
+
 class CtlCommand(BaseModel):
     """
     trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 §9). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (§13).
@@ -270,6 +364,12 @@ class CtlCommand(BaseModel):
         "bookmark",
         "clip_that",
         "review_call",
+        "run_check",
+        "request_check",
+        "feed_schedule",
+        "viewer_status",
+        "revert_house_rule",
+        "regenerate_interpreter",
     ] = Field(..., title="CtlCmd")
     game_id: str
     t_srv_ms: float

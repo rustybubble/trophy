@@ -5,13 +5,16 @@ import type {
   Camera,
   Challenge,
   Commentary,
+  DroidRun,
   Event,
+  Feed,
   Game,
   HouseRule,
   Moment,
   Rally,
   Score,
   TrackSample,
+  Viewer,
 } from "@trophy/contracts";
 
 export type {
@@ -21,13 +24,16 @@ export type {
   Camera,
   Challenge,
   Commentary,
+  DroidRun,
   Event,
+  Feed,
   Game,
   HouseRule,
   Moment,
   Rally,
   Score,
   TrackSample,
+  Viewer,
 } from "@trophy/contracts";
 
 /** A Spacetime `observation` row, parsed: one trophy.event.v1 event (interfaces-v1 §7.1). */
@@ -65,6 +71,10 @@ export interface TrophyState {
   /** Post-game (interfaces-v1 §19): moments the engine writes live, and grounded commentary lines. */
   onMoment(cb: (m: Moment, change: RowChange) => void): Unsubscribe;
   onCommentary(cb: (c: Commentary) => void): Unsubscribe;
+  /** Replayed angles and the phones showing them (D-42); Droid runs of every kind (D-43). */
+  onFeeds(cb: (f: Feed[]) => void): Unsubscribe;
+  onViewers(cb: (v: Viewer[]) => void): Unsubscribe;
+  onDroidRun(cb: (r: DroidRun) => void): Unsubscribe;
 }
 
 export interface TableRows {
@@ -81,6 +91,9 @@ export interface TableRows {
   track_sample: TrackSample;
   moment: Moment;
   commentary: Commentary;
+  feed: Feed;
+  viewer: Viewer;
+  droid_run: DroidRun;
 }
 export type TableName = keyof TableRows;
 

@@ -1,5 +1,7 @@
 # secrets
 .env
+.env.local
+.env.*.local
 *.pem
 *.key
 
@@ -47,3 +49,6 @@ Thumbs.db
 
 # runtime outputs
 rulepacks/house/
+
+# integrator scratch scenarios (local tests only)
+data/scenarios/scratch-*/

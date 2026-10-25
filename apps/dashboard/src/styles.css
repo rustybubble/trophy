@@ -221,6 +221,13 @@ td {
 .votes {
   margin-bottom: 10px;
 }
+details.droid {
+  border-top: 1px solid var(--line);
+  padding: 6px 0;
+}
+details.droid > summary {
+  cursor: pointer;
+}
 .droid pre {
   background: #0b0d11;
   border: 1px solid var(--line);
@@ -238,12 +245,14 @@ td {
   border: 1px solid var(--line);
 }
 .status.ready,
-.status.approved {
+.status.approved,
+.status.applied {
   color: var(--ok);
   border-color: var(--ok);
 }
 .status.failed,
-.status.rejected {
+.status.rejected,
+.status.reverted {
   color: var(--bad);
   border-color: var(--bad);
 }
@@ -329,3 +338,134 @@ td {
 .lobby .sportwall {
   margin-top: 32px;
 }
+
+/* upload a clip (ClipPanel) */
+.clip .frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin: 6px 0;
+}
+.clip .frame img {
+  display: block;
+  max-width: 100%;
+  cursor: crosshair;
+  border-radius: 6px;
+}
+.clip .corner {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: #f5a623;
+  color: #0f1115;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  pointer-events: none;
+}
+.clip .clipvideo {
+  width: 100%;
+  max-height: 300px;
+  border-radius: 6px;
+  background: #000;
+  margin: 6px 0;
+}
+.clip .log {
+  white-space: pre-wrap;
+  max-height: 120px;
+  overflow: auto;
+  margin: 4px 0;
+}
+
+/* recorded clips as live cameras (LiveClipsPanel) */
+.liveclips {
+  margin: 0 0 12px;
+}
+.liveclips .cliplist {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.liveclips .cliplist li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.liveclips .thumb {
+  width: 160px;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.liveclips .frame {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  margin: 6px 0;
+}
+.liveclips .frame img {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  cursor: crosshair;
+  background: #000;
+}
+.liveclips .corner {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: #f5a623;
+  color: #0f1115;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  pointer-events: none;
+}
+.liveclips .camgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 10px;
+}
+.liveclips .camlive .frame img {
+  cursor: default;
+  aspect-ratio: 16/9;
+  object-fit: contain;
+}
+.liveclips .placeholder {
+  aspect-ratio: 16/9;
+  display: grid;
+  place-items: center;
+  background: #000;
+  border-radius: 6px;
+}
+.liveclips .ball {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  border: 3px solid #3ddc84;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 6px #3ddc84;
+}
+.liveclips .camtag {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* replayed angles in sync (NetworkPanel, D-42) */
+.network .row.between { justify-content: space-between; align-items: center; }
+.angles { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; margin: 8px 0 12px; }
+.angle { margin: 0; background: #000; border-radius: 8px; overflow: hidden; }
+.angle video { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #000; }
+.angle figcaption { display: flex; justify-content: space-between; padding: 6px 10px; font-size: 13px; }
+.small { font-size: 12px; }

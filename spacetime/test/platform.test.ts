@@ -158,6 +158,29 @@ describe("platform reducer boundaries", () => {
     call("update_droid_run", r, "compiler");
     expect(() => call("set_droid_run_status", { run_id: "r1", status: "approved" })).toThrow();
   });
+  it("lets the engine queue an interpreter run that the compiler then runs under the same id (D-43)", () => {
+    const req = {
+      ...run("queued"),
+      kind: "interpreter",
+      game_id: "g1",
+      model: "",
+      attempt: 0,
+      results: null,
+      commit: undefined,
+      trigger: { source: "sport_module", text: "no interpreter" },
+    };
+    expect(() => call("request_droid_run", req, "compiler")).toThrow("unauthorized");
+    expect(() => call("request_droid_run", { ...req, kind: "compile" })).toThrow();
+    expect(() => call("request_droid_run", { ...req, trigger: { source: "cli" } })).toThrow("sport_module");
+    call("request_droid_run", req);
+    expect(JSON.parse(ctx.db.droid_run.run_id.find("r1").json).trigger.requested_by).toBe("engine");
+    expect(() => call("request_droid_run", req)).toThrow("exists");
+    call("update_droid_run", { ...run("running"), kind: "interpreter", game_id: "g1", updated_at_ms: 5 }, "compiler");
+    expect(() =>
+      call("update_droid_run", { ...run("running"), kind: "house_rule", game_id: "g1", updated_at_ms: 6 }, "compiler"),
+    ).toThrow("immutable");
+    expect(ctx.db.droid_run.run_id.find("r1").status).toBe("running");
+  });
   it("publishes only approved modules and requires increasing versions", () => {
     const m = {
       sport: "table_tennis",

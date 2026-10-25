@@ -1,4 +1,4 @@
-.PHONY: dev e2e e2e-calls contracts fixtures check stdb-publish stdb-provision stdb-bindings stdb-seed
+.PHONY: dev e2e e2e-calls e2e-synthetic contracts fixtures check stdb-publish stdb-provision stdb-bindings stdb-seed
 # macOS and most Linux ship only `python3`; Windows has `python` (and a Store stub named python3).
 ifeq ($(OS),Windows_NT)
 PYTHON ?= python
@@ -18,6 +18,7 @@ fixtures:   ## rebuild the labelled-synthetic MockState scripts
 check:      ## what CI runs: lint, types, tests, fixture validation, codegen staleness
 	cd packages/py-trophy && uv run --frozen ruff check . && uv run --frozen ruff format --check . && uv run --frozen pytest -q
 	uv run --project packages/py-trophy --frozen ruff check scripts && uv run --project packages/py-trophy --frozen python scripts/validate_fixtures.py
+	cd services/referee && uv run --frozen ruff check . && uv run --frozen ruff format --check . && uv run --frozen pytest -q
 	npm run typecheck && npm run lint && npm test
 	$(MAKE) contracts fixtures && git diff --exit-code -- packages/contracts/gen packages/py-trophy/trophy/contracts packages/state-client/fixtures
 SPACETIME ?= spacetime
@@ -44,3 +45,15 @@ gateway-check:
 eval-live-check:
 	uv run --frozen --project packages/py-trophy ruff check tools/eval_live.py tests/test_eval_live.py
 	uv run --frozen --project packages/py-trophy python -m pytest -q tests/test_eval_live.py
+e2e-synthetic: ## headless check on the SYNTHETIC fixtures: gateway game -> trophy-play -> calls/score -> Droid house rule -> approve
+	$(PYTHON) scripts/e2e_synthetic.py
+
+.PHONY: recorded-analysis-check recorded-analysis-doctor
+recorded-analysis-check: ## Recorded prototype checks; bootstrap/import private assets first
+	cd spikes/serve-analysis && .venv/bin/python repro/reproduce.py test
+recorded-analysis-doctor:
+	cd spikes/serve-analysis && .venv/bin/python repro/reproduce.py doctor
+
+.PHONY: tunnel
+tunnel: ## reach the stack from phones on any network (Cloudflare quick tunnel; stop with ctrl-c)
+	$(PYTHON) scripts/tunnel.py

@@ -19,9 +19,10 @@ Point a phone at a ping-pong table and Trophy referees the game:
 | `apps/pwa` | Phone app: camera, calls, voice, challenge, replay |
 | `apps/dashboard` | Judges' screen: score, calls, AI votes, Droid panel, ask-the-ref, live world state |
 | `apps/watch` | Trophy Watch: post-game recap, highlights, moments, replay, stats |
-| `services/gateway`, `services/recorder` | Phone API and replay recording |
-| `services/flight` | The ping-pong vision module (arriving with #19) |
-| `services/engine`, `services/compiler`, `services/referee` | Rule engine + AI votes, Factory Droid house rules, the referee voice (arriving with #19) |
+| `services/gateway`, `services/recorder` | Phone API, replay recording, the demo's clip upload + "stream as a phone" |
+| `services/flight` | The ping-pong vision module: BlurBall live on every camera stream, N-camera 3D fusion |
+| `services/engine`, `services/compiler`, `services/referee` | Rule engine + AI votes + 3D checks, Factory Droid house rules, the referee voice |
+| `spikes/serve-analysis` | BlurBall adapter (vendored upstream + official weights), serve spotting, two-camera HMR2 replay, ball-track completion and toss evidence ([reproduce on another computer](spikes/serve-analysis/REPRODUCE.md)) |
 | `spacetime/` | SpacetimeDB module: the shared world state (metadata only, no video) |
 | `packages/` | Contracts (JSON Schema), generated types, shared Python lib, state client |
 | `infra/` | Caddy + Porkbun DNS for `https://trophy.photo` |
@@ -142,10 +143,42 @@ Pickup games are how strangers become regulars: a table in a dorm basement, a co
 **What players said** _[OPEN-8: quotes from real players at Cal Hacks go here, with their permission. None yet; we won't invent any.]_
 
 ## Factory Droid
-_TODO (Agent 3, with #19): where the Droid runs, its trigger (`house_rule` row / `calibrate_checks`), the sandbox and exactly what it may touch, the `replay_test` / `check_test` gate, what the dashboard shows, and measured Droid-rule end-to-end time._
+A Factory Droid (`@factory/droid-sdk`, `services/compiler`) is how a judge changes the rules mid-game. It is never in
+the per-call hot path.
+- **Trigger:** a `house_rule` row with status `pending` in Spacetime (the judge typed or said "first to 7, win by 1").
+  `trophy-droid watch` subscribes and starts a run. A second job, `calibrate_checks`, specialises the geometry check
+  library to a camera setup (D-36).
+- **Sandbox:** a fresh git repository per run in `~/.trophy/droid_runs/<run_id>`, outside the repo, holding only the
+  pack to edit, its schemas, labelled synthetic samples, the brief and one gate script. Three layers enforce it: a
+  PreToolUse hook (`hooks/guard.py`) that allows edits to the job's allowlisted files, reads only inside the sandbox,
+  and exactly one command, the bare `./replay_test` or `./check_test`; a git audit after each turn that fails the run if anything else changed (or
+  nothing did); and the gate itself, which runs the Droid-written code with a clean environment, no network and no
+  writes outside the sandbox (`sandbox-exec` on macOS).
+- **Gate and approval:** `replay_test` replays the labelled fixtures through the candidate module and the rule engine
+  (event counts, timing, the labelled rally winners). On `ready` the dashboard's Droid panel shows the plan, every
+  step, the diff, the gate table and the calls that would change. The judge clicks Approve; the engine loads the pack
+  **from the gated commit** (`git show`), never from the working tree, and hot-loads it.
+- **Measured (this Mac, `claude-sonnet-5`, effort low, single runs):** "a serve that clips the net and lands in is a let"
+  went pending → **ready in 27.5–30.6 s** (first attempt, gate 19/19 in 270 ms), **65.5 s** once under load; approve →
+  hot-load in **0.5–0.8 s**. On the synthetic 3D fixtures, `calibrate_checks` was **ready in 86.9 s** (inside the 90 s cap, over the 60 s target), and a referee `new_check` ("how fast was the ball in that rally") was **ready in 37.2 s** with its answer gated on the session's own track.
 
 ## Anthropic
-_TODO (Agent 3, with #19): our community and its problem, how Claude is used (ask-the-ref phrasing grounded in `rules.yaml` + house rules, the challenge voter), **where it could go wrong** and how we contain it._
+Pickup games have no referee, so close calls end in arguments or a replayed point. Trophy measures what sensors can
+measure and lets the players decide the rest, honestly labelled.
+- **How Claude is used:** the referee voice (`services/referee`) routes a spoken question and phrases the answer from a
+  geometry check's numbers; rules questions are answered only from the sport's `rules.yaml` plus approved house rules;
+  Claude is one of three background voters on a challenged BETA call (`decide()`), and writes post-game commentary
+  from the moment's facts. The Factory Droid runs on a Claude model too.
+- **Where it could go wrong, and the containment:**
+  - *A made-up line call.* Claude never makes one: geometry decides, Claude only phrases, and a vote is shown next to
+    the measurement, labelled uncalibrated.
+  - *A wrong number in a spoken answer.* Every digit Claude says must be one it was given; otherwise the deterministic
+    rendering of the same measurement is used, labelled `template`.
+  - *A confident but unsupported rules answer.* Answers are grounded only in the pack the engine enforces; weak
+    grounding says so instead of guessing.
+  - *A house rule that does something else.* The Droid's sandbox, gate and the judge's approval of a visible diff.
+- **Not yet measured:** no `ANTHROPIC_API_KEY` has been available on the demo Mac, so phrasing latency (budget
+  0.5–1.5 s) and live votes have only been tested against recorded API response shapes.
 
 ## License
 MIT (see [LICENSE](LICENSE)). Third-party code, models and media keep their own terms: see [docs/licenses.md](docs/licenses.md).

@@ -19,9 +19,12 @@ const ACCESSORS: { [T in TableName]: string } = {
   track_sample: "trackSample",
   moment: "moment",
   commentary: "commentary",
+  feed: "feed",
+  viewer: "viewer",
+  droid_run: "droidRun",
 };
-/** Post-game tables (#10). Subscribed separately, so a module published before them still serves live games. */
-const POST_GAME: TableName[] = ["moment", "commentary"];
+/** Tables added after the first module (#10, D-42, D-43). Subscribed separately, so an older module still serves live games. */
+const POST_GAME: TableName[] = ["moment", "commentary", "feed", "viewer", "droid_run"];
 
 type JsonRow = { json: string };
 interface TableHandle {
@@ -99,7 +102,9 @@ export class SpacetimeState extends StateStore implements TrophyState {
             );
           conn
             .subscriptionBuilder()
-            .onError((ctx) => console.warn(`Trophy: post-game tables unavailable (${String((ctx as { event?: unknown }).event)})`))
+            .onError((ctx) =>
+              console.warn(`Trophy: post-game tables unavailable (${String((ctx as { event?: unknown }).event)})`),
+            )
             .subscribe(POST_GAME.map((t) => `SELECT * FROM ${t} ${where}`));
         })
         .onConnectError((_ctx, err) => {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MockScript } from "@trophy/state-client";
 import { Api, forgetSession, type AskAnswer, type Session } from "../lib/api.ts";
+import { buildAskContext } from "../lib/askContext.ts";
 import { beep, startOnsets } from "../lib/audio.ts";
 import { fakeCamera, openRearCamera, type CameraInfo } from "../lib/camera.ts";
 import type { Crop } from "../lib/crop.ts";
@@ -48,6 +49,8 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
   const [onsets, setOnsets] = useState(0);
   const [toast, setToast] = useState<string>();
   const [answer, setAnswer] = useState<{ q: string; a?: AskAnswer; err?: string }>();
+  // a question the referee answers later (the Droid is writing the check): resolved by the ask row in Spacetime
+  const pendingAsk = useRef<{ q: string; sinceMs: number } | undefined>(undefined);
   const [calibrating, setCalibrating] = useState(false);
   const [calibratedHere, setCalibratedHere] = useState(false);
   const cropKey = `trophy.crop.${session.gameId}.${session.camId}`;
@@ -268,14 +271,27 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
       case "ask":
         setAnswer({ q: intent.question });
         try {
-          const a = await api.ask(intent.question);
+          const a = await api.ask(intent.question, buildAskContext(g));
           setAnswer({ q: intent.question, a });
           void voice?.speak(a.speech || a.answer, { voice: "ref", interrupt: true });
+          if (a.kind === "pending") pendingAsk.current = { q: intent.question, sinceMs: Date.now() - 2000 };
         } catch (e) {
           setAnswer({ q: intent.question, err: e instanceof Error ? e.message : String(e) });
         }
     }
   };
+
+  // the late answer arrives as an ask row (the referee logs it when the new check is ready): show and speak it
+  useEffect(() => {
+    const p = pendingAsk.current;
+    if (!p) return;
+    const row = g.asks.find((a) => a.question === p.q && a.created_at_ms >= p.sinceMs && a.answer);
+    if (!row) return;
+    pendingAsk.current = undefined;
+    const late: AskAnswer = { answer: row.answer, citations: row.citations, latency_ms: row.latency_ms, kind: "check" };
+    setAnswer({ q: p.q, a: late });
+    void voice?.speak(row.answer, { voice: "ref", interrupt: true });
+  }, [g.asks, voice]);
 
   const flashColor = g.flash
     ? (g.game?.teams.find((t) => t.team_id === g.flash)?.color ?? (g.flash.startsWith("#") ? g.flash : "#f59e0b"))
@@ -416,8 +432,23 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
                 ))}
               </ul>
               <p className="muted small">
-                {answer.a.latency_ms.toFixed(0)} ms
-                {answer.a.moss_ms !== undefined ? ` · Moss ${answer.a.moss_ms.toFixed(0)} ms` : ""}
+                {answer.a.kind === "pending"
+                  ? "Writing a new check… the answer will be spoken when it's ready"
+                  : [
+                      answer.a.check
+                        ? `${answer.a.check}${answer.a.verdict ? ` → ${answer.a.verdict}` : ""}` +
+                          (typeof answer.a.p === "number" ? ` (p ${answer.a.p.toFixed(2)})` : "") +
+                          (answer.a.calibrated === false ? ", uncalibrated" : "")
+                        : answer.a.kind,
+                      `${answer.a.latency_ms.toFixed(0)} ms`,
+                      answer.a.check_ms ? `check ${answer.a.check_ms.toFixed(0)} ms` : "",
+                      answer.a.phrase_ms
+                        ? `${answer.a.phrased_by ?? "phrased"} ${answer.a.phrase_ms.toFixed(0)} ms`
+                        : "",
+                      answer.a.moss_ms !== undefined ? `Moss ${answer.a.moss_ms.toFixed(0)} ms` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
               </p>
             </>
           ) : (

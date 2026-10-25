@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Trophy · Your reconstructed rally</title><link rel="stylesheet" href="style.css"><script type="importmap">{"imports":{"three":"./three.module.js"}}</script></head>
+<body>
+<main>
+  <header><div><p class="eyebrow">TROPHY / TWO CAMERAS</p><h1>Your rally, reconstructed.</h1><p>4D Humans body estimates and triangulated BlurBall detections in the same table coordinates.</p></div><span class="badge">Estimated reconstruction</span></header>
+  <section class="workspace">
+    <div class="toolbar"><span id="status">Loading reconstruction…</span><label>View <select id="camera"><option value="orbit">Orbit freely</option><option value="0">Recording camera 1</option><option value="1">Recording camera 2</option><option value="top">Overhead</option></select></label></div>
+    <div id="viewport"></div>
+    <div class="controls"><button id="play" disabled>Play</button><label>Speed <select id="speed"><option value="0.25">0.25×</option><option value="0.5" selected>0.5×</option><option value="1">1×</option></select></label><input id="timeline" type="range" min="0" max="1" step="0.001" value="0"><output id="clock">0.00 s</output></div>
+  </section>
+  <div class="facts"><div><span>PLAYER MODEL</span><strong>HMR 2.0 + two-view fit</strong></div><div><span>VISUAL TIME OFFSET</span><strong id="offset">—</strong></div><div><span>VISIBLE JOINT IMAGE FIT</span><strong id="error">—</strong></div><div><span>3D BALL OBSERVATIONS</span><strong id="coverage">—</strong></div></div>
+  <section class="sources"><article><h2>Camera 1 · side</h2><video id="source0" src="source1.mp4" muted playsinline preload="auto"></video></article><article><h2>Camera 2 · oblique</h2><video id="source1" src="source2.mp4" muted playsinline preload="auto"></video></article></section>
+  <section id="servePanel" hidden><h2>Serve candidates · select to seek both cameras and 3D replay</h2><p id="serveSummary"></p><div id="serveEvents" class="serve-events"></div><p><a id="serveReview" href="review/">Review, correct and export serves ↗</a> · <a href="ball-camera1.mp4">Camera 1 ball detections</a> · <a href="ball-camera2.mp4">Camera 2 ball detections</a> · <a href="ball-3d.csv">3D ball CSV</a></p></section>
+  <footer><p>Orbit with drag; scroll to zoom. Missing ball positions remain absent. Body shape, hidden joints and camera geometry are estimates. Image fit does not establish metric 3D accuracy.</p><nav><a href="orbit.mp4">3D video</a><a href="comparison.mp4">Source comparison</a><a href="scene.json">Reconstruction report</a></nav></footer>
+</main><script type="module" src="viewer.js"></script>
+</body></html>

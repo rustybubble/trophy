@@ -2,8 +2,21 @@
 #   filename:  call.schema.json
 
 from __future__ import annotations
-from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
+
+
+class AtFault(BaseModel):
+    """
+    Who committed the fault / lost the point (spoken with the call)
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    team_id: str
+    name: str
 
 
 class Cue(BaseModel):
@@ -89,10 +102,21 @@ class Call(BaseModel):
     event_ids: list[str]
     evidence: list[EvidenceWindow]
     overlay: Overlay | None = None
-    status: Literal["final", "challenged", "upheld", "overturned", "voided"] = Field(..., title="CallStatus")
+    status: Literal["final", "challenged", "upheld", "overturned", "voided", "players_decide"] = Field(
+        ..., title="CallStatus"
+    )
     supersedes: str | None = None
     rule_ref: str | None = Field(None, description="Closest official clause (Moss), if any")
     why: str | None = Field(None, description="One short sentence from event facts")
+    at_fault: AtFault | None = Field(
+        None, description="Who committed the fault / lost the point (spoken with the call)"
+    )
+    explanation: str | None = Field(
+        None, description="Plain-language reason, e.g. a challenge verdict (240 chars at most)"
+    )
+    source: Literal["sensed", "annotated", "manual"] | None = Field(
+        None, description="Where the evidence came from; annotated = hand-marked events on recorded footage"
+    )
     suggested: str | None = Field(
         None, description="decide() suggested verdict after AI votes; advisory only, the judge decides"
     )

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trophy ball cloud</title>
+<style>
+  :root { --bg: #0f1115; --fg: #e6e6e6; --dim: #8a8f98; --table: #2f6fb0; --net: #cfd3d8; --a: #51dbed; --b: #a78bfa; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, sans-serif; }
+  #wrap { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+  header, footer { padding: 8px 12px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  header b { font-weight: 600; } .dim { color: var(--dim); }
+  canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  input[type=range] { width: min(60vw, 520px); }
+  label { display: inline-flex; gap: 6px; align-items: center; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header>
+    <b>Trophy ball cloud</b>
+    <span id="stats" class="dim"></span>
+    <span class="dim">drag: orbit · wheel: zoom · shift+drag: pan</span>
+    <label><input type="checkbox" id="showSigma" checked> σ</label>
+    <label><input type="checkbox" id="showTrail" checked> trail</label>
+    <label><input type="checkbox" id="synthWarn" disabled> synthetic</label>
+  </header>
+  <canvas id="c"></canvas>
+  <footer>
+    <button id="play">▶</button>
+    <input type="range" id="time" min="0" max="1" step="0.001" value="1">
+    <span id="tlabel" class="dim"></span>
+    <span><span class="sw" style="background:var(--a)"></span> bounce A · <span class="sw" style="background:var(--b)"></span> bounce B · <span class="sw" style="background:#ffb454"></span> contact · <span class="sw" style="background:#ff5c5c"></span> dead</span>
+  </footer>
+</div>
+<script>
+/*__DATA__*/
+(() => {
+  const d = (typeof DATA !== "undefined") ? DATA : {field: {corners_m: [[-1.37,-0.7625,0],[1.37,-0.7625,0],[1.37,0.7625,0],[-1.37,0.7625,0]], net: {height_m: 0.1525, overhang_m: 0.1525}, table: {width_m: 1.525, height_m: 0.76}}, track3d: [], events: {bounces: [], hits: [], dead: []}};
+  const F = d.field, T = d.track3d, E = d.events || {};
+  const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+  const t0 = T.length ? T[0].t_s : 0, t1 = T.length ? T[T.length - 1].t_s : 1;
+  document.getElementById("synthWarn").checked = !!F.synthetic;
+  document.getElementById("stats").textContent = `${T.length} samples · ${(E.bounces||[]).length} bounces · ${(E.hits||[]).length} contacts · ${T.length ? "median σ " + median(T.map(r => r.sigma_m || 0)).toFixed(3) + " m" : ""}`;
+  function median(a) { const s = [...a].sort((x, y) => x - y); return s.length ? s[(s.length - 1) >> 1] : 0; }
+  // orbit camera
+  let yaw = -0.9, pitch = 0.55, dist = 5.0, panX = 0, panY = 0, dragging = false, lx = 0, ly = 0, shift = false;
+  cv.addEventListener("mousedown", e => { dragging = true; lx = e.clientX; ly = e.clientY; shift = e.shiftKey; });
+  window.addEventListener("mouseup", () => dragging = false);
+  window.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY;
+    if (shift) { panX += dx; panY += dy; } else { yaw += dx * 0.008; pitch = Math.max(-1.5, Math.min(1.5, pitch + dy * 0.008)); }
+    draw();
+  });
+  cv.addEventListener("wheel", e => { dist *= Math.exp(e.deltaY * 0.001); dist = Math.max(1, Math.min(30, dist)); draw(); e.preventDefault(); }, {passive: false});
+  function project(p) {
+    // field (x along table, y across, z up) -> camera: rotate by yaw about z, then pitch
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const x1 = cy * p[0] - sy * p[1], y1 = sy * p[0] + cy * p[1], z1 = p[2];
+    const y2 = cp * y1 - sp * z1, z2 = sp * y1 + cp * z1;         // tilt
+    const depth = dist + y2;                                        // camera looks along +y2
+    const f = Math.min(cv.width, cv.height) * 0.9;
+    return [cv.width / 2 + panX + f * x1 / depth, cv.height * 0.55 + panY - f * z2 / depth, depth];
+  }
+  function line(a, b, color, w) { const p = project(a), q = project(b); ctx.strokeStyle = color; ctx.lineWidth = w || 1; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); }
+  function dot(p, r, color) { const q = project(p); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 7); ctx.fill(); return q; }
+  function timeColor(t) { const u = (t - t0) / Math.max(1e-9, t1 - t0); return `hsl(${200 + 140 * u} 90% 60%)`; }
+  const slider = document.getElementById("time"), tlabel = document.getElementById("tlabel");
+  let playing = false, raf = null;
+  document.getElementById("play").onclick = () => { playing = !playing; document.getElementById("play").textContent = playing ? "❚❚" : "▶"; if (playing) tick(); };
+  function tick() { if (!playing) return; let v = parseFloat(slider.value) + 0.004; if (v > 1) v = 0; slider.value = v; draw(); raf = requestAnimationFrame(tick); }
+  slider.oninput = draw; document.getElementById("showSigma").onchange = draw; document.getElementById("showTrail").onchange = draw;
+  function draw() {
+    const w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--bg"); ctx.fillRect(0, 0, w, h);
+    const tNow = t0 + parseFloat(slider.value) * (t1 - t0);
+    tlabel.textContent = `t = ${tNow.toFixed(2)} s`;
+    const C = F.corners_m, hz = -(F.table.height_m || 0.76);
+    // floor shadow of the table + legs, then the top
+    for (let i = 0; i < 4; i++) { line([C[i][0], C[i][1], hz], [C[(i+1)%4][0], C[(i+1)%4][1], hz], "#2a2e36", 1); line(C[i], [C[i][0], C[i][1], hz], "#3a3f48", 1); }
+    const grad = ctx.createLinearGradient(0, 0, 0, h); ctx.fillStyle = "rgba(47,111,176,0.35)";
+    ctx.beginPath(); C.forEach((p, i) => { const q = project(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath(); ctx.fill();
+    for (let i = 0; i < 4; i++) line(C[i], C[(i+1)%4], "#dfe6ee", 2);
+    line([C[0][0], 0, 0], [C[1][0], 0, 0], "#dfe6ee", 1);
+    const wy = F.table.width_m / 2 + (F.net.overhang_m || 0), nh = F.net.height_m;
+    line([0, -wy, 0], [0, wy, 0], "#cfd3d8", 1); line([0, -wy, nh], [0, wy, nh], "#cfd3d8", 2); line([0, -wy, 0], [0, -wy, nh], "#cfd3d8", 1); line([0, wy, 0], [0, wy, nh], "#cfd3d8", 1);
+    ctx.fillStyle = "#8a8f98"; ctx.font = "12px system-ui"; let q = project([C[0][0] - 0.2, 0, 0]); ctx.fillText("A", q[0], q[1]); q = project([C[1][0] + 0.15, 0, 0]); ctx.fillText("B", q[0], q[1]);
+    // samples up to tNow
+    const showSigma = document.getElementById("showSigma").checked, showTrail = document.getElementById("showTrail").checked;
+    let prev = null;
+    for (const r of T) {
+      if (r.t_s > tNow) break;
+      const col = timeColor(r.t_s);
+      if (showTrail && prev) line(prev, r.xyz_m, "rgba(255,255,255,0.18)", 1);
+      const qq = dot(r.xyz_m, 2.5, col);
+      if (showSigma && r.sigma_m) { const s = r.sigma_m; const e = project([r.xyz_m[0] + s, r.xyz_m[1], r.xyz_m[2]]); const rp = Math.hypot(e[0] - qq[0], e[1] - qq[1]); ctx.strokeStyle = "rgba(255,255,255,0.25)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(qq[0], qq[1], rp, 0, 7); ctx.stroke(); }
+      prev = r.xyz_m;
+    }
+    for (const b of (E.bounces || [])) if (b.t_s <= tNow) { const qq = dot(b.xyz_m, 5, b.side === "A" ? "#51dbed" : "#a78bfa"); if (!b.on_table) { ctx.strokeStyle = "#ff5c5c"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(qq[0], qq[1], 8, 0, 7); ctx.stroke(); } if (b.near_edge) { ctx.fillStyle = "#ffd166"; ctx.fillText("edge?", qq[0] + 8, qq[1] - 6); } }
+    for (const hh of (E.hits || [])) if (hh.t_s <= tNow) dot(hh.xyz_m, 4, "#ffb454");
+    for (const dd of (E.dead || [])) if (dd.t_s <= tNow) { const r = T.find(x => x.t_s >= dd.t_s) || T[T.length - 1]; if (r) dot(r.xyz_m, 6, "#ff5c5c"); }
+    if (E.serve_toss && E.serve_toss.apex && E.serve_toss.release.t_s <= tNow) { const s = E.serve_toss; line(s.release.xyz_m, s.apex.xyz_m, "#ffd166", 2); line(s.apex.xyz_m, s.contact.xyz_m, "#ffd166", 2); const qq = project(s.apex.xyz_m); ctx.fillStyle = "#ffd166"; ctx.fillText(`toss ${(s.height_m * 100).toFixed(0)} cm, ${s.angle_from_vertical_deg.toFixed(0)}°`, qq[0] + 8, qq[1]); }
+  }
+  window.addEventListener("resize", draw);
+  draw();
+})();
+</script>
+</body>
+</html>

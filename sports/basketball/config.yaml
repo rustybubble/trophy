@@ -1,0 +1,41 @@
+# Sport module: half-court pickup basketball. Facts for the Droid-written interpreter; validated by
+# sportmodule.schema.json (written for net sports, so net_x_m is a required placeholder here). Metres, seconds,
+# pixels. Hand-annotated shots drive this sport in the judging demo (D-44).
+sport: basketball
+version: 1
+court:
+  template: basketball_half      # field frame: origin on the floor directly under the centre of the ring, +y out
+                                 # toward half court, +x to the right facing the basket (image right in the clip), z up
+  length_m: 14.0                 # half of a 28 m FIBA court (the outdoor court's own markings are not measured)
+  width_m: 15.0
+  plane_z_m: 0.0
+  surface: court
+  net_x_m: 0.0                   # unused: no net in basketball
+  floor_z_m: 0.0
+  rim_height_m: 3.05
+  three_point_radius_m: 6.75     # FIBA arc from the point under the ring centre; 6.60 m in the corners
+  baseline_y_m: -1.575           # the end line is 1.575 m behind the ring centre (FIBA)
+teams:
+  - {team_id: A, name: Team A, short: A, look: "as labelled by the clip's own score overlay (mixed shirt colours)"}
+  - {team_id: B, name: Team B, short: B, look: "as labelled by the clip's own score overlay (mixed shirt colours)"}
+scoring:
+  template: basket
+  system: ones_and_twos          # pickup: a basket inside the arc counts 1, beyond the arc 2 (the overlay's increments)
+  points_to_win: 11
+  make_it_take_it: false         # not determined from the clip
+ball:
+  diameter_m: 0.239              # size 7
+  colour: orange-brown
+  radius_px: {min: 3, max: 30}
+capture:
+  fps: 30
+  min_conf: 0.3
+bounce:
+  min_track_len: 2
+  min_vy_px_s: 40
+  plane_margin_m: 1.0
+  edge_band_m: 0.05
+  sigma_m: 0.3
+  merge_window_s: 0.12
+dead:
+  gap_s: 3.0

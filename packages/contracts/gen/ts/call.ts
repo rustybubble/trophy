@@ -32,7 +32,7 @@ export type Shown = "auto" | "challengeable" | "replay" | "evidence";
  * This interface was referenced by `Call`'s JSON-Schema
  * via the `definition` "CallStatus".
  */
-export type CallStatus = "final" | "challenged" | "upheld" | "overturned" | "voided";
+export type CallStatus = "final" | "challenged" | "upheld" | "overturned" | "voided" | "players_decide";
 
 /**
  * trophy.call.v1: a decision by the engine (interfaces-v1 §10). Stored in the Spacetime `call` table; clients receive it parsed.
@@ -88,6 +88,21 @@ export interface Call {
    * One short sentence from event facts
    */
   why?: string;
+  /**
+   * Who committed the fault / lost the point (spoken with the call)
+   */
+  at_fault?: {
+    team_id: string;
+    name: string;
+  } | null;
+  /**
+   * Plain-language reason, e.g. a challenge verdict (240 chars at most)
+   */
+  explanation?: string | null;
+  /**
+   * Where the evidence came from; annotated = hand-marked events on recorded footage
+   */
+  source?: "sensed" | "annotated" | "manual";
   /**
    * decide() suggested verdict after AI votes; advisory only, the judge decides
    */

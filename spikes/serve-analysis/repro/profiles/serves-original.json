@@ -1,0 +1,60 @@
+{
+  "config": {
+    "session_id": "user-two-camera",
+    "title": "Our room \u00b7 serve review",
+    "players": {
+      "p0": "Black shirt",
+      "p1": "Navy shirt"
+    },
+    "synchronization_status": "audio_offset_40ms_visual_alignment_not_verified",
+    "merge_tolerance_seconds": 0.3,
+    "views": [
+      {
+        "id": "Side camera",
+        "video": "../../data/local/analysis-inputs/Adobe Express - IMG_4342.mp4",
+        "source_offset_seconds": 0,
+        "player_regions_norm": {
+          "left": [
+            0.08,
+            0.25,
+            0.4,
+            0.98
+          ],
+          "right": [
+            0.65,
+            0.15,
+            1,
+            1
+          ]
+        },
+        "player_map": {
+          "left": "p0",
+          "right": "p1"
+        }
+      },
+      {
+        "id": "Oblique camera",
+        "video": "../../data/local/analysis-inputs/IMG_2865 (1).mov",
+        "source_offset_seconds": 0.04,
+        "player_regions_norm": {
+          "left": [
+            0.12,
+            0.18,
+            0.58,
+            1
+          ],
+          "right": [
+            0.62,
+            0.28,
+            0.9,
+            0.87
+          ]
+        },
+        "player_map": {
+          "left": "p1",
+          "right": "p0"
+        }
+      }
+    ]
+  }
+}

@@ -110,9 +110,16 @@ class Challenge(BaseModel):
     call_id: str
     by_cam_id: str
     status: Literal["open", "resolved"]
-    result: Literal["upheld", "overturned"] | None = None
+    result: Literal["upheld", "overturned", "players_decide"] | None = None
     created_at_ms: float
     resolved_at_ms: float | None = None
+    decided_by: Literal["auto", "judge"] | None = Field(
+        None, description="auto = geometry + Claude (uncalibrated) re-check (D-44); judge = a person"
+    )
+    p_original: float | None = Field(
+        None, description="Blended probability that the original call was right (uncalibrated)"
+    )
+    explanation: str | None = Field(None, description="The spoken verdict and reason")
 
 
 class HouseRuleStep(BaseModel):
@@ -154,30 +161,6 @@ class HouseRuleResults(BaseModel):
     )
     tests: list[HouseRuleTest]
     calls_changed: list[CallChange]
-
-
-class HouseRule(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    rule_version: str = Field(..., description="ULID")
-    game_id: str
-    sport: str
-    text: str
-    source: Literal["typed", "voice"]
-    status: Literal["pending", "compiling", "ready", "approved", "rejected", "failed"] = Field(
-        ..., title="HouseRuleStatus"
-    )
-    backend: Literal["droid", "claude-fallback"]
-    plan_md: str
-    steps: list[HouseRuleStep]
-    diff: str = Field(..., description="Unified diff of the pack YAML")
-    results: HouseRuleResults | None = None
-    pack_path: str | None = None
-    error: str | None = None
-    created_at_ms: float
-    updated_at_ms: float
 
 
 class AiVote(BaseModel):
@@ -311,6 +294,108 @@ class Commentary(BaseModel):
     validated: bool
     source: Literal["claude", "template"]
     created_at_ms: float
+
+
+class Feed(BaseModel):
+    """
+    One camera angle replayed from a recording as if live (D-42). The Mac streams the clip into frames:{cam_id} for the referee; phones hosting the angle play the same clip locally, in sync with wall0_ms on the server clock.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    cam_id: str = Field(..., description="The camera the referee sees: frames:{cam_id}")
+    game_id: str
+    label: str = Field(..., description="e.g. Side, Diagonal, Baseline")
+    status: Literal["scheduled", "playing", "ended", "failed"]
+    scenario_id: str
+    video_url: str = Field(..., description="Gateway path of the phone-playable H.264 file (append ?token=)")
+    offset_s: float = Field(..., description="Clip time shown at wall0_ms")
+    duration_s: float = Field(..., description="Seconds streamed from offset_s")
+    wall0_ms: float = Field(..., description="Server epoch ms at which clip time offset_s plays")
+    t_game0_s: float = Field(
+        ..., description="Game time at wall0_ms (game time of clip time t = t_game0_s + (t - offset_s))"
+    )
+    source: Literal["team_recording", "cc_by_online", "synthetic"]
+    credit: str | None = Field(None, description="Attribution line for CC BY footage")
+    annotated: bool | None = Field(
+        None, description="True when this angle's events come from hand annotations, not perception"
+    )
+    calibrated: bool | None = None
+    updated_at_ms: float
+
+
+class Viewer(BaseModel):
+    """
+    A phone showing one angle (D-42). Phones report their playback drift against the feed schedule; every device sees every other device through Spacetime.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    viewer_id: str = Field(..., description="The phone's own cam_id from its join token")
+    game_id: str
+    cam_id: str = Field(..., description="The angle (Feed.cam_id) this phone shows")
+    name: str | None = Field(None, description="Short device name, e.g. iPhone")
+    connected: bool
+    playing: bool | None = None
+    drift_ms: float = Field(..., description="Local video time minus scheduled time, ms (positive = ahead)")
+    last_seen_ms: float
+
+
+class HouseRuleDecision(BaseModel):
+    """
+    The Droid's decision on a new house rule (D-43): whether it applies, why, and what it re-judged.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    applies: bool
+    rationale: str
+    decided_by: Literal["droid", "judge"]
+    rejudged_rallies: int | None = None
+    calls_changed: int | None = None
+    decided_at_ms: float | None = None
+    reverted_at_ms: float | None = None
+
+
+class HouseRule(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    rule_version: str = Field(..., description="ULID")
+    game_id: str
+    sport: str
+    text: str
+    source: Literal["typed", "voice"]
+    status: Literal["pending", "compiling", "ready", "approved", "rejected", "failed", "applied", "reverted"] = Field(
+        ..., title="HouseRuleStatus"
+    )
+    backend: Literal["droid", "claude-fallback"]
+    plan_md: str
+    steps: list[HouseRuleStep]
+    diff: str = Field(..., description="Unified diff of the pack YAML")
+    results: HouseRuleResults | None = None
+    pack_path: str | None = None
+    error: str | None = None
+    created_at_ms: float
+    updated_at_ms: float
+    decision: HouseRuleDecision | None = None
+    run_id: str | None = Field(None, description="The droid_run row of the run that compiled this rule")
+    base_rule_version: str | None = Field(
+        None, description="The pack version the run starts from (the last applied pack: house rules stack)"
+    )
+    base_pack_path: str | None = Field(
+        None, description="The engine's copy of that pack's rules.yaml (the sandbox starts from it)"
+    )
+    session_path: str | None = Field(
+        None, description="The session's events so far (session.json), the gate's baseline for calls_changed"
+    )
 
 
 class StateTables(BaseModel):

@@ -20,7 +20,13 @@ class DroidRunTrigger(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    source: Literal["cli", "house_rule", "session", "health_stat"]
+    source: Literal["cli", "house_rule", "session", "health_stat", "sport_module", "user"] = Field(
+        ...,
+        description="sport_module: a game started for a sport with no approved interpreter (an event: the engine's request); user: 'Regenerate interpreter' (a judge's action)",
+    )
+    requested_by: str | None = Field(
+        None, description="The service that queued the run through request_droid_run (engine)"
+    )
     rule_version: str | None = Field(None, description="house_rule.rule_version when source = house_rule")
     text: str | None = Field(None, description="The house rule, or the retune reason")
     scene: str | None = Field(None, description="Path of the scene descriptor used")
@@ -62,8 +68,18 @@ class DroidRunCallChange(BaseModel):
     )
     rally_no: int
     call_id: str | None = None
+    t_s: float | None = Field(None, description="Game time of the play (session replays)")
     before: str
     after: str
+
+
+class DroidRunDecision(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    applies: bool
+    rationale: str = Field(..., max_length=600)
 
 
 class DroidRunResults(BaseModel):
@@ -103,7 +119,7 @@ class DroidRun(BaseModel):
     game_id: str | None = None
     sport: str = Field(..., description="The module being produced or edited")
     base_sport: str | None = Field(None, description="The reference module a compile derives from")
-    kind: Literal["compile", "house_rule", "retune"]
+    kind: Literal["compile", "house_rule", "retune", "calibrate_checks", "new_check", "interpreter"]
     trigger: DroidRunTrigger
     status: Literal["queued", "running", "ready", "failed", "approved", "rejected"] = Field(..., title="DroidRunStatus")
     backend: Literal["droid", "claude-fallback"]
@@ -125,4 +141,8 @@ class DroidRun(BaseModel):
     finished_at_ms: float | None = None
     duration_ms: float | None = None
     gate_ms: list[float] | None = Field(None, description="replay_test wall time per attempt")
+    decision: DroidRunDecision | None = Field(
+        None,
+        description="house_rule runs: the Droid's decision (decision.json in the sandbox, validated by the runner)",
+    )
     token_usage: TokenUsage | None = None

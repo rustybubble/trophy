@@ -46,6 +46,7 @@ import PostObservationsReducer from "./post_observations_reducer";
 import PostTrackSamplesReducer from "./post_track_samples_reducer";
 import PruneTrackSamplesReducer from "./prune_track_samples_reducer";
 import RegisterServiceReducer from "./register_service_reducer";
+import RequestDroidRunReducer from "./request_droid_run_reducer";
 import ResolveChallengeReducer from "./resolve_challenge_reducer";
 import SetBestPlayReducer from "./set_best_play_reducer";
 import SetDroidRunStatusReducer from "./set_droid_run_status_reducer";
@@ -56,9 +57,11 @@ import UpdateCallStatusReducer from "./update_call_status_reducer";
 import UpdateDroidRunReducer from "./update_droid_run_reducer";
 import UpdateHouseRuleProgressReducer from "./update_house_rule_progress_reducer";
 import UpsertCameraReducer from "./upsert_camera_reducer";
+import UpsertFeedReducer from "./upsert_feed_reducer";
 import UpsertGameReducer from "./upsert_game_reducer";
 import UpsertMomentReducer from "./upsert_moment_reducer";
 import UpsertSportModuleReducer from "./upsert_sport_module_reducer";
+import UpsertViewerReducer from "./upsert_viewer_reducer";
 
 // Import all procedure arg schemas
 
@@ -70,6 +73,7 @@ import CameraRow from "./camera_table";
 import ChallengeRow from "./challenge_table";
 import CommentaryRow from "./commentary_table";
 import DroidRunRow from "./droid_run_table";
+import FeedRow from "./feed_table";
 import GameRow from "./game_table";
 import HouseRuleRow from "./house_rule_table";
 import MomentRow from "./moment_table";
@@ -78,6 +82,7 @@ import RallyRow from "./rally_table";
 import ScoreRow from "./score_table";
 import SportModuleRow from "./sport_module_table";
 import TrackSampleRow from "./track_sample_table";
+import ViewerRow from "./viewer_table";
 
 /** Type-only namespace exports for generated type groups. */
 
@@ -196,6 +201,20 @@ const tablesSchema = __schema({
       { name: 'droid_run_run_id_key', constraint: 'unique', columns: ['runId'] },
     ],
   }, DroidRunRow),
+  feed: __table({
+    name: 'feed',
+    indexes: [
+      { accessor: 'cam_id', name: 'feed_cam_id_idx_btree', algorithm: 'btree', columns: [
+        'camId',
+      ] },
+      { accessor: 'game_id', name: 'feed_game_id_idx_btree', algorithm: 'btree', columns: [
+        'gameId',
+      ] },
+    ],
+    constraints: [
+      { name: 'feed_cam_id_key', constraint: 'unique', columns: ['camId'] },
+    ],
+  }, FeedRow),
   game: __table({
     name: 'game',
     indexes: [
@@ -314,6 +333,20 @@ const tablesSchema = __schema({
       { name: 'track_sample_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, TrackSampleRow),
+  viewer: __table({
+    name: 'viewer',
+    indexes: [
+      { accessor: 'game_id', name: 'viewer_game_id_idx_btree', algorithm: 'btree', columns: [
+        'gameId',
+      ] },
+      { accessor: 'viewer_id', name: 'viewer_viewer_id_idx_btree', algorithm: 'btree', columns: [
+        'viewerId',
+      ] },
+    ],
+    constraints: [
+      { name: 'viewer_viewer_id_key', constraint: 'unique', columns: ['viewerId'] },
+    ],
+  }, ViewerRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
@@ -330,6 +363,7 @@ const reducersSchema = __reducers(
   __reducerSchema("post_track_samples", PostTrackSamplesReducer),
   __reducerSchema("prune_track_samples", PruneTrackSamplesReducer),
   __reducerSchema("register_service", RegisterServiceReducer),
+  __reducerSchema("request_droid_run", RequestDroidRunReducer),
   __reducerSchema("resolve_challenge", ResolveChallengeReducer),
   __reducerSchema("set_best_play", SetBestPlayReducer),
   __reducerSchema("set_droid_run_status", SetDroidRunStatusReducer),
@@ -340,9 +374,11 @@ const reducersSchema = __reducers(
   __reducerSchema("update_droid_run", UpdateDroidRunReducer),
   __reducerSchema("update_house_rule_progress", UpdateHouseRuleProgressReducer),
   __reducerSchema("upsert_camera", UpsertCameraReducer),
+  __reducerSchema("upsert_feed", UpsertFeedReducer),
   __reducerSchema("upsert_game", UpsertGameReducer),
   __reducerSchema("upsert_moment", UpsertMomentReducer),
   __reducerSchema("upsert_sport_module", UpsertSportModuleReducer),
+  __reducerSchema("upsert_viewer", UpsertViewerReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

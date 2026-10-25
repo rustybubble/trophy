@@ -1,0 +1,114 @@
+{
+  "synthetic": true,
+  "label": "SYNTHETIC: hand-written events for the Droid's interpreter gate, not annotated from footage",
+  "sport": "table_tennis",
+  "bounces": [
+    {
+      "t_game_s": 1.0,
+      "side": "B",
+      "surface": "table"
+    },
+    {
+      "t_game_s": 5.0,
+      "side": "A",
+      "surface": "table"
+    },
+    {
+      "t_game_s": 5.4,
+      "side": "B",
+      "surface": "table"
+    },
+    {
+      "t_game_s": 9.0,
+      "side": "A",
+      "surface": "table"
+    },
+    {
+      "t_game_s": 9.4,
+      "side": "B",
+      "surface": "table"
+    },
+    {
+      "t_game_s": 9.9,
+      "side": "A",
+      "surface": "table"
+    },
+    {
+      "t_game_s": 10.4,
+      "side": "B",
+      "surface": "floor"
+    },
+    {
+      "t_game_s": 14.0,
+      "side": "B",
+      "surface": "table"
+    },
+    {
+      "t_game_s": 14.4,
+      "side": "A",
+      "surface": "table"
+    },
+    {
+      "t_game_s": 14.9,
+      "side": "B",
+      "surface": "table"
+    },
+    {
+      "t_game_s": 15.3,
+      "side": "B",
+      "surface": "table"
+    },
+    {
+      "t_game_s": 19.0,
+      "side": "B",
+      "surface": "table"
+    }
+  ],
+  "tol_count": 0,
+  "alternate_sides": false,
+  "min_recall": 1.0,
+  "first_server": "A",
+  "tol_t_s": 0.5,
+  "teams": [
+    {
+      "team_id": "A",
+      "name": "Team A"
+    },
+    {
+      "team_id": "B",
+      "name": "Team B"
+    }
+  ],
+  "calls": [
+    {
+      "t_s": 1.0,
+      "outcome": "fault",
+      "team_id": "B",
+      "at_fault": "A"
+    },
+    {
+      "t_s": 5.3,
+      "outcome": "let",
+      "team_id": null,
+      "at_fault": null
+    },
+    {
+      "t_s": 10.4,
+      "outcome": "out",
+      "team_id": "B",
+      "at_fault": "A"
+    },
+    {
+      "t_s": 15.3,
+      "outcome": "point",
+      "team_id": "A",
+      "at_fault": "B"
+    },
+    {
+      "t_s": 19.2,
+      "outcome": "net",
+      "team_id": "A",
+      "at_fault": "B"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Trophy · Serve review</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header><a class="brand" href="#">TROPHY<span> / SERVE REVIEW</span></a><span class="badge">RECORDED</span><span class="badge subtle">EXPERIMENTAL DETECTOR</span></header>
+<main>
+  <section class="intro"><div><p class="eyebrow">TWO VIEWS. ONE TIMELINE.</p><h1 id="title">Find the start of play.</h1><p class="muted">Inspect the serving action, compare both cameras, and keep a reviewed event list.</p></div><div class="intro-actions"><a id="demoVideo" class="demo-link" hidden target="_blank" rel="noopener">▶ Play annotated footage demo</a><button id="export" class="secondary">Export reviewed events ↗</button></div></section>
+  <div class="workspace">
+    <section class="evidence">
+      <div class="video-grid" id="videos"></div>
+      <div class="transport"><button id="previous" title="Previous candidate">←</button><button id="backFrame" title="Back 1/60 second">− 1/60 s</button><button id="play" class="primary">Play</button><button id="nextFrame" title="Forward 1/60 second">+ 1/60 s</button><button id="next" title="Next candidate">→</button><span id="time">0.000 s</span><label>Speed <select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option selected value="1">1×</option></select></label></div>
+      <input id="timeline" type="range" min="0" max="1" step="0.001" value="0" aria-label="Session time">
+      <p id="sync" class="notice"></p>
+      <article class="decision"><div><p class="eyebrow">SELECTED EVENT</p><h2 id="eventTitle">Choose a candidate</h2><p id="eventDetail" class="muted"></p></div><div id="edit"><label>Player <select id="player"></select></label><button id="setTime" class="secondary">Use current time</button><div class="review-actions"><button id="confirm" class="primary">Confirm serve</button><button id="uncertain">Needs review</button><button id="reject">False detection</button></div></div></article>
+      <p class="notice">Confirming records a serving action. Measure toss height and direction separately below.</p>
+      <section id="toss" class="toss-panel" aria-label="Toss height and angle evidence">
+        <div class="toss-heading"><div><p class="eyebrow">RULE 2.6.2 · TOSS EVIDENCE</p><h2>Height & direction</h2></div><span id="tossStatus" class="badge">NOT MEASURED</span></div>
+        <p id="tossCalibration" class="notice">Checking camera calibration…</p>
+        <div class="rule-grid"><article class="rule-card"><span class="muted">Rise after release</span><strong id="heightValue">— cm</strong><span id="heightResult">Not measured</span><span id="heightExplanation" class="muted"></span><a id="heightRule" target="_blank" rel="noopener">ITTF 2.6.2 · at least 16 cm ↗</a></article><article class="rule-card"><span class="muted">3D angle from vertical</span><strong id="angleValue">—°</strong><span id="angleResult">Not measured</span><span id="angleExplanation" class="muted"></span><a id="angleRule" target="_blank" rel="noopener">ITTF TTR · maximum 30° ↗</a></article></div>
+        <div id="tossDiagram" class="toss-diagram" hidden></div>
+        <p class="notice">Height is the ball-center rise from hand release to the highest point. Angle uses the 3D release-to-apex line, including motion toward either camera.</p>
+        <details id="markingDetails"><summary>Mark release and apex frames</summary>
+          <p class="notice">Pause and step through the toss. Choose a phase, then mark the ball center in each view. Use player crops to inspect it. Leave hidden observations missing. Source timestamps are saved with every mark.</p>
+          <div id="tossPhases" class="toss-phases"></div>
+          <div class="mark-toolbar"><button id="markToss" class="secondary">Mark ball in both views</button><button id="clearToss" class="secondary">Clear toss marks</button><span id="markHint" role="status"></span></div>
+          <label class="check-label"><input id="releaseVerified" type="checkbox"> I verified the last-on-hand and first-free release frames.</label>
+          <label class="check-label"><input id="apexVerified" type="checkbox"> I inspected the whole toss and bracketed its highest point with adjacent frames.</label>
+          <label class="profile-label">Angle interpretation <select id="tossProfile"><option value="ittf_ttr_30">TTR review criterion · 30°</option><option value="ittf_law_2_6_2">Published law · referee judgment</option></select></label>
+          <p class="notice">The release-to-apex method follows published research. Equivalence to ITTF’s proprietary measurement algorithm has not been verified.</p>
+        </details>
+        <div class="toss-actions"><button id="measureToss" class="primary">Compute toss checks</button><button id="exportToss" class="secondary" disabled>Export evidence JSON ↗</button><button id="exportTossImage" class="secondary" disabled>Export proof image ↗</button></div>
+        <ul id="tossBlockers" class="toss-blockers"></ul>
+        <p id="tossMessage" class="notice" role="status"></p>
+        <p class="notice">These two checks do not establish overall serve legality. Spin, visibility, palm position, end-line position, and other service requirements remain unchecked.</p>
+      </section>
+      <details><summary>Model, evidence, and validation</summary><pre id="diagnostics"></pre></details>
+    </section>
+    <aside><div class="list-heading"><h2>Candidates <span id="count">0</span></h2><select id="filter" aria-label="Filter events"><option value="all">All events</option><option value="candidate">Unreviewed</option><option value="confirmed">Confirmed</option><option value="review_needed">Needs review</option><option value="rejected">False detections</option></select></div><div id="events"></div><div class="manual"><button id="add" class="secondary">+ Add missed serve at current time</button><p class="muted">Reviews stay in this browser. Export them to keep or share your corrections.</p><button id="reset" class="secondary" title="Restore the original detector candidates; export your corrections first">Reset browser reviews</button></div></aside>
+  </div>
+  <div id="error" role="alert" hidden></div>
+</main><script type="module" src="review.js"></script></body></html>

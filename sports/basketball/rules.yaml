@@ -1,0 +1,55 @@
+# Written by the Factory Droid (interpreter job, D-43), live run 01M5SCPQJ2Y95HM2MZJN0CAAKJ on 2026-10-25: ready in 52 s,
+# 1 attempt, gate passed on evals/fixtures/annotated/basketball (hand-annotated). Gated sandbox commit 8c186b825ca5f3afc0fb25aff6468ae2cf559ce5.
+# Regenerate with: npm run cli -w @trophy/compiler -- interpreter --sport basketball
+sport: basketball
+family: possession
+version: 1
+name: Half-court pickup basketball
+teams:
+  - {team_id: A, name: Team A}
+  - {team_id: B, name: Team B}
+params:
+  three_point_radius_m: 6.75   # FIBA Article 2: arc from the point under the ring centre (6.60 m in the corners)
+field:
+  units: m
+  frame: "Origin on the floor directly under the centre of the ring; +y out toward half court, +x right facing the basket; z up."
+  landmarks: []
+scoring:
+  template: cumulative
+  params:
+    points_to_win: 11
+rules:
+  # Pickup scoring ("1s and 2s", RULES.md): a made shot scores 2 if the shooter's release was beyond the
+  # three-point arc, 1 otherwise. The release position (behind_arc_p), not where the ball lands, decides it.
+  # A close call near the line (RULES.md: the 23.3 s basket) is judged, not measured, so it runs BETA with
+  # the call's confidence taken from the measurement itself (p = behind_arc_p for 2, 1 - behind_arc_p for 1).
+  - id: basket_made_beyond_arc
+    name: Made basket beyond the arc
+    tier: BETA
+    kind: basket
+    when: "ev.type == 'shot' && ev.payload.made == true && ev.payload.behind_arc_p > 0.5"
+    check: code
+    p: "ev.payload.behind_arc_p"
+    outcome: basket
+    team: "ev.team_id"
+    points: 2
+    at_fault: "''"
+    text: "Basket, {team}: 2 points"
+    speech: "Basket, {team}."
+    requires: [shot]
+    rule_ref: "FIBA Article 16; RULES.md pickup 1s and 2s"
+  - id: basket_made_inside_arc
+    name: Made basket inside the arc
+    tier: BETA
+    kind: basket
+    when: "ev.type == 'shot' && ev.payload.made == true"
+    check: code
+    p: "1.0 - ev.payload.behind_arc_p"
+    outcome: basket
+    team: "ev.team_id"
+    points: 1
+    at_fault: "''"
+    text: "Basket, {team}: 1 point"
+    speech: "Basket, {team}."
+    requires: [shot]
+    rule_ref: "FIBA Article 16; RULES.md pickup 1s and 2s"

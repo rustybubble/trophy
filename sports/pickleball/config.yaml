@@ -1,0 +1,53 @@
+# Sport module: pickleball (doubles). Facts for the Droid-written interpreter; validated by sportmodule.schema.json.
+# Metres, seconds, pixels. Written from the USA Pickleball court spec and the BT Pickleball clip (CC BY), not tuned on
+# perception: in the judging demo this sport runs on hand-annotated events (D-44), so detector fields are defaults.
+sport: pickleball
+version: 1
+court:
+  template: pickleball_doubles   # field frame: origin on the ground under the centre of the net, +x toward team B's
+                                 # baseline (the far court in the clip), +y to the left looking from A to B, z up
+  length_m: 13.41                # 44 ft baseline to baseline
+  width_m: 6.10                  # 20 ft sideline to sideline
+  plane_z_m: 0.0
+  surface: court                 # bounce.payload.surface for a bounce on the court
+  net_x_m: 0.0
+  net_height_m: 0.914            # 36 in at the sidelines (34 in = 0.864 m at the centre)
+  floor_z_m: 0.0
+  kitchen_depth_m: 2.13          # non-volley zone: 7 ft from the net on each side; its lines belong to the zone
+  lines:
+    baseline_A: [[-6.705, -3.05], [-6.705, 3.05]]
+    baseline_B: [[6.705, -3.05], [6.705, 3.05]]
+    sideline_left: [[-6.705, 3.05], [6.705, 3.05]]
+    sideline_right: [[-6.705, -3.05], [6.705, -3.05]]
+    kitchen_A: [[-2.13, -3.05], [-2.13, 3.05]]
+    kitchen_B: [[2.13, -3.05], [2.13, 3.05]]
+    centre_A: [[-6.705, 0.0], [-2.13, 0.0]]
+    centre_B: [[2.13, 0.0], [6.705, 0.0]]
+  zones:
+    kitchen_A: [[-2.13, -3.05], [0.0, -3.05], [0.0, 3.05], [-2.13, 3.05]]
+    kitchen_B: [[0.0, -3.05], [2.13, -3.05], [2.13, 3.05], [0.0, 3.05]]
+teams:
+  - {team_id: A, name: Near team, short: Near, look: "black shirt with red shorts, and white long sleeves (near the camera)"}
+  - {team_id: B, name: Far team, short: Far, look: "green shirt, and grey shirt (beyond the net)"}
+scoring:
+  template: side_out             # traditional doubles scoring: only the serving team scores; 0-0-2 start
+  points_to_win: 11
+  win_by: 2
+ball:
+  diameter_m: 0.074              # outdoor ball, 2.87-2.97 in
+  colour: yellow-green
+  radius_px: {min: 2, max: 12}
+capture:
+  fps: 30
+  min_conf: 0.3
+bounce:
+  min_track_len: 2
+  min_vy_px_s: 40
+  plane_margin_m: 0.5
+  edge_band_m: 0.05              # lines are 2 in (0.051 m) wide and count as in (except the kitchen line on a serve)
+  sigma_m: 0.10
+  merge_window_s: 0.12
+net:
+  window_m: 0.3
+dead:
+  gap_s: 1.5

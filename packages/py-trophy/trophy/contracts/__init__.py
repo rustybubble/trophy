@@ -18,6 +18,9 @@ from .ctl import (
     AdjustScoreArgs,
     SubmitHouseRuleArgs,
     HouseRuleVersionArgs,
+    CheckReply,
+    RunCheckArgs,
+    RequestCheckArgs,
     AskCitation,
     AskLoggedArgs,
     WsClientMessage,
@@ -26,9 +29,20 @@ from .ctl import (
     BookmarkArgs,
     ClipThatArgs,
     ReviewCallArgs,
+    FeedScheduleArgs,
+    ViewerStatusArgs,
+    RegenerateInterpreterArgs,
 )
 from .decide import Decide, DecideRequest, Vote, DecideResult
-from .droidrun import DroidRun, DroidRunTrigger, DroidRunStep, DroidRunTest, DroidRunCallChange, DroidRunResults
+from .droidrun import (
+    DroidRun,
+    DroidRunTrigger,
+    DroidRunStep,
+    DroidRunTest,
+    DroidRunCallChange,
+    DroidRunDecision,
+    DroidRunResults,
+)
 from .event import (
     Event,
     PosM,
@@ -55,6 +69,7 @@ from .event import (
 )
 from .frame import FrameMeta
 from .rulepack import RulePack, Team, Landmark, FieldTemplate, Scoring, Ensemble, Rule
+from .scene import SceneDescriptor, SceneCamera, SceneCourt, SceneBall, L1Record, BounceLabel, SampleLabels
 from .sportmodule import SportConfig, SportModuleRow
 from .state import (
     StateTables,
@@ -75,7 +90,11 @@ from .state import (
     Ask,
     Moment,
     Commentary,
+    Feed,
+    Viewer,
+    HouseRuleDecision,
 )
+from .track3d import Track3DSample, Track3DView, CheckResult, Track3DLabels
 from .tracks import BallTrackSample, PlayerBox, PlayersTrackSample
 
 __all__ = [
@@ -88,6 +107,7 @@ __all__ = [
     "BallDeadPayload",
     "BallTrackSample",
     "BookmarkArgs",
+    "BounceLabel",
     "BounceMark",
     "BouncePayload",
     "Calibration",
@@ -98,6 +118,8 @@ __all__ = [
     "CameraHealthArgs",
     "Challenge",
     "ChallengeArgs",
+    "CheckReply",
+    "CheckResult",
     "Citation",
     "ClipThatArgs",
     "ClockSample",
@@ -111,6 +133,7 @@ __all__ = [
     "DecideResult",
     "DroidRun",
     "DroidRunCallChange",
+    "DroidRunDecision",
     "DroidRunResults",
     "DroidRunStep",
     "DroidRunTest",
@@ -122,6 +145,8 @@ __all__ = [
     "Event",
     "EvidenceRef",
     "EvidenceWindow",
+    "Feed",
+    "FeedScheduleArgs",
     "FieldTemplate",
     "FrameMeta",
     "Game",
@@ -129,11 +154,13 @@ __all__ = [
     "HeartbeatPayload",
     "HiddenCamView",
     "HouseRule",
+    "HouseRuleDecision",
     "HouseRuleResults",
     "HouseRuleStep",
     "HouseRuleTest",
     "HouseRuleVersionArgs",
     "ImageSize",
+    "L1Record",
     "Landmark",
     "LineCrossPayload",
     "Moment",
@@ -146,12 +173,20 @@ __all__ = [
     "PosM",
     "Rally",
     "ReachOverNetPayload",
+    "RegenerateInterpreterArgs",
     "RegisterCameraArgs",
     "Replacement",
+    "RequestCheckArgs",
     "ResolveChallengeArgs",
     "ReviewCallArgs",
     "Rule",
     "RulePack",
+    "RunCheckArgs",
+    "SampleLabels",
+    "SceneBall",
+    "SceneCamera",
+    "SceneCourt",
+    "SceneDescriptor",
     "Score",
     "Scoring",
     "ServeHiddenPayload",
@@ -170,7 +205,12 @@ __all__ = [
     "TeamSpec",
     "TossMark",
     "TouchPayload",
+    "Track3DLabels",
+    "Track3DSample",
+    "Track3DView",
     "TrackSample",
+    "Viewer",
+    "ViewerStatusArgs",
     "Vote",
     "WsClientMessage",
     "WsServerMessage",

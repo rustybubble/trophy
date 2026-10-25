@@ -1,0 +1,45 @@
+{
+  "synthetic": false,
+  "label": "HAND-ANNOTATED from CC BY footage by a Trophy agent (not synthetic, not perception output)",
+  "sport": "pickleball",
+  "labeller": "Claude (Trophy sports agent), 2026-10-25, from 720p frames at 1-60 fps",
+  "bounces": [
+    {
+      "t_game_s": 13.95,
+      "side": "A",
+      "surface": "court"
+    }
+  ],
+  "tol_count": 1,
+  "tol_t_s": 0.5,
+  "alternate_sides": false,
+  "min_recall": 0.75,
+  "initial_score": {
+    "A": 0,
+    "B": 0,
+    "server_number": 2
+  },
+  "outcome_truth": "no score overlay in this video; the out call is our reading, supported by SportsAlgo's own line-tracking minimap. The server and the score are not visible, so only the call is labelled.",
+  "not_annotated": [
+    {
+      "t_s": 2.0,
+      "why": "rally start; contacts before the deciding shot are not labelled"
+    },
+    {
+      "t_s": 17.5,
+      "why": "the next rally starts at 17.5 s and is still going at the segment end (30 s)"
+    }
+  ],
+  "calls": [
+    {
+      "t_s": 13.95,
+      "outcome": "out",
+      "team_id": "A",
+      "at_fault": "B",
+      "rule_hint": "ball_out",
+      "p_in": 0.23,
+      "expected_tier": "BETA",
+      "conf": 0.7
+    }
+  ]
+}

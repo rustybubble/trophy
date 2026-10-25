@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trophy.local/contracts/track3d.schema.json",
+  "title": "Track3DSample",
+  "description": "One fused 3D ball sample (D-31): the ball's position in the field frame at one instant, fused from two or more phones. PROVISIONAL: perception owns the fusion and the shape may change; consumers go through trophy_engine.checks.api. Field (the calibration), CheckResult (what a check returns) and Track3DLabels (fixture truth) are in $defs.",
+  "type": "object",
+  "required": ["t_s", "xyz_m", "conf"],
+  "properties": {
+    "t_s": { "type": "number", "description": "Game time, seconds, on the gateway clock" },
+    "xyz_m": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3, "description": "Field frame: origin at the play-surface centre, x along the length (A: x<0, B: x>0), y across, z up" },
+    "sigma_m": { "type": "number", "minimum": 0, "description": "Isotropic 1-sigma position uncertainty; when absent the adapter uses cov_m2 or the calibration default and marks the sample uncalibrated" },
+    "cov_m2": { "type": "array", "items": { "type": "number" }, "minItems": 9, "maxItems": 9, "description": "3x3 row-major covariance, m^2" },
+    "conf": { "type": "number", "minimum": 0, "maximum": 1, "description": "Normalised detection confidence (BlurBall's raw blob score divided by max(heatmap))" },
+    "n_views": { "type": "integer", "minimum": 0, "description": "2+ triangulated, 1 single view on the surface plane, 0 interpolated" },
+    "views": { "type": "array", "items": { "$ref": "#/$defs/Track3DView" } }
+  },
+  "$defs": {
+    "Track3DView": {
+      "title": "Track3DView",
+      "description": "Provenance: the per-camera BlurBall row behind a fused sample (Frame, X, Y, Visibility, L, Theta)",
+      "type": "object",
+      "required": ["cam_id"],
+      "properties": {
+        "cam_id": { "type": "string" },
+        "frame": { "type": "integer" },
+        "xy_px": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "L_px": { "type": "number", "description": "blur half-length in original pixels" },
+        "theta_deg": { "type": "number", "description": "blur orientation, degrees, unsigned direction" },
+        "vis": { "type": "integer" }
+      }
+    },
+    "Field": {
+      "title": "Field",
+      "description": "The calibration a session's checks are written for: the play surface, net and sides in the field frame, plus the uncertainty model.",
+      "type": "object",
+      "required": ["sport", "corners_m"],
+      "properties": {
+        "schema": { "const": "trophy.field.v1" },
+        "sport": { "type": "string" },
+        "frame": { "type": "string", "default": "field" },
+        "surface_z_m": { "type": "number", "default": 0, "description": "Height of the tracked point when the ball rests on the play surface (the ball centre is one radius above the table top; calibration sets this)" },
+        "floor_z_m": { "type": "number", "description": "Floor height in the field frame (table tennis: -0.76)" },
+        "table": { "type": "object", "properties": { "length_m": { "type": "number" }, "width_m": { "type": "number" }, "height_m": { "type": "number" } } },
+        "net": { "type": "object", "properties": { "x_m": { "type": "number" }, "height_m": { "type": "number" }, "overhang_m": { "type": "number" } } },
+        "corners_m": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }, "description": "A-right, B-right, B-left, A-left on the surface" },
+        "sides": { "type": "object", "properties": { "A": { "type": "string" }, "B": { "type": "string" } } },
+        "ball": { "type": "object", "properties": { "diameter_m": { "type": "number" } } },
+        "cameras": { "type": "array", "items": { "type": "object", "required": ["cam_id"], "properties": { "cam_id": { "type": "string" }, "P": { "type": "array" }, "reproj_err_px": { "type": "number" }, "position_m": { "type": "array", "items": { "type": "number" } } } } },
+        "uncertainty": { "type": "object", "properties": { "sigma_default_m": { "type": "number" }, "sigma_1view_m": { "type": "number" }, "skew_sigma_s": { "type": "number" } } },
+        "time": { "type": "object", "properties": { "sync_method": { "type": "string" }, "skew_sigma_s": { "type": "number" } } },
+        "calibrated_at_ms": { "type": "number" },
+        "synthetic": { "type": "boolean" },
+        "label": { "type": "string" }
+      }
+    },
+    "CheckResult": {
+      "title": "CheckResult",
+      "description": "What every check returns: check(track, field, params, **q) -> CheckResult. verdict is the answer, p its probability (sigma propagated), evidence what it was computed from.",
+      "type": "object",
+      "required": ["check", "verdict", "calibrated"],
+      "properties": {
+        "check": { "type": "string" },
+        "verdict": {},
+        "p": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "t_s": { "type": ["number", "null"] },
+        "sigma_m": { "type": ["number", "null"] },
+        "evidence": { "type": "object" },
+        "calibrated": { "type": "boolean", "description": "false when the track carried no sigma or the checks are the unedited golden library" },
+        "text": { "type": "string", "description": "one plain-language line Claude may phrase from; never a decision" }
+      }
+    },
+    "Track3DLabels": {
+      "title": "Track3DLabels",
+      "description": "Ground truth for a track3d fixture (synthetic or hand-labelled).",
+      "type": "object",
+      "required": ["sport", "rallies", "bounces"],
+      "properties": {
+        "synthetic": { "type": "boolean" },
+        "label": { "type": "string" },
+        "sport": { "type": "string" },
+        "labeller": { "type": "string" },
+        "first_server": { "enum": ["A", "B"] },
+        "rallies": { "type": "array", "items": { "type": "object", "required": ["rally_no", "t_start_s", "t_end_s", "server_side"], "properties": { "rally_no": { "type": "integer" }, "t_start_s": { "type": "number" }, "t_contact_s": { "type": "number" }, "t_end_s": { "type": "number" }, "server_side": { "enum": ["A", "B"] }, "winner": { "enum": ["A", "B", null] }, "let": { "type": "boolean" }, "end_reason": { "type": "string" } } } },
+        "bounces": { "type": "array", "items": { "type": "object", "required": ["t_s", "side", "surface"], "properties": { "t_s": { "type": "number" }, "rally_no": { "type": "integer" }, "side": { "enum": ["A", "B"] }, "surface": { "enum": ["table", "floor", "side_face"] }, "pos_m": { "type": "array", "items": { "type": "number" } }, "in": { "type": "boolean" }, "margin_m": { "type": "number", "description": "signed distance to the nearest line, + inside" }, "line": { "type": "string" } } } },
+        "contacts": { "type": "array", "items": { "type": "object", "required": ["t_s", "side"], "properties": { "t_s": { "type": "number" }, "side": { "enum": ["A", "B"] }, "rally_no": { "type": "integer" } } } },
+        "nets": { "type": "array", "items": { "type": "object", "required": ["t_s", "kind"], "properties": { "t_s": { "type": "number" }, "kind": { "enum": ["touch", "into", "over"] }, "from_side": { "enum": ["A", "B"] }, "rally_no": { "type": "integer" } } } },
+        "serves": { "type": "array", "items": { "type": "object", "required": ["rally_no", "height_m", "angle_deg", "legal"], "properties": { "rally_no": { "type": "integer" }, "t_release_s": { "type": "number" }, "t_contact_s": { "type": "number" }, "height_m": { "type": "number" }, "angle_deg": { "type": "number" }, "legal": { "type": "boolean" } } } },
+        "tol": { "type": "object", "properties": { "t_s": { "type": "number" }, "t_start_s": { "type": "number" }, "t_end_s": { "type": "number" }, "pos_m": { "type": "number" }, "height_m": { "type": "number" }, "angle_deg": { "type": "number" }, "min_recall": { "type": "number" }, "min_precision": { "type": "number" } } }
+      }
+    }
+  }
+}
