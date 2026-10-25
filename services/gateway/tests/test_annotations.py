@@ -142,7 +142,8 @@ async def test_invalid_events_are_skipped_and_valid_ones_mirrored(tmp_path: Path
 
 
 # ---- the committed fixtures --------------------------------------------------------------------------------------
-FIXTURES = sorted(ANNOTATED.glob("*/*.events.jsonl"))
+# hand-annotated footage only; the Droid gate also has SYNTHETIC_* fixtures (labelled in their names)
+FIXTURES = sorted(p for p in ANNOTATED.glob("*/*.events.jsonl") if not p.name.startswith("SYNTHETIC"))
 
 
 def test_there_are_annotated_fixtures_for_the_three_demo_sports():

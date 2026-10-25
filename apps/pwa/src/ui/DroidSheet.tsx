@@ -81,9 +81,14 @@ const KIND_LABEL: Record<DroidRun["kind"], string> = {
 function triggerText(item: DroidItem): string {
   if (item.rule) return `${item.rule.source === "voice" ? "Spoken" : "Typed"} house rule`;
   const t = item.run!.trigger;
-  const src = { cli: "Command line", house_rule: "House rule", session: "Session event", health_stat: "Health stat" }[
-    t.source
-  ];
+  const src = {
+    cli: "Command line",
+    house_rule: "House rule",
+    session: "Session event",
+    health_stat: "Health stat",
+    sport_module: "New sport in play",
+    user: "Regenerate tapped",
+  }[t.source];
   return `${src}${t.text ? `: ${t.text}` : ""}`;
 }
 

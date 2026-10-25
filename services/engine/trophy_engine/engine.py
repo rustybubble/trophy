@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import queue
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path

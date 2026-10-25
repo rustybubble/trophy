@@ -32,11 +32,13 @@ from trophy.contracts import (
     CtlCommand,
     EmptyArgs,
     HouseRuleVersionArgs,
+    RegenerateInterpreterArgs,
     ResolveChallengeArgs,
     ReviewCallArgs,
     SetServerArgs,
     StartGameArgs,
     SubmitHouseRuleArgs,
+    ViewerStatusArgs,
 )
 from trophy.events import event_json, make_event
 from trophy.framebus import FRAMES_MAXLEN, frame_fields, parse_message
@@ -88,6 +90,9 @@ CLIENT_ARGS = {
     "bookmark": BookmarkArgs,
     "clip_that": ClipThatArgs,
     "review_call": ReviewCallArgs,
+    "revert_house_rule": HouseRuleVersionArgs,
+    "regenerate_interpreter": RegenerateInterpreterArgs,
+    "viewer_status": ViewerStatusArgs,
 }
 
 
