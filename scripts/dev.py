@@ -28,7 +28,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PIDS = ROOT / "data" / "local" / "dev.pids"
-DEFAULTS = {"SPACETIME": "spacetime"}
+# $PYTHON: the interpreter running this script, quoted for the shell (Windows paths often contain spaces)
+PY = f'"{sys.executable}"' if os.name == "nt" else shlex.quote(sys.executable)
+DEFAULTS = {"SPACETIME": "spacetime", "PYTHON": PY}
 PORTS = {"spacetime": 3000, "gateway": 8000, "voice": 8765, "pwa": 5173, "dashboard": 5174, "watch": 5175, "caddy": 443}
 WAITS = {
     "gateway": [6379, 3000],

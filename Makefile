@@ -1,6 +1,12 @@
 .PHONY: dev e2e contracts fixtures check smoke stdb-publish stdb-provision stdb-bindings stdb-seed
-dev:        ## (re)start the whole stack natively from the Procfile (also: npm run dev; stop: python scripts/dev.py --stop)
-	python scripts/dev.py
+# macOS and most Linux ship only `python3`; Windows has `python` (and a Store stub named python3).
+ifeq ($(OS),Windows_NT)
+PYTHON ?= python
+else
+PYTHON ?= python3
+endif
+dev:        ## (re)start the whole stack natively from the Procfile (also: npm run dev; stop: $(PYTHON) scripts/dev.py --stop)
+	$(PYTHON) scripts/dev.py
 e2e:        ## CC BY clip as a phone -> frames -> recorder/replay -> Spacetime observations + calls (C2; stack running)
 	uv run --project services/gateway --frozen python scripts/e2e.py
 contracts:  ## regenerate TS (@trophy/contracts) + Pydantic (py-trophy) from packages/contracts/*.schema.json
@@ -16,11 +22,11 @@ SPACETIME ?= spacetime
 stdb-publish:   ## publish the module to the local server as `trophy` (spacetime start must be running)
 	$(SPACETIME) publish -s local -p spacetime --yes=skip-login trophy
 stdb-provision: ## engine/vision/compiler identities -> .env, registered with the module
-	python spacetime/scripts/provision.py
+	$(PYTHON) spacetime/scripts/provision.py
 stdb-bindings:  ## regenerate the TS client bindings after module changes
 	$(SPACETIME) generate --lang typescript -p spacetime -o packages/state-client/src/bindings --no-config -y
 stdb-seed:      ## replay the labelled-synthetic demo into a new game and check it
-	python spacetime/scripts/seed_demo.py --check
+	$(PYTHON) spacetime/scripts/seed_demo.py --check
 smoke:      ## P0 spikes
 	bash scripts/smoke.sh
 
