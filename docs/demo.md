@@ -70,14 +70,14 @@ The judge view of the PWA does the same from its House rules panel (typed or spo
 
 **Measured on this Mac (2026-10-24, `claude-sonnet-5`, effort low, single runs):** pending row → sandbox → one edit of
 `rules.yaml` (`net_let_on_serve`, placed before `net_into_own_side`) → `./replay_test` 19/19 in 270 ms → **ready in
-27.5 s** (interactive run) and **28.3 s** (`make e2e`); approve → engine hot-load → status `approved` in **0.8 s**.
+27.5 s** (interactive run) and **28.3 s** (`make e2e-synthetic`); approve → engine hot-load → status `approved` in **0.8 s**.
 Note: the engine keeps game state in memory, so restart it *before* creating the game, not between the rule and the
 approval.
 
 ## 3b. All of the above, headless
 ```bash
-make e2e        # scripts/e2e.py: game via the gateway -> trophy-play -> calls/score/rallies/moments vs labels -> house rule -> ready -> approve
-make e2e PYTHON=python3   # (the default); add --no-droid through `python3 scripts/e2e.py --no-droid` to skip the Factory run
+make e2e-synthetic   # scripts/e2e_synthetic.py: game via the gateway -> trophy-play -> calls/score/rallies/moments vs labels -> house rule -> ready -> approve
+make e2e-synthetic PYTHON=python3   # (the default); add --no-droid through `python3 scripts/e2e_synthetic.py --no-droid` to skip the Factory run
 ```
 Last result on this Mac: `E2E PASS` (2 fixtures in 3.6 s at ×4; Droid ready after 28.3 s; approved in 0.8 s).
 

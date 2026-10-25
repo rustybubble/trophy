@@ -1,9 +1,9 @@
 PYTHON ?= python3
-.PHONY: dev e2e contracts fixtures check smoke stdb-publish stdb-provision stdb-bindings stdb-seed
+.PHONY: dev e2e e2e-synthetic contracts fixtures check smoke stdb-publish stdb-provision stdb-bindings stdb-seed
 dev:        ## (re)start the whole stack natively from the Procfile (also: npm run dev; stop: python scripts/dev.py --stop)
 	$(PYTHON) scripts/dev.py
-e2e:        ## headless demo check (C2): gateway game -> synthetic replay -> calls/score in Spacetime -> Droid house rule -> approve
-	$(PYTHON) scripts/e2e.py
+e2e-synthetic: ## headless demo check on the SYNTHETIC fixtures: gateway game -> trophy-play -> calls/score in Spacetime -> Droid house rule -> approve
+	$(PYTHON) scripts/e2e_synthetic.py
 contracts:  ## regenerate TS (@trophy/contracts) + Pydantic (py-trophy) from packages/contracts/*.schema.json
 	node scripts/gen-contracts.mjs
 fixtures:   ## rebuild the labelled-synthetic MockState scripts

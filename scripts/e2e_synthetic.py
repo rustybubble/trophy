@@ -1,7 +1,7 @@
-"""`make e2e`: the headless demo check (checkpoint C2) against the running stack.
+"""`make e2e-synthetic`: the headless demo check on the SYNTHETIC fixtures, against the running stack.
 
-    python3 scripts/e2e.py                 # needs redis, spacetime (published + provisioned), gateway, engine, compiler
-    python3 scripts/e2e.py --no-droid      # skip the Factory Droid house rule (no FACTORY_API_KEY, or no spend wanted)
+    python3 scripts/e2e_synthetic.py                 # needs redis, spacetime (published + provisioned), gateway, engine, compiler
+    python3 scripts/e2e_synthetic.py --no-droid      # skip the Factory Droid house rule (no FACTORY_API_KEY, or no spend wanted)
 
 1. creates a game through the gateway (as a phone would), 2. replays the labelled-SYNTHETIC fixtures into the live
 engine with `trophy-play`, 3. checks the calls, rallies and score in Spacetime against the fixture labels, 4. submits a
