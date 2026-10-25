@@ -245,6 +245,23 @@ class Ask(BaseModel):
     moss_ms: float | None = None
     latency_ms: float
     created_at_ms: float
+    speech: str | None = Field(
+        None, description="Spoken form; phones speak it when the row arrives late (a pending answer)"
+    )
+    kind: Literal["check", "rule", "score", "explain", "pending", "none"] | None = Field(
+        None, description="How the referee answered"
+    )
+    check: str | None = Field(None, description="The session check that answered, when kind = check")
+    p: float | None = Field(
+        None,
+        description="The check's probability for its verdict; uncalibrated unless `calibrated` is true",
+        ge=0.0,
+        le=1.0,
+    )
+    calibrated: bool | None = Field(
+        None, description="false on the unedited golden check library or when sigma was a default"
+    )
+    by_cam_id: str | None = Field(None, description="Who asked")
 
 
 class Moment(BaseModel):

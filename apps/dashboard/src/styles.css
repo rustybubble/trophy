@@ -263,7 +263,8 @@ td {
   font-style: italic;
   margin-bottom: 4px;
 }
-.ask a {
+.ask a,
+.ask .check {
   margin-right: 10px;
 }
 .join .qr {

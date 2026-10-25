@@ -166,6 +166,16 @@ class AskLoggedArgs(BaseModel):
     citations: list[AskCitation]
     latency_ms: float
     moss_ms: float | None = None
+    speech: str | None = Field(
+        None, description="Spoken form; phones speak it when the row arrives late (a pending answer)"
+    )
+    kind: Literal["check", "rule", "score", "explain", "pending", "none"] | None = Field(
+        None, description="How the referee answered"
+    )
+    check: str | None = Field(None, description="The session check that answered, when kind = check")
+    p: float | None = Field(None, ge=0.0, le=1.0)
+    calibrated: bool | None = None
+    by_cam_id: str | None = Field(None, description="Who asked; set by the referee on late answers")
 
 
 class ClockSample(BaseModel):

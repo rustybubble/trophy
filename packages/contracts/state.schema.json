@@ -560,6 +560,32 @@
         },
         "created_at_ms": {
           "type": "number"
+        },
+        "speech": {
+          "type": "string",
+          "description": "Spoken form; phones speak it when the row arrives late (a pending answer)"
+        },
+        "kind": {
+          "enum": ["check", "rule", "score", "explain", "pending", "none"],
+          "description": "How the referee answered"
+        },
+        "check": {
+          "type": "string",
+          "description": "The session check that answered, when kind = check"
+        },
+        "p": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "The check's probability for its verdict; uncalibrated unless `calibrated` is true"
+        },
+        "calibrated": {
+          "type": ["boolean", "null"],
+          "description": "false on the unedited golden check library or when sigma was a default"
+        },
+        "by_cam_id": {
+          "type": "string",
+          "description": "Who asked"
         }
       }
     },
