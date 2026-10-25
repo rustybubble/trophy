@@ -6,7 +6,7 @@
  *   trophy-droid house-rule --sport table_tennis --text "a serve that clips the net is a let" --samples <dir> [--rule-version <ulid> --spacetime]
  *   trophy-droid retune     --sport table_tennis --reason "ball lost in 45% of frames" --scene <scene.json> --samples <dir>
  *   trophy-droid calibrate  --sport table_tennis --field <field.json> --samples <dir> [--checks <dir>] [--session <id>]
- *                                                        # D-31: specialise sports/<sport>/checks to this calibration
+ *                                                        # D-36: specialise sports/<sport>/checks to this calibration
  *   trophy-droid watch      [--ws ws://127.0.0.1:3000]   # subscribe to pending house rules and compile each one
  *   trophy-droid approve    <run_id> [--by judge] [--session <id>]
  *                           # module runs: promote to data/local/modules/<sport>/v<n>

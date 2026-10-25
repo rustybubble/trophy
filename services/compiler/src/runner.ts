@@ -42,7 +42,7 @@ export function newRunId(now = Date.now()): string {
 
 function triggerOf(job: Job): DroidRun["trigger"] {
   if (job.kind === "calibrate_checks") {
-    // a calibration belongs to a session (D-31); the field and samples it was built from are the evidence
+    // a calibration belongs to a session (D-36); the field and samples it was built from are the evidence
     return {
       source: "session",
       text: job.text,

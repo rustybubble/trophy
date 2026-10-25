@@ -28,7 +28,7 @@ the voters are exercised through recorded response shapes on an injected HTTP tr
 
 Contracts: `docs/plan/interfaces-v1.md` §9–§11, §15, §19; `packages/contracts/{call,ctl,decide,state,sportmodule,scene,droidrun}.schema.json`.
 
-## 3D checks, the gate and ask the ref (D-31)
+## 3D checks, the gate and ask the ref (D-36)
 
 - `trophy_engine/checks/`: `api.py` (the `Field`/`Track` adapter over provisional `track3d` rows, free-flight maths),
   `library.py` (loads a `checks/` directory under an import allowlist; `library.json` → `calibrated`), `events.py`

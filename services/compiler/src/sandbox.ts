@@ -10,7 +10,7 @@
  *   samples/*.l1.jsonl + .labels.json
  *   replay_test               the test gate, pinned to the engine venv; the one command the Droid may run
  *
- * calibrate_checks (D-31):
+ * calibrate_checks (D-36):
  *   checks/*.py + library.json   a copy of the golden check library to specialise (the *.py are the editable files)
  *   reference/checks/            the same copy, read-only (the gate's "before" column)
  *   samples/field.json + *.track3d.jsonl + *.labels3d.json   this calibration and its labelled fused tracks
@@ -130,7 +130,7 @@ function layoutModule(job: Job, dir: string, root: string): Layout {
   if (job.kind === "compile") {
     const base = job.baseSport ?? "table_tennis";
     const refSrc = job.moduleDir ?? join(root, "sports", base);
-    // only the three module files: sports/<sport>/ also holds checks/ (D-31), which is not this job's business
+    // only the three module files: sports/<sport>/ also holds checks/ (D-36), which is not this job's business
     mkdirSync(join(dir, "reference", base), { recursive: true });
     for (const f of MODULE_FILES) cpSync(join(refSrc, f), join(dir, "reference", base, f));
     // Seed the new module with the reference so the Droid edits (a 90 s job) instead of retyping events.py.

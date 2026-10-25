@@ -7,7 +7,7 @@ of the root README's Factory section.
 
 Trophy keeps rules out of code: a sport is a module in `sports/<sport>/` (`config.yaml` detector parameters,
 `events.py` layer 1 → layer 2 events, `rules.yaml` the CEL rule pack; see [`sports/README.md`](../../sports/README.md))
-plus, since D-31, a **check library** `sports/<sport>/checks/*.py`: handwritten geometry checks (`phases`, `bounces`,
+plus, since D-36, a **check library** `sports/<sport>/checks/*.py`: handwritten geometry checks (`phases`, `bounces`,
 `in_out`, `net_touch`, `contacts`, `serve_toss`, `rally_summary`) over a fused 3D ball track, with `library.json`
 saying whether they were calibrated. A Factory Droid is the thing that writes and edits those files. It does four
 jobs, each from a trigger we designed:
@@ -26,7 +26,7 @@ calibrate run from the CLI until Agent 1 adds the `droid_run` and `sport_module`
 
 ## Scoped access: what the Droid can touch
 
-Each run gets a **fresh sandbox** (`~/.trophy/droid_runs/<run_id> (DROID_RUNS_DIR)/workspace`, its own git repository) containing
+Each run gets a **fresh sandbox** (`~/.trophy/droid_runs/<run_id>/workspace`, or under `DROID_RUNS_DIR`; its own git repository) containing
 only what the job needs, `TASK.md` (the brief from `prompts/`) and one fixed gate script that runs the engine's gate
 with a pinned interpreter, module and samples. No repo, no `.env`, no secrets.
 - **Module jobs:** the module to edit, the golden reference (compile jobs, read-only), the JSON Schemas, the scene
@@ -37,7 +37,7 @@ with a pinned interpreter, module and samples. No repo, no `.env`, no secrets.
   `schema/track3d.schema.json`, and `check_test`.
 
 Enforcement is layered, because the SDK's own permission handler turned out not to be enough (measured 2026-10-24:
-autonomy *off* offers no Edit tool, autonomy *low* auto-approves edits without asking; D-30):
+autonomy *off* offers no Edit tool, autonomy *low* auto-approves edits without asking; D-35):
 1. **A PreToolUse hook in every sandbox** (`.factory/hooks.json` → [`hooks/guard.py`](hooks/guard.py), read-only):
    the Droid CLI runs it before each `Edit|Create|ApplyPatch|MultiEdit|Write|Execute`; it allows only the job's
    allowlisted files and the job's gate (`.trophy/allowlist.json` `commands`: `./replay_test` or `./check_test`,
@@ -83,7 +83,7 @@ draft → gate → repair, at most `DROID_MAX_ATTEMPTS` (3) times. Both gates pr
   the rule engine with `rules/<sport>/rules.yaml` and compares rally winners with the labels. `reference/checks` is
   the *before* column.
 
-### calibrate_checks (D-31)
+### calibrate_checks (D-36)
 
 - **Trigger:** the judge finishes camera setup; the gateway will write a `droid_run` row of kind `calibrate_checks`
   (today: `trophy-droid calibrate`). `trigger.source` is `session`; `trigger.samples` records the `field.json` and the

@@ -26,7 +26,7 @@ Droid's job is deriving other sports from it (`sports/pickleball/` in the demo) 
 Fixtures: `evals/fixtures/synthetic/<sport>/` (labelled synthetic; `trophy-synth` generates them). Recorded logs from
 real games go to `data/local/` (gitignored) and are labelled before they join a gate.
 
-## `checks/`: geometry over the fused 3D track (D-31)
+## `checks/`: geometry over the fused 3D track (D-36)
 
 `sports/<sport>/checks/*.py` is the handwritten **golden check library**: one file per question the referee can be
 asked about the 3D ball track (`track3d.schema.json`: fused `t_s, xyz_m, sigma_m, conf` samples plus a `field.json`

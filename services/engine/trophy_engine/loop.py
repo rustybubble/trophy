@@ -1,5 +1,5 @@
 """``trophy-engine run``: the live loop. Redis ``ev:*`` (consumer group ``engine``) and ``ctl:engine`` in, Spacetime
-out. With ``--field`` the engine also consumes fused 3D ball samples (D-31): from the Redis stream ``trk:ball3d``, or
+out. With ``--field`` the engine also consumes fused 3D ball samples (D-36): from the Redis stream ``trk:ball3d``, or
 ``--track3d <file.track3d.jsonl>`` replayed on the clock; the session's check library (``--checks``, default the
 golden ``sports/<sport>/checks``) turns them into events through ``TrackEventer``. Events after a scored point are
 dropped until the next rally starts (the ball is dead whatever the track says). Background AI votes run only when
@@ -129,7 +129,7 @@ def make_feeder(
 
 
 def start_ask(env: dict[str, str], store: TrackStore, session_dir: Path) -> Any:
-    """Ask the ref over the live checks (D-31 §5). Needs ANTHROPIC_API_KEY: without it the service answers 503
+    """Ask the ref over the live checks (D-36 §5). Needs ANTHROPIC_API_KEY: without it the service answers 503
     not_configured, never a made-up answer."""
     phraser = None
     err = None
@@ -166,7 +166,7 @@ def run(argv: list[str] | None = None) -> int:
         help="real play: the first racket hit of a rally names the server",
     )
     ap.add_argument(
-        "--field", type=Path, default=None, help="field.json: consume fused 3D samples through the checks (D-31)"
+        "--field", type=Path, default=None, help="field.json: consume fused 3D samples through the checks (D-36)"
     )
     ap.add_argument(
         "--checks", type=Path, default=None, help="the session's checks/ (default sports/<sport>/checks, uncalibrated)"
