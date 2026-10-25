@@ -212,3 +212,16 @@ def interpolate_px(track: list[dict], t_s: float, max_gap_s: float) -> np.ndarra
     w = (t_s - t0) / (t1 - t0) if t1 > t0 else 0.0
     p0, p1 = np.array(track[i - 1]["xy_px"], float), np.array(track[i]["xy_px"], float)
     return p0 + w * (p1 - p0)
+
+
+def camera_looking_at(cam_id: str, pos, look_at, f_px: float, width: int = 1280, height: int = 720) -> Camera:
+    """A ground-truth camera at `pos` looking at `look_at` (field frame, z up). Used by the synthetic generator."""
+    pos, look_at = np.asarray(pos, float), np.asarray(look_at, float)
+    fwd = look_at - pos
+    fwd /= np.linalg.norm(fwd)
+    right = np.cross(fwd, np.array([0, 0, 1.0]))
+    right /= np.linalg.norm(right)
+    down = np.cross(fwd, right)
+    R = np.stack([right, down, fwd])
+    K = np.array([[f_px, 0, width / 2], [0, f_px, height / 2], [0, 0, 1]], float)
+    return Camera(cam_id, width, height, K, R, -R @ pos, 0.0, "truth")

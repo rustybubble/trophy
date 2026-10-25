@@ -1,24 +1,8 @@
 import numpy as np
 import pytest
 
-from flight.calib import Camera, focal_from_homography, refine_corners, solve_pose
+from flight.calib import camera_looking_at, focal_from_homography, refine_corners, solve_pose
 from flight.field import CORNERS_M
-
-
-def make_camera(cam_id, pos, look_at, f_px, width=1280, height=720):
-    """Ground-truth camera looking at look_at from pos (field frame, z up)."""
-    pos, look_at = np.asarray(pos, float), np.asarray(look_at, float)
-    fwd = look_at - pos
-    fwd /= np.linalg.norm(fwd)
-    up = np.array([0, 0, 1.0])
-    right = np.cross(fwd, up)
-    right /= np.linalg.norm(right)
-    down = np.cross(fwd, right)
-    R = np.stack([right, down, fwd])  # rows: camera x, y, z axes in field coords
-    t = -R @ pos
-    K = np.array([[f_px, 0, width / 2], [0, f_px, height / 2], [0, 0, 1]], float)
-    return Camera(cam_id, width, height, K, R, t, 0.0, "truth")
-
 
 SIDE = dict(pos=(0.0, -3.2, 1.9), look_at=(0.0, 0.0, 0.3), f_px=1000.0)
 DIAG = dict(pos=(3.0, 2.6, 2.1), look_at=(0.0, 0.0, 0.2), f_px=1050.0)
@@ -26,7 +10,7 @@ DIAG = dict(pos=(3.0, 2.6, 2.1), look_at=(0.0, 0.0, 0.2), f_px=1050.0)
 
 @pytest.mark.parametrize("spec", [SIDE, DIAG])
 def test_pose_recovered_from_exact_corners(spec):
-    truth = make_camera("c", **spec)
+    truth = camera_looking_at("c", **spec)
     px = truth.project(CORNERS_M)
     cam = solve_pose("c", px, truth.width, truth.height)
     assert cam.f_source == "homography"
@@ -38,7 +22,7 @@ def test_pose_recovered_from_exact_corners(spec):
 
 
 def test_pose_with_noisy_corners_reports_error():
-    truth = make_camera("c", **SIDE)
+    truth = camera_looking_at("c", **SIDE)
     rng = np.random.default_rng(0)
     px = truth.project(CORNERS_M) + rng.normal(0, 1.5, (4, 2))
     cam = solve_pose("c", px, truth.width, truth.height)
@@ -49,14 +33,14 @@ def test_pose_with_noisy_corners_reports_error():
 def test_focal_from_homography_matches_truth():
     import cv2
 
-    truth = make_camera("c", **DIAG)
+    truth = camera_looking_at("c", **DIAG)
     H, _ = cv2.findHomography(CORNERS_M[:, :2], truth.project(CORNERS_M))
     f = focal_from_homography(H, truth.width / 2, truth.height / 2)
     assert abs(f - DIAG["f_px"]) / DIAG["f_px"] < 0.02
 
 
 def test_lift_to_plane_inverts_projection():
-    truth = make_camera("c", **SIDE)
+    truth = camera_looking_at("c", **SIDE)
     p = np.array([0.4, -0.3, 0.02])
     px = truth.project(p)[0]
     back = truth.lift_to_plane(px, 0.02)
@@ -66,7 +50,7 @@ def test_lift_to_plane_inverts_projection():
 def test_refine_corners_snaps_to_drawn_table():
     import cv2
 
-    truth = make_camera("c", **SIDE)
+    truth = camera_looking_at("c", **SIDE)
     px = truth.project(CORNERS_M)
     img = np.full((720, 1280), 60, np.uint8)
     cv2.fillPoly(img, [np.round(px).astype(np.int32)], 140)
