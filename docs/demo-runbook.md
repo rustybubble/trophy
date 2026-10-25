@@ -7,7 +7,7 @@ numbers are in `docs/demo.md` and `docs/progress.md`; this file is only what to 
 
 | Check | Command | Expect |
 |---|---|---|
-| Keys in `.env` | `grep -E '^(CARTESIA_API_KEY\|FACTORY_API_KEY\|ANTHROPIC_API_KEY\|PORKBUN_API_KEY\|PORKBUN_SECRET_API_KEY)=' .env \| sed -E 's/=.+/=set/; s/=$/=EMPTY/'` | all `set`. `ANTHROPIC_API_KEY=EMPTY` means no Claude vote and no ask-the-ref until you add it |
+| Keys in `.env` | `grep -E '^(CARTESIA_API_KEY\|FACTORY_API_KEY\|ANTHROPIC_API_KEY\|PORKBUN_API_KEY\|PORKBUN_SECRET_API_KEY)=' .env \| sed -E 's/=.+/=set/; s/=$/=EMPTY/'` | all `set`. The stack reads **`.env`** only (not `.env.local`): a key added there must be copied over. `ANTHROPIC_API_KEY` set since 2026-10-25 04:47 |
 | Domain → this Mac | `python3 infra/dns/porkbun_set_ip.py` then `dig +short trophy.photo A` | the answer equals `ipconfig getifaddr en0`. Rerun after any Wi-Fi change |
 | Speaker | System Settings → Sound: the output the referee should use, volume up | the announcer plays on the default output |
 | Phones on the same Wi-Fi | open `https://trophy.photo/cam/` on a phone | the join screen (client isolation or DNS-rebind filtering blocks it; a travel router avoids both) |
@@ -19,15 +19,16 @@ make dev
 ```
 
 One coloured line per service. In order: `redis`, `spacetime` (local SpacetimeDB on :3000), `gateway` (:8000), `recorder`,
-`engine` (rule engine), `flight` (BlurBall on MPS), `live` (the golden table-tennis module), `referee` (ask the ref: **exits
-with "ANTHROPIC_API_KEY must be set" until the key is in `.env`**, by design), `announcer` (speaks every call on the Mac),
+`engine` (rule engine), `flight` (BlurBall on MPS), `live` (the golden table-tennis module), `referee` (ask the ref on :8100;
+it exits with "ANTHROPIC_API_KEY must be set" if the key is missing from `.env`, by design), `announcer` (speaks every call on the Mac),
 `compiler` (`trophy-droid watch`: the Factory Droid), `voice` (the P0 spike), `pwa` (:5173), `dashboard` (:5174), `watch`
 (:5175), `caddy` (:443, `https://trophy.photo`). Ready when you see:
 
 ```
-   engine | ... {"svc": "engine", "msg": "started", "state": "spacetime", "votes": false ...}
+   engine | ... {"svc": "engine", "msg": "started", "state": "spacetime", "votes": true ...}   (false = no Anthropic key)
    flight | ... {"svc": "flight", "msg": "started", "detector": "blurball", "device": "mps" ...}
 announcer | ... {"svc": "announce", "msg": "started", "stream": "ev:calls", "speaker": true}
+  referee | INFO:     Uvicorn running on http://127.0.0.1:8100
  compiler | watching ws://127.0.0.1:3000 trophy for pending house rules (ctrl-c to stop)
     caddy | ... "msg":"certificate obtained successfully"   (or "loaded certificate": it is cached)
 ```
@@ -38,8 +39,9 @@ Health, from another terminal:
 curl -s http://127.0.0.1:8000/api/healthz
 ```
 
-`{"ok":true,"redis":true,"spacetime":true,"adapter":false,"rules":false,"recorder":true}`: `rules` turns true once the
-referee service runs (Anthropic key); `adapter` stays false (the courtcam adapter is not part of this demo).
+`{"ok":true,"redis":true,"spacetime":true,"adapter":false,"rules":true,"recorder":true}`: `rules` is the referee service
+(false = it is not running: no Anthropic key); `adapter` stays false (the courtcam adapter is not part of this demo).
+`curl -s http://127.0.0.1:8100/healthz` shows the referee's models and its Cartesia socket.
 
 Stop everything, or restart a few entries (the engine keeps game state in memory, so restart it **between** games, never
 during one):
