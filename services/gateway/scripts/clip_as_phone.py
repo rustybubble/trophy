@@ -5,6 +5,9 @@ with a high-quality (original-resolution) replay segment. For testing on real fo
 
 1. Creates a game, joins as cam+judge, syncs the clock over /api/ws/ctl.
 2. Streams the clip from --start, scaled to 1280x720 JPEG at 30 fps in real time over /api/ws/frames (like the PWA).
+   Frames are encoded with libjpeg (Pillow) at quality 70, 4:2:0, like the PWA's canvas encoder at 0.7; ffmpeg's
+   MJPEG encoder loses noticeably more of a small ball's colour at a similar size, so it isn't used. `--crop x,y,w,h`
+   streams only that normalised region, like the PWA's table zoom (D-29).
 3. Posts a BETA test call (as the engine, SPACETIME_ENGINE_TOKEN) at the end, opens a challenge on it, and uploads a
    6 s segment cut from the ORIGINAL file around the call (`ffmpeg -c copy`, no re-encode) to /api/clips (as D-27's
    phone recorder would).
@@ -26,7 +29,7 @@ from pathlib import Path
 import httpx
 import redis
 import websockets
-from trophy.framebus import pack_header
+from trophy.framebus import Crop, pack_header
 from trophy.recordings import ffmpeg_binary
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -60,8 +63,15 @@ def reducer(name: str, payload: object, token: str) -> None:
     urllib.request.urlopen(req, timeout=10).read()
 
 
-async def jpeg_frames(path: Path, start: float, seconds: float):
-    """1280x720 JPEGs at 30 fps from ffmpeg (MJPEG on a pipe), with each frame's clip time."""
+async def jpeg_frames(path: Path, start: float, seconds: float, crop: Crop | None = None):
+    """1280x720 JPEGs at 30 fps (ffmpeg decodes and scales, libjpeg encodes), with each frame's clip time. With
+    `crop` (normalised x, y, w, h), only that region, as the PWA streams once the table is set (D-29)."""
+    import io
+
+    from PIL import Image
+
+    w, h = 1280, 720
+    vf = "fps=30," + (f"crop=iw*{crop[2]}:ih*{crop[3]}:iw*{crop[0]}:ih*{crop[1]}," if crop else "")
     proc = await asyncio.create_subprocess_exec(
         ffmpeg_binary(),
         "-v",
@@ -73,37 +83,35 @@ async def jpeg_frames(path: Path, start: float, seconds: float):
         "-i",
         str(path),
         "-vf",
-        "fps=30,scale=1280:720",
-        "-q:v",
-        "5",
+        vf + f"scale={w}:{h}:flags=area",
         "-f",
-        "image2pipe",
-        "-vcodec",
-        "mjpeg",
+        "rawvideo",
+        "-pix_fmt",
+        "rgb24",
         "-",
         stdout=asyncio.subprocess.PIPE,
     )
-    buf = b""
     n = 0
     assert proc.stdout
     while True:
-        chunk = await proc.stdout.read(1 << 16)
-        if not chunk:
+        try:
+            raw = await proc.stdout.readexactly(w * h * 3)
+        except asyncio.IncompleteReadError:
             break
-        buf += chunk
-        while True:
-            s = buf.find(b"\xff\xd8")
-            e = buf.find(b"\xff\xd9", s + 2)
-            if s < 0 or e < 0:
-                break
-            yield start + n / 30, buf[s : e + 2]
-            n += 1
-            buf = buf[e + 2 :]
+        out = io.BytesIO()
+        Image.frombytes("RGB", (w, h), raw).save(out, "JPEG", quality=70, subsampling=2)  # 4:2:0 q70, like the PWA
+        yield start + n / 30, out.getvalue()
+        n += 1
     await proc.wait()
 
 
 async def main(
-    path: Path, start: float, seconds: float, check_replay: bool = False, report: Path | None = None
+    path: Path,
+    start: float,
+    seconds: float,
+    check_replay: bool = False,
+    report: Path | None = None,
+    crop: Crop | None = None,
 ) -> None:
     e = env()
     async with httpx.AsyncClient(base_url=BASE, timeout=30) as http:
@@ -150,10 +158,10 @@ async def main(
         wall0 = now_ms() + 300
         sent = 0
         async with websockets.connect(f"{ws_base}/api/ws/frames?token={tok}", max_size=None) as fws:
-            async for c, jpeg in jpeg_frames(path, start, seconds):
+            async for c, jpeg in jpeg_frames(path, start, seconds, crop):
                 t_phone = wall0 + (c - start) * 1000
                 await asyncio.sleep(max(0, (t_phone - now_ms()) / 1000))
-                await fws.send(pack_header(sent, t_phone) + jpeg)
+                await fws.send(pack_header(sent, t_phone, 0, crop) + jpeg)
                 sent += 1
 
         # a challenged call at the end of the streamed window; the replay segment is cut from the original file
@@ -318,8 +326,10 @@ if __name__ == "__main__":
     ap.add_argument("--env-file", type=Path, default=ENV_PATH)
     ap.add_argument("--check-replay", action="store_true")
     ap.add_argument("--report", type=Path)
+    ap.add_argument("--crop", help="x,y,w,h (normalised): stream only this region, like the PWA's table zoom")
     a = ap.parse_args()
     if a.check_replay and a.seconds < 6:
         ap.error("--check-replay requires at least 6 seconds")
     BASE, STDB, MODULE, REDIS_URL, ENV_PATH = a.base, a.stdb, a.module, a.redis_url, a.env_file
-    asyncio.run(main(a.clip, a.start, a.seconds, a.check_replay, a.report))
+    crop = tuple(float(v) for v in a.crop.split(",")) if a.crop else None
+    asyncio.run(main(a.clip, a.start, a.seconds, a.check_replay, a.report, crop))  # type: ignore[arg-type]

@@ -159,8 +159,21 @@ def test_frames_ws_writes_bus_and_still(env):
     assert 0 <= float(f[b"t_game_s"]) < 5
     still = client.get(f"/api/cams/{j['cam_id']}/still", headers={"Authorization": f"Bearer {j['cam_token']}"})
     assert still.status_code == 200 and still.content == jpeg and still.headers["x-seq"] == "3"
+    assert "x-crop" not in still.headers
     health = [c for c in ctl_cmds(client, r) if c["cmd"] == "camera_health"]
     assert health and health[-1]["args"]["connected"] is False
+
+
+def test_cropped_frames_carry_their_crop(env):
+    client, r, _ = env
+    g, j = new_game(client)
+    jpeg = make_jpeg()
+    with client.websocket_connect(f"/api/ws/frames?token={j['cam_token']}") as ws:
+        ws.send_bytes(pack_header(0, now_ms(), 0, crop=(0.125, 0.25, 0.5, 0.5)) + jpeg)
+    f = client.portal.call(r.xrange, f"frames:{j['cam_id']}")[-1][1]
+    assert f[b"crop"] == b"0.125,0.25,0.5,0.5" and f[b"data"] == jpeg
+    still = client.get(f"/api/cams/{j['cam_id']}/still", headers={"Authorization": f"Bearer {j['cam_token']}"})
+    assert still.headers["x-crop"] == "0.125,0.25,0.5,0.5"
 
 
 def test_frames_ws_rejects_bad_tokens_and_display_role(env):

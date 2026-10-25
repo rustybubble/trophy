@@ -8,6 +8,7 @@ newest frame; ``mode="all"`` returns consecutive frames but jumps to the newest 
 from __future__ import annotations
 
 import struct
+from collections import deque
 from dataclasses import dataclass
 from typing import Literal
 
@@ -17,12 +18,15 @@ from .streams import frames_key
 
 HEADER = struct.Struct("<BBHId")  # version, flags, reserved, seq, t_capture_phone_ms
 HEADER_SIZE = HEADER.size  # 16
+CROP = struct.Struct("<4f")  # x, y, w, h of the region sent, normalised to the camera's full view
 VERSION = 1
 FLAG_CALIB_STILL = 1 << 0
 FLAG_FIRST_AFTER_START = 1 << 1
+FLAG_CROP = 1 << 2  # the header is followed by CROP (16 bytes): the frame shows only that region of the view
 FRAMES_MAXLEN = 300
 
 Source = Literal["ws", "webrtc", "file"]
+Crop = tuple[float, float, float, float]
 
 
 @dataclass(frozen=True)
@@ -31,23 +35,40 @@ class FrameHeader:
     flags: int
     seq: int
     t_capture_phone_ms: float
+    crop: Crop | None = None
 
 
-def pack_header(seq: int, t_capture_phone_ms: float, flags: int = 0) -> bytes:
-    return HEADER.pack(VERSION, flags, 0, seq & 0xFFFFFFFF, t_capture_phone_ms)
+def pack_header(seq: int, t_capture_phone_ms: float, flags: int = 0, crop: Crop | None = None) -> bytes:
+    if crop is None:
+        return HEADER.pack(VERSION, flags & ~FLAG_CROP, 0, seq & 0xFFFFFFFF, t_capture_phone_ms)
+    return HEADER.pack(VERSION, flags | FLAG_CROP, 0, seq & 0xFFFFFFFF, t_capture_phone_ms) + CROP.pack(*crop)
+
+
+def _valid_crop(c: Crop) -> bool:
+    x, y, w, h = c
+    return 0 <= x < 1 and 0 <= y < 1 and 0 < w <= 1 and 0 < h <= 1 and x + w <= 1.0001 and y + h <= 1.0001
 
 
 def parse_message(buf: bytes) -> tuple[FrameHeader, bytes]:
-    """Split a phone WS binary message into its header and JPEG bytes."""
+    """Split a phone WS binary message into its header (with its crop, if flagged) and JPEG bytes."""
     if len(buf) < HEADER_SIZE + 4:
         raise ValueError("frame message too short")
     version, flags, _reserved, seq, t_ms = HEADER.unpack_from(buf, 0)
     if version != VERSION:
         raise ValueError(f"unsupported frame header version {version}")
-    jpeg = bytes(buf[HEADER_SIZE:])
+    start, crop = HEADER_SIZE, None
+    if flags & FLAG_CROP:
+        if len(buf) < HEADER_SIZE + CROP.size + 4:
+            raise ValueError("frame message too short for its crop")
+        x, y, w, h = (round(v, 5) for v in CROP.unpack_from(buf, HEADER_SIZE))
+        crop = (x, y, w, h)
+        if not _valid_crop(crop):
+            raise ValueError(f"bad crop {crop}")
+        start += CROP.size
+    jpeg = bytes(buf[start:])
     if jpeg[:2] != b"\xff\xd8":
         raise ValueError("payload is not a JPEG")
-    return FrameHeader(version, flags, seq, t_ms), jpeg
+    return FrameHeader(version, flags, seq, t_ms, crop), jpeg
 
 
 _SOF = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
@@ -94,6 +115,7 @@ class Frame:
     source: str
     flags: int
     data: bytes  # JPEG
+    crop: Crop | None = None  # the region of the camera's view this frame shows (normalised x, y, w, h)
 
 
 def frame_fields(
@@ -109,9 +131,11 @@ def frame_fields(
     source: Source = "ws",
     flags: int = 0,
     size: tuple[int, int] | None = None,
+    crop: Crop | None = None,
 ) -> dict[str, str | bytes]:
     """The fields of one ``frames:{cam}`` entry (§5.2). Async writers XADD these themselves."""
     w, h = size or jpeg_size(jpeg)
+    extra = {"crop": ",".join(repr(float(v)) for v in crop)} if crop is not None else {}
     return {
         "v": "1",
         "game_id": game_id,
@@ -126,6 +150,7 @@ def frame_fields(
         "fmt": "jpeg",
         "source": source,
         "flags": str(flags),
+        **extra,
         "data": jpeg,
     }
 
@@ -164,7 +189,15 @@ def _decode(entry_id: bytes | str, fields: dict) -> Frame:
         source=g("source").decode(),
         flags=int(fields.get(b"flags", fields.get("flags", b"0"))),
         data=g("data"),
+        crop=_crop(fields.get(b"crop", fields.get("crop"))),
     )
+
+
+def _crop(v: bytes | str | None) -> Crop | None:
+    if v is None:
+        return None
+    x, y, w, h = (float(p) for p in (v.decode() if isinstance(v, bytes) else v).split(","))
+    return (x, y, w, h)
 
 
 class FrameReader:
@@ -190,6 +223,7 @@ class FrameReader:
         self.last_id: str | None = None
         self.last_seq: int | None = None
         self.skipped = 0
+        self._pending: deque = deque()  # entries fetched in one XREAD and not yet returned ("all" mode)
 
     def _newest(self) -> Frame | None:
         got = self.r.xrevrange(self.key, count=1)
@@ -215,22 +249,23 @@ class FrameReader:
             f = self._newest()
             return self._accept(f) if f and f.entry_id != self.last_id else None
 
-        got = self.r.xread({self.key: self.last_id}, count=self.max_lag + 1, block=block_ms or None)
-        if not got:
-            return None
-        entries = got[0][1]
-        if len(entries) > self.max_lag:
-            newest = self._newest()
-            self.skipped += len(entries)  # at least this many dropped
-            return self._accept(newest)
-        for entry in entries:
-            f = _decode(*entry)
-            self.last_id = f.entry_id
-            if f.seq == self.last_seq:
-                continue
-            self.last_seq = f.seq
-            return f
-        return None
+        while True:
+            while self._pending:  # serve what one XREAD fetched before fetching again (a backlog costs one read)
+                f = _decode(*self._pending.popleft())
+                self.last_id = f.entry_id
+                if f.seq == self.last_seq:
+                    continue
+                self.last_seq = f.seq
+                return f
+            got = self.r.xread({self.key: self.last_id}, count=self.max_lag + 1, block=block_ms or None)
+            if not got:
+                return None
+            entries = got[0][1]
+            if len(entries) > self.max_lag:
+                newest = self._newest()
+                self.skipped += len(entries)  # at least this many dropped
+                return self._accept(newest)
+            self._pending.extend(entries)
 
     def _accept(self, f: Frame | None) -> Frame | None:
         if f is None:
