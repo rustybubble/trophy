@@ -53,6 +53,7 @@
         "bookmark",
         "clip_that",
         "review_call",
+        "label_rally",
         "run_check",
         "request_check"
       ]
@@ -246,6 +247,18 @@
         "source": {
           "enum": ["typed", "voice"]
         }
+      }
+    },
+    "LabelRallyArgs": {
+      "title": "LabelRallyArgs",
+      "description": "label_rally (judge): the span t0_s..t1_s (defaults: since the previous label, until now) was ONE rally won by `winner`. The engine fixes the score, exports the span as a labelled sample under data/local/labelled/<sport>/ and files a `correction` house rule for the Droid.",
+      "type": "object",
+      "required": ["winner"],
+      "properties": {
+        "winner": { "type": "string", "minLength": 1, "maxLength": 16 },
+        "t0_s": { "type": "number", "minimum": 0 },
+        "t1_s": { "type": "number", "minimum": 0 },
+        "note": { "type": "string", "maxLength": 300 }
       }
     },
     "HouseRuleVersionArgs": {

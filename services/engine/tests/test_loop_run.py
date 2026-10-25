@@ -9,6 +9,7 @@ import time
 
 import fakeredis
 import pytest
+from _handwritten import handwritten_modules_dir
 from trophy.streams import CTL_ENGINE, EV_FLIGHT, make_ctl, publish_ctl
 
 from trophy_engine import loop
@@ -55,7 +56,11 @@ def test_loop_run_scores_one_point_and_survives_a_malformed_entry(redis_and_stat
     r, states = redis_and_state
     done: list[int] = []
     t = threading.Thread(
-        target=lambda: done.append(loop.run(["--state", "memory", "--exit-when-idle", "1.0"])), daemon=True
+        # the hand-written pack (tests/fixtures): this sequence has no racket contacts (the Droid pack needs them)
+        target=lambda: done.append(
+            loop.run(["--state", "memory", "--exit-when-idle", "1.0", "--modules", str(handwritten_modules_dir())])
+        ),
+        daemon=True,
     )
     t.start()
     time.sleep(0.4)  # the loop's ctl cursor starts after what is already on the stream

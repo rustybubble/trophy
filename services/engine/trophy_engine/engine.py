@@ -4,10 +4,13 @@ house rules, asks and moments out. Scores are derived by replaying the call log,
 
 from __future__ import annotations
 
+import json
 import logging
+import math
 import re
 import subprocess
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -32,6 +35,9 @@ SCORING_KINDS = frozenset({"point", "violation", "basket"})
 # ball rolling off must not open a rally of its own and score again (review blocker 4).
 DEAD_AFTER_POINT_S = 2.0
 ENSEMBLE_LO, ENSEMBLE_HI = 0.35, 0.75
+EVENT_LOG_MAX = 20_000  # events kept per game for the judge's label_rally export
+DEFAULT_SIGMA_M = 0.03  # bounce position sigma when the event carries none (side_p)
+LABELLED_DIR = ROOT / "data" / "local" / "labelled"  # judge-labelled real samples (gitignored), per sport
 
 
 class Decider:
@@ -65,6 +71,9 @@ class GameState:
     # DEAD_AFTER_POINT_S at most: players pick the ball up and knock it around, and those bounces are not a new rally
     dead_since_t_s: float | None = None
     rally_hit_seen: bool = False  # a racket hit was seen in the current rally (server_from_first_hit)
+    events: list[dict[str, Any]] = field(default_factory=list)  # every layer-2 event seen (capped), for label_rally
+    labelled_until_s: float = -1.0  # the judge has labelled play up to here
+    labels_n: int = 0
 
     @property
     def sides(self) -> tuple[str, str]:
@@ -106,6 +115,9 @@ class Engine:
         # set by the live loop with a 3D track: start a Droid new_check job (game_id, question, hint, query, reply)
         self.new_check = None
         self.server_from_first_hit = server_from_first_hit
+        # set by the live loop: every posted call (points, lets, info lines) goes here too, for the voice announcer
+        self.announce: Callable[[dict[str, Any]], None] | None = None
+        self.labelled_dir = LABELLED_DIR
         self.modules_dir = modules_dir or ROOT / "sports"
         self.decider = decider
         self.now_ms = now_ms or (lambda: time.time() * 1000.0)
@@ -188,6 +200,10 @@ class Engine:
             return []
         t = float(ev.get("t_game_s", 0.0))
         g.last_t_s = t
+        if len(g.events) < EVENT_LOG_MAX:
+            g.events.append(ev)
+        if _weak_evidence(ev, g.params):
+            return []  # the pack's evidence policy: an observation, not grounds for a call or rally state
         if g.dead_since_t_s is not None:
             if ev.get("type") == "ball_dead" or t - g.dead_since_t_s > self.dead_after_point_s:
                 g.dead_since_t_s = None
@@ -219,7 +235,8 @@ class Engine:
                 g.game["server_team_id"] = hitter
                 self.state.upsert_game(g.game)
         calib_untrusted = bool((ev.get("payload") or {}).get("calib_untrusted")) or g.calib_untrusted
-        activation = {"ev": _strip_none(ev), "rally": g.rally.view(), "game": self._game_view(g), "params": g.params}
+        evv = _enrich(ev, g)  # + n_cams, side_p: measurements derived from the event for the pack
+        activation = {"ev": _strip_none(evv), "rally": g.rally.view(t), "game": self._game_view(g), "params": g.params}
         posted: list[dict[str, Any]] = []
         scoring_call: dict[str, Any] | None = None
         for cr in g.rules.rules:
@@ -236,7 +253,7 @@ class Engine:
             posted.append(scoring_call)
         for call in posted:
             self._post(g, call)
-        g.rally.apply(ev)
+        g.rally.apply(evv)
         if scoring_call is not None:
             self._end_rally(g, scoring_call)
             if ev.get("type") != "ball_dead" and self.dead_after_point_s > 0:
@@ -313,6 +330,11 @@ class Engine:
     def _post(self, g: GameState, call: dict[str, Any]) -> None:
         g.calls.append(call)
         self.state.post_call(call)
+        if self.announce is not None:
+            try:
+                self.announce(call)
+            except Exception:  # noqa: BLE001 - the voice is never allowed to stop the referee
+                log.exception("announce failed")
         rule = g.rules.by_id(call["rule_id"])
         if rule is not None and rule.rule.get("check") == "ensemble" and ENSEMBLE_LO < call["p"] < ENSEMBLE_HI:
             self._spawn_decide(g, call, rule.rule)
@@ -478,8 +500,7 @@ class Engine:
             call["team_id"] = team_id
         if points:
             call["points"] = points
-        g.calls.append(call)
-        self.state.post_call(call)
+        self._post(g, call)
         return call
 
     # ------------------------------------------------------------ control commands
@@ -657,6 +678,146 @@ class Engine:
             rule_id="adjust_score",
         )
         self._recompute(g)
+
+    def _ctl_label_rally(self, g: GameState, a: dict[str, Any], by: str | None) -> None:
+        """The judge labels a span of play: it was ONE rally, won by `winner`. The engine fixes the score now (voids
+        the span's point calls, posts one judge point), exports the span's events as a labelled sample under
+        data/local/labelled/<sport>/, and files a `correction` house rule so the Droid repairs the pack against it."""
+        winner = str(a["winner"])
+        if winner not in g.sides:
+            raise ValueError(f"winner must be one of {g.sides}")
+        t1 = float(a["t1_s"]) if a.get("t1_s") is not None else g.last_t_s
+        if a.get("t0_s") is not None:
+            t0 = float(a["t0_s"])
+        elif g.labelled_until_s >= 0:
+            t0 = g.labelled_until_s
+        else:
+            t0 = float(g.events[0]["t_game_s"]) if g.events else 0.0
+        span = [e for e in g.events if t0 <= float(e.get("t_game_s", -1)) <= t1]
+        voided: list[dict[str, Any]] = []
+        for c in g.calls:
+            if c.get("points") and c["status"] in ("final", "upheld", "challenged") and t0 <= c["t_game_s"] <= t1:
+                c["status"] = "voided"
+                self.state.update_call_status(c["id"], "voided")
+                voided.append(c)
+        server_at_t0 = g.score().server  # the span's calls are voided: this is who served the labelled rally
+        g.rally = None  # the judge closed the rally
+        g.dead_since_t_s = None
+        name = g.team(winner).get("name", winner)
+        self._info(
+            g,
+            f"Judge: one rally, point {name}",
+            speech=f"Correction. That was one rally. Point, {name}.",
+            kind="score_update",
+            outcome="point",
+            points=1,
+            team_id=winner,
+            rule_id="label_rally",
+        )
+        self._recompute(g)
+        g.labelled_until_s = t1
+        g.labels_n += 1
+        sample = self._write_labelled_sample(g, span, t0, t1, winner, server_at_t0, voided, by)
+        called = ", ".join(f"{c['rule_id']}->{c.get('team_id')} at {c['t_game_s']:.1f} s" for c in voided) or "nothing"
+        now = self.now_ms()
+        rv = new_ulid()
+        row = {
+            "rule_version": rv,
+            "game_id": g.game["game_id"],
+            "sport": g.game["sport"],
+            "text": (
+                f"Correction from the judge: {t0:.1f}-{t1:.1f} s of game {g.game['game_id']} was ONE rally, won by "
+                f"{winner}. The pack called: {called}. Change rules.yaml so sample {sample or '(export failed)'} "
+                f"replays as exactly one point to {winner} while every other sample still passes."
+            ),
+            "source": "correction",
+            "status": "pending",
+            "backend": "droid",
+            "plan_md": "",
+            "steps": [],
+            "diff": "",
+            "results": None,
+            "pack_path": None,
+            "error": None,
+            "evidence": {
+                "sample": sample,
+                "game_id": g.game["game_id"],
+                "t0_s": round(t0, 3),
+                "t1_s": round(t1, 3),
+                "winner": winner,
+                "voided_call_ids": [c["id"] for c in voided],
+                "n_events": len(span),
+            },
+            "created_at_ms": now,
+            "updated_at_ms": now,
+        }
+        g.house_rules[rv] = row
+        self.state.insert_house_rule(row)
+
+    def _write_labelled_sample(
+        self,
+        g: GameState,
+        span: list[dict[str, Any]],
+        t0: float,
+        t1: float,
+        winner: str,
+        server: str,
+        voided: list[dict[str, Any]],
+        by: str | None,
+    ) -> str | None:
+        """`<labelled_dir>/<sport>/<game>_labelNN.l2.jsonl` + `.labels.json`: the span's layer-2 events exactly as the
+        engine saw them, with the judge's verdict as the label. The gate (replay_test) replays `.l2.jsonl` samples
+        through the rule pack directly. Returns the sample name, or None when nothing could be written."""
+        if not span:
+            return None
+        gid = g.game["game_id"]
+        out = self.labelled_dir / g.game["sport"]
+        try:
+            out.mkdir(parents=True, exist_ok=True)
+            name = f"{gid}_label{g.labels_n:02d}"
+            with (out / f"{name}.l2.jsonl").open("w", encoding="utf8") as f:
+                for e in span:
+                    f.write(json.dumps(e) + "\n")
+            last_bounce = next((e for e in reversed(span) if e.get("type") == "bounce"), None)
+            dead_after = any(
+                e.get("type") == "ball_dead" and last_bounce is not None and e["t_game_s"] > last_bounce["t_game_s"]
+                for e in span
+            )
+            labels: dict[str, Any] = {
+                "synthetic": False,
+                "label": (
+                    f"RECORDED {time.strftime('%Y-%m-%d')}: real play labelled by the judge "
+                    "(layer-2 events as the engine saw them; no media)"
+                ),
+                "sport": g.game["sport"],
+                "labeller": by or "judge",
+                "game_id": gid,
+                "span_s": [round(t0, 3), round(t1, 3)],
+                "rally_winner": winner,
+                "first_server": server,
+                "bounces": [],
+                "tol_count": 100000,
+                "tol_t_s": 0.1,
+                "alternate_sides": False,
+                "min_recall": 0.0,
+                "min_precision": 0.0,
+                "engine": {
+                    "dead_after_point_s": self.dead_after_point_s,
+                    "server_from_first_hit": self.server_from_first_hit,
+                },
+                # each voided call with the evidence the engine had at that moment (the event's cameras, confidence,
+                # side probability, p_in, and the rally's hits/time since the previous bounce): measurements, so the
+                # Droid reads facts instead of parsing the whole event log; it still decides what they mean
+                "called": _calls_with_evidence(voided, span, g),
+            }
+            if last_bounce is not None and not dead_after:
+                # the judge says the rally was over: the ball was dead after its last bounce (label, not perception)
+                labels["end_ball_dead"] = {"t_game_s": round(t1 + 0.8, 3), "last_side": last_bounce.get("side")}
+            (out / f"{name}.labels.json").write_text(json.dumps(labels, indent=1) + "\n", encoding="utf8")
+            return name
+        except OSError:
+            log.exception("labelled sample not written")
+            return None
 
     def _ctl_end_period(self, g: GameState, _a: dict[str, Any], _by: str | None) -> None:
         g.game["period_no"] = int(g.game.get("period_no", 1)) + 1
@@ -997,6 +1158,97 @@ def _pre_serve_floor_bounce(ev: dict[str, Any], g: GameState) -> bool:
 
 def render_text(template: str, ctx: dict[str, Any]) -> str:  # re-exported for tests
     return render(template, ctx)
+
+
+def _calls_with_evidence(
+    voided: list[dict[str, Any]], span: list[dict[str, Any]], g: GameState
+) -> list[dict[str, Any]]:
+    """Replay the span through a fresh rally state and, for each voided call, snapshot the event that caused it and the
+    rally state just before it (what the rules saw). Pure: no scoring, no side effects."""
+    out: list[dict[str, Any]] = []
+    by_t: dict[float, list[dict[str, Any]]] = {}
+    for c in voided:
+        by_t.setdefault(round(float(c["t_game_s"]), 3), []).append(c)
+    rally = RallyState(rally_no=0, server_side=g.first_server, t_start_s=span[0]["t_game_s"] if span else 0.0)
+    for e in span:
+        t = float(e.get("t_game_s", 0.0))
+        evv = _enrich(e, g)
+        for c in by_t.get(round(t, 3), []):
+            rv = rally.view(t)
+            payload = e.get("payload") or {}
+            out.append(
+                {
+                    "rule_id": c["rule_id"],
+                    "team_id": c.get("team_id"),
+                    "t_game_s": c["t_game_s"],
+                    "event": {
+                        "type": e.get("type"),
+                        "side": e.get("side"),
+                        "n_cams": evv.get("n_cams"),
+                        "conf": e.get("conf"),
+                        "side_p": evv.get("side_p"),
+                        "p_in": payload.get("p_in"),
+                        "surface": payload.get("surface"),
+                        "kind": payload.get("kind"),
+                        "x_m": (e.get("pos_m") or {}).get("x"),
+                        "sigma_m": e.get("sigma_m"),
+                    },
+                    "rally_before": {
+                        k: rv[k]
+                        for k in (
+                            "phase",
+                            "bounces",
+                            "last_bounce_side",
+                            "last_bounce_side_p",
+                            "hits_since_last_bounce",
+                            "t_since_last_bounce_s",
+                            "t_since_last_contact_s",
+                        )
+                    },
+                }
+            )
+        rally.apply(evv)
+    seen = {(c["rule_id"], c["t_game_s"]) for c in out}
+    for c in voided:  # a call whose event is not in the span (should not happen) keeps its bare row
+        if (c["rule_id"], c["t_game_s"]) not in seen:
+            out.append({"rule_id": c["rule_id"], "team_id": c.get("team_id"), "t_game_s": c["t_game_s"]})
+    return out
+
+
+def _weak_evidence(ev: dict[str, Any], params: dict[str, Any]) -> bool:
+    """The pack's evidence policy (params.evidence_min_cams / evidence_min_conf): a bounce or net seen by fewer
+    cameras than evidence_min_cams AND with conf below evidence_min_conf is an observation only. Both params must be
+    set for the gate to apply; the engine has no policy of its own."""
+    if ev.get("type") not in ("bounce", "net"):
+        return False
+    try:
+        min_cams = int(params.get("evidence_min_cams") or 0)
+        min_conf = float(params.get("evidence_min_conf") or 0.0)
+    except (TypeError, ValueError):
+        return False
+    if min_cams <= 0 or min_conf <= 0:
+        return False
+    n = len(ev.get("cams") or [])
+    conf = float(ev.get("conf", 1.0))
+    return n < min_cams and conf < min_conf
+
+
+def _enrich(ev: dict[str, Any], g: GameState) -> dict[str, Any]:
+    """The event plus measurements derived from it for the pack: `n_cams`, and for a bounce `side_p`, the probability
+    that it was on the side it was given, Phi(|x - net_x| / sigma)."""
+    out = dict(ev)
+    out["n_cams"] = len(ev.get("cams") or [])
+    if ev.get("type") == "bounce":
+        pos = ev.get("pos_m") or {}
+        x = pos.get("x")
+        if x is None:
+            out["side_p"] = 1.0
+        else:
+            net_x = float(((g.module.config.get("court") or {}).get("net_x_m")) or 0.0)
+            sigma = float(ev.get("sigma_m") or DEFAULT_SIGMA_M)
+            z = abs(float(x) - net_x) / max(sigma, 1e-6)
+            out["side_p"] = round(0.5 * (1.0 + math.erf(z / math.sqrt(2.0))), 4)
+    return out
 
 
 def _strip_none(obj: Any) -> Any:

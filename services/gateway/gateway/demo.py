@@ -378,6 +378,19 @@ def demo_router(st: Settings) -> APIRouter:
             args += ["--clip", f"{m['video']}:{m['label']}:{corners}"]
             if mode == "simultaneous" and m.get("offset_s"):
                 args += ["--offset", f"{m['label']}={m['offset_s']}"]
+            # where the corners came from: the detector's (Mu Du's table_detection suggests them at upload time; the
+            # dashboard only asks for taps when it found nothing), the judge's taps, or a library preset
+            src = m.get("corners_source")
+            if src is None:
+                sugg = m.get("suggested_corners_norm") or []
+                auto = len(sugg) == 4 and all(
+                    abs(float(a[k]) - float(b[k])) < 1e-4
+                    for a, b in zip(m["corners_norm"], sugg, strict=True)
+                    for k in (0, 1)
+                )
+                frames = (m.get("corner_suggestion") or {}).get("agreeing_frames")
+                src = ("auto" + (f":{frames}" if frames else "")) if auto else "tapped"
+            args += ["--corners-source", f"{m['label']}={src}"]
         if mode == "sequential":
             args += ["--label", "camera (recorded takes)"]
         # the game goes live: the engine opens rallies as events arrive
@@ -490,6 +503,7 @@ def demo_router(st: Settings) -> APIRouter:
                 "corners_norm": cam["corners_norm"],
                 "offset_s": float(cam.get("offset_s", 0.0)),
                 "duration_s": cam.get("duration_s"),
+                "corners_source": cam.get("corners_source", "preset"),
             }
             for cam in p["cameras"]
         ]

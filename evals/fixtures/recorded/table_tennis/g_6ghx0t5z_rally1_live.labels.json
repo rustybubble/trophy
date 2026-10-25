@@ -1,0 +1,50 @@
+{
+ "synthetic": false,
+ "sport": "table_tennis",
+ "labeller": "the team (judge), 2026-10-24",
+ "game_id": "g_6ghx0t5z",
+ "rally_winner": "B",
+ "first_server": "A",
+ "bounces": [],
+ "tol_count": 100000,
+ "tol_t_s": 0.1,
+ "alternate_sides": false,
+ "min_recall": 0.0,
+ "min_precision": 0.0,
+ "engine": {
+  "dead_after_point_s": 3.0,
+  "server_from_first_hit": true
+ },
+ "called": [
+  {
+   "rule_id": "net_into_own_side",
+   "team_id": "B",
+   "t_game_s": 71.2387
+  },
+  {
+   "rule_id": "double_bounce",
+   "team_id": "B",
+   "t_game_s": 75.714
+  },
+  {
+   "rule_id": "double_bounce",
+   "team_id": "A",
+   "t_game_s": 82.2539
+  },
+  {
+   "rule_id": "double_bounce",
+   "team_id": "A",
+   "t_game_s": 90.4997
+  },
+  {
+   "rule_id": "double_bounce",
+   "team_id": "B",
+   "t_game_s": 100.4383
+  }
+ ],
+ "label": "RECORDED 2026-10-24: the layer-2 events the engine saw live for the same rally (trophy-live over the pixel samples; no media). One rally won by B; the engine called five points. end_ball_dead is the judge's label: the rally was over after the last bounce.",
+ "end_ball_dead": {
+  "t_game_s": 102.8,
+  "last_side": "A"
+ }
+}

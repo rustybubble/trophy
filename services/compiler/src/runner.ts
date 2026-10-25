@@ -80,7 +80,7 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
     backend: "droid",
     model: deps.config.model,
     attempt: 0,
-    max_attempts: deps.config.maxAttempts,
+    max_attempts: job.budget?.maxAttempts ?? deps.config.maxAttempts,
     plan_md: "",
     steps: [],
     diff: "",
@@ -131,10 +131,9 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
   await emit();
 
   const controller = new AbortController();
-  const timer = setTimeout(
-    () => controller.abort(new Error(`timeout after ${deps.config.timeoutMs / 1000} s`)),
-    deps.config.timeoutMs,
-  );
+  const timeoutMs = job.budget?.timeoutS ? job.budget.timeoutS * 1000 : deps.config.timeoutMs;
+  const maxAttempts = job.budget?.maxAttempts ?? deps.config.maxAttempts;
+  const timer = setTimeout(() => controller.abort(new Error(`timeout after ${timeoutMs / 1000} s`)), timeoutMs);
   let agent: Agent | undefined;
   try {
     agent = await deps.agentFactory({
@@ -142,13 +141,13 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
       allowlist: sb.allowlist,
       gate: sb.gate,
       model: deps.config.model,
-      reasoningEffort: deps.config.reasoningEffort,
+      reasoningEffort: job.budget?.reasoningEffort ?? deps.config.reasoningEffort,
     });
     // The brief goes in the first prompt (it is also TASK.md in the sandbox) so the agent needs no exploratory turn.
     const gateCmd = `./${sb.gate}`;
     let prompt = `${readFileSync(join(sb.dir, "TASK.md"), "utf8")}\n\nBegin now: plan in 3-5 lines, then edit, then run ${gateCmd}.`;
     let lastTable = "";
-    for (let attempt = 1; attempt <= deps.config.maxAttempts; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       run.attempt = attempt;
       if (attempt > 1) {
         step({ kind: "repair", text: `attempt ${attempt}: repairing after failed checks` });
@@ -176,7 +175,10 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
           output: (tu.output ?? 0) + result.tokenUsage.output,
         };
       }
-      if (controller.signal.aborted) break;
+      if (controller.signal.aborted) {
+        run.diff = sandboxDiff(sb); // the judge still sees what the Droid had written when the clock ran out
+        break;
+      }
       if (!result.success) {
         step({ kind: "error", text: `agent turn failed: ${result.error ?? "unknown"}` });
       }
@@ -186,6 +188,36 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
       if (outside.length) {
         clearTimeout(timer);
         return finish("failed", `allowlist violation: the agent changed ${outside.join(", ")}`);
+      }
+      if (!touched.length && job.kind === "correction") {
+        // A correction may find the pack already agrees with the judge (the wrong call came from elsewhere): then
+        // the gate on the labelled sample is the proof, and the run is ready with an empty diff.
+        step({ kind: "test", text: `runner: ${gateCmd} on the unchanged pack (attempt ${attempt})` });
+        await emit();
+        let unchanged;
+        try {
+          unchanged = await runGate(sb.dir, sb.gate);
+        } catch (e) {
+          clearTimeout(timer);
+          return finish("failed", `gate: ${(e as Error).message}`);
+        }
+        run.gate_ms!.push(unchanged.ms);
+        run.results = unchanged.results;
+        lastTable = formatTestTable(unchanged.results);
+        step({ kind: "test", text: `${unchanged.results.summary} (${unchanged.ms} ms)` });
+        if (unchanged.results.passed) {
+          step({
+            kind: "message",
+            text: "no change needed: the pack already scores the labelled sample as the judge ruled",
+          });
+          run.commit = commitSandbox(sb, `${job.kind} ${job.sport}: no change needed (run ${runId})`);
+          clearTimeout(timer);
+          return finish("ready");
+        }
+        lastTable = `You did not change any file, and ${gateCmd} fails on the unchanged pack:\n${lastTable}`;
+        await emit();
+        if (!result.success) break;
+        continue;
       }
       if (!touched.length) {
         // A gate that passes on an unchanged module proves nothing: the job asked for a change.

@@ -6,11 +6,15 @@ import json
 import shutil
 from pathlib import Path
 
+from _handwritten import handwritten_modules_dir
+
 from trophy_engine.replay_test.checks import format_table, run_replay
 from trophy_engine.replay_test.cli import main
 
 ROOT = Path(__file__).resolve().parents[3]
-TT = ROOT / "sports" / "table_tennis"
+# the gate's own mechanics are tested on the frozen hand-written pack (tests/fixtures); the shipped Droid-written
+# pack is covered by test_evidence.py
+TT = handwritten_modules_dir() / "table_tennis"
 SAMPLES = ROOT / "evals" / "fixtures" / "synthetic" / "table_tennis"
 
 

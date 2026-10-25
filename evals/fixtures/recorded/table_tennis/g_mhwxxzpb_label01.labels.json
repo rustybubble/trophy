@@ -1,0 +1,45 @@
+{
+ "synthetic": false,
+ "label": "RECORDED 2026-10-24: real play labelled by the judge (layer-2 events as the engine saw them; no media)",
+ "sport": "table_tennis",
+ "labeller": "c_tt60zv",
+ "game_id": "g_mhwxxzpb",
+ "span_s": [
+  9.197,
+  48.097
+ ],
+ "rally_winner": "B",
+ "first_server": "A",
+ "bounces": [],
+ "tol_count": 100000,
+ "tol_t_s": 0.1,
+ "alternate_sides": false,
+ "min_recall": 0.0,
+ "min_precision": 0.0,
+ "engine": {
+  "dead_after_point_s": 3.0,
+  "server_from_first_hit": true
+ },
+ "called": [
+  {
+   "rule_id": "net_into_own_side",
+   "team_id": "A",
+   "t_game_s": 10.4306
+  },
+  {
+   "rule_id": "double_bounce",
+   "team_id": "B",
+   "t_game_s": 14.6056
+  },
+  {
+   "rule_id": "double_bounce",
+   "team_id": "A",
+   "t_game_s": 29.3942
+  },
+  {
+   "rule_id": "double_bounce",
+   "team_id": "B",
+   "t_game_s": 39.3303
+  }
+ ]
+}

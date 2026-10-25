@@ -7,6 +7,7 @@ rally winner, and ``calls_changed``: the rallies whose scoring call differs betw
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -25,6 +26,8 @@ class Sample:
     log: Path
     labels: dict[str, Any]
     observations: list[Observation]
+    # a `.l2.jsonl` sample: layer-2 events recorded from live play, replayed through the pack as they were
+    events: list[dict[str, Any]] | None = None
 
 
 @dataclass
@@ -52,8 +55,10 @@ class ReplayResult:
 
 def load_samples(samples_dir: Path) -> list[Sample]:
     out = []
-    for log in sorted(samples_dir.glob("*.l1.jsonl")):
-        name = log.name.removesuffix(".l1.jsonl")
+    logs = sorted(list(samples_dir.glob("*.l1.jsonl")) + list(samples_dir.glob("*.l2.jsonl")))
+    for log in logs:
+        given = log.name.endswith(".l2.jsonl")
+        name = log.name.removesuffix(".l2.jsonl" if given else ".l1.jsonl")
         labels_path = log.with_name(f"{name}.labels.json")
         if not labels_path.is_file():
             raise FileNotFoundError(f"{log}: no {labels_path.name} next to it")
@@ -61,10 +66,37 @@ def load_samples(samples_dir: Path) -> list[Sample]:
         errs = validate_against("labels", labels)
         if errs:
             raise ValueError(f"{labels_path}: {errs}")
-        out.append(Sample(name=name, log=log, labels=labels, observations=read_l1(log)))
+        if given:
+            events = [json.loads(line) for line in log.read_text("utf8").splitlines() if line.strip()]
+            out.append(Sample(name=name, log=log, labels=labels, observations=[], events=events))
+        else:
+            out.append(Sample(name=name, log=log, labels=labels, observations=read_l1(log)))
     if not out:
-        raise FileNotFoundError(f"{samples_dir}: no *.l1.jsonl samples")
+        raise FileNotFoundError(f"{samples_dir}: no *.l1.jsonl or *.l2.jsonl samples")
     return out
+
+
+def _labelled_dead_ball(events: list[dict[str, Any]], end: dict[str, Any]) -> dict[str, Any]:
+    """`labels.end_ball_dead`: the judge says the rally was over after the recording's last bounce. A label, not a
+    perception event; it carries the recorded stream's game and source so the schema check still holds."""
+    last = events[-1]
+    t = float(end["t_game_s"])
+    side = end.get("last_side")
+    ev: dict[str, Any] = {
+        "schema": "trophy.event.v1",
+        "id": f"LABELDEAD{int(t * 1000):012d}",
+        "game_id": last.get("game_id", "g_label"),
+        "t_game_s": t,
+        "sport": last.get("sport", "table_tennis"),
+        "type": "ball_dead",
+        "source": last.get("source", "flight"),
+        "cams": list(last.get("cams") or []),
+        "conf": 1.0,
+        "payload": {"reason": "stopped", **({"last_side": side} if side else {})},
+    }
+    if side:
+        ev["side"] = side
+    return ev
 
 
 def _run_module(mod: SportModule, sample: Sample, game_id: str) -> list[dict[str, Any]]:
@@ -160,27 +192,39 @@ def run_replay(
         row("samples:load", False, "fail", detail=str(e))
         return _finish(tests, counts, cand_events, t0)
 
+    fired: set[str] = set()  # rule ids that produced a call on any sample (the coverage row)
     for s in samples:
         labels = s.labels
         pre = f"{s.name}:"
         base_events: list[dict[str, Any]] | None = None
-        if base is not None:
+        given = s.events is not None
+        if given:
+            # recorded layer-2 events: the module is not in the loop, the pack is judged on what the engine saw
+            # replayed under the gate's game id (the recording's own id is in the labels)
+            events = [{**e, "game_id": game_id} for e in (s.events or [])]
+            if labels.get("end_ball_dead") and events:
+                events.append(_labelled_dead_ball(events, labels["end_ball_dead"]))
+            if base is not None:
+                base_events = events
+            row(f"{pre}events:given", True, f"{len(events)} recorded events")
+        else:
+            if base is not None:
+                try:
+                    base_events = _run_module(base, s, game_id)
+                except Exception as e:  # noqa: BLE001 - the baseline is informational
+                    row(f"{pre}baseline:runs", False, f"{type(e).__name__}: {e}")
+            # 2. events() runs without raising
             try:
-                base_events = _run_module(base, s, game_id)
-            except Exception as e:  # noqa: BLE001 - the baseline is informational
-                row(f"{pre}baseline:runs", False, f"{type(e).__name__}: {e}")
-        # 2. events() runs without raising
-        try:
-            events = _run_module(mod, s, game_id)
-        except Exception as e:  # noqa: BLE001 - any exception is a test failure, reported to the Droid
-            row(f"{pre}events:runs", False, f"{type(e).__name__}: {e}")
-            continue
-        row(
-            f"{pre}events:runs",
-            True,
-            f"{len(events)} events",
-            before="" if base_events is None else f"{len(base_events)} events",
-        )
+                events = _run_module(mod, s, game_id)
+            except Exception as e:  # noqa: BLE001 - any exception is a test failure, reported to the Droid
+                row(f"{pre}events:runs", False, f"{type(e).__name__}: {e}")
+                continue
+            row(
+                f"{pre}events:runs",
+                True,
+                f"{len(events)} events",
+                before="" if base_events is None else f"{len(base_events)} events",
+            )
         cand_events[s.name] = events
         counts[s.name] = {t: sum(1 for e in events if e.get("type") == t) for t in sorted(ALLOWED_TYPES)}
         # 3. every event validates against trophy.event.v1 and uses only layer-2 types
@@ -191,15 +235,16 @@ def run_replay(
                 continue
             bad += [f"event {i}: {err}" for err in validate_event(ev)]
         row(f"{pre}events:schema", not bad, "ok" if not bad else f"{len(bad)} invalid", detail="; ".join(bad[:5]))
-        # 4. deterministic
-        try:
-            again = _run_module(mod, s, game_id)
-            det = again == events
-        except Exception as e:  # noqa: BLE001
-            det, again = False, []
-            bad = [str(e)]
-        row(f"{pre}events:deterministic", det, "ok" if det else "differs between runs")
-        # 5. bounce count within tolerance of the labels
+        if not given:
+            # 4. deterministic
+            try:
+                again = _run_module(mod, s, game_id)
+                det = again == events
+            except Exception as e:  # noqa: BLE001
+                det, again = False, []
+                bad = [str(e)]
+            row(f"{pre}events:deterministic", det, "ok" if det else "differs between runs")
+        # 5. bounce count within tolerance of the labels (recorded samples label the outcome, not every bounce)
         sb = _surface_bounces(events, labels)
         n_lab = len(_labelled_surface(labels))
         tol = int(labels["tol_count"])
@@ -234,7 +279,7 @@ def run_replay(
             detail=f"min_recall {labels['min_recall']}, min_precision {labels.get('min_precision', 0)}",
         )
         # 8. ball_dead expected
-        if labels.get("expect_ball_dead"):
+        if labels.get("expect_ball_dead") and not given:
             has = any(e.get("type") == "ball_dead" for e in events)
             row(f"{pre}ball_dead:present", has, "ok" if has else "missing")
         # 9. calls: replay the events through the rule engine with the candidate pack (and the baseline's)
@@ -258,22 +303,49 @@ def run_replay(
                     ok,
                     f"{won or 'none'} ({len(pts)} point calls; labelled {labels['rally_winner']})",
                     before=_winner_str(base_calls) if base is not None else "",
+                    detail=""
+                    if ok
+                    else "one rally = exactly one point call to the labelled winner; got: " + _calls_summary(pts),
                 )
+            fired.update(str(c.get("rule_id")) for c in cand_calls)
             changed = _calls_changed(base_calls, cand_calls, s.name) if base is not None else []
             calls_changed.extend(changed)
 
+    # 10. coverage: which rules these samples exercise at all. Informational (never blocks): a rule nobody has seen
+    # fire has no evidence either way, and the judge sees that before approving.
+    ids = [str(r.get("id")) for r in (mod.rules.get("rules") or [])]
+    silent = [i for i in ids if i not in fired]
+    row(
+        "rules:coverage",
+        True,
+        f"{len(ids) - len(silent)}/{len(ids)} rules fired on these samples",
+        detail=("no evidence for: " + ", ".join(silent)) if silent else "",
+    )
     return _finish(tests, counts, cand_events, t0, calls_changed)
 
 
 def _replay_calls(mod: SportModule, events: list[dict[str, Any]], game_id: str, labels: dict[str, Any]):
     """Run the events through the engine with this module's pack, in memory. Returns (calls, error)."""
-    from ..engine import Engine
+    from ..engine import DEAD_AFTER_POINT_S, Engine
     from ..state import MemoryState
 
     try:
-        eng = Engine(MemoryState(), modules_dir=mod.path.parent)
+        # the live loop's switches (trophy-engine --dead-after-point / --server-from-first-hit): a recorded sample
+        # replays under the switches it was recorded with, so the gate judges what the engine actually did
+        opts = labels.get("engine") or {}
+        eng = Engine(
+            MemoryState(),
+            modules_dir=mod.path.parent,
+            dead_after_point_s=float(opts.get("dead_after_point_s", DEAD_AFTER_POINT_S)),
+            server_from_first_hit=bool(opts.get("server_from_first_hit", False)),
+        )
+        synthetic = bool(labels.get("synthetic", True))
         eng.create_game(
-            game_id, mod.sport, t0_ms=0, module_dir=mod.path, params={"synthetic": True, "label": "SYNTHETIC"}
+            game_id,
+            mod.sport,
+            t0_ms=0,
+            module_dir=mod.path,
+            params={"synthetic": True, "label": labels.get("label", "SYNTHETIC")} if synthetic else {},
         )
         eng.start_game(game_id, labels.get("first_server") or "A")
         calls: list[dict[str, Any]] = []

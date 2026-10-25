@@ -66,6 +66,15 @@ def _ask(st: Settings, a: argparse.Namespace) -> int:
     return 0 if r.status_code == 200 else 1
 
 
+def _announce(st: Settings, a: argparse.Namespace) -> int:
+    import logging
+
+    from .announce import run_announcer
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+    return 0 if asyncio.run(run_announcer(st, speaker=a.speaker, stream=a.stream)) >= 0 else 1
+
+
 def _serve(st: Settings, a: argparse.Namespace) -> int:
     import uvicorn
 
@@ -87,6 +96,9 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--emotion")
     s.add_argument("--play", action="store_true", help="also play on this machine (needs the speaker extra)")
     s.add_argument("--wav-dir")
+    s = sub.add_parser("announce", help="speak every call the engine posts (Redis ev:calls) through Cartesia")
+    s.add_argument("--speaker", action="store_true", help="play on this machine's output (needs the speaker extra)")
+    s.add_argument("--stream", default="ev:calls")
     s = sub.add_parser("transcribe", help="Ink-2 transcript of a WAV file")
     s.add_argument("wav")
     s.add_argument("--fast", action="store_true", help="send faster than real time")
@@ -98,6 +110,10 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--url", default="http://127.0.0.1:8100")
     a = p.parse_args(argv)
     st = Settings.from_env(
-        require=("CARTESIA_API_KEY",) if a.cmd in ("speak", "transcribe") else ("ANTHROPIC_API_KEY", "CARTESIA_API_KEY")
+        require=("CARTESIA_API_KEY",)
+        if a.cmd in ("speak", "transcribe", "announce")
+        else ("ANTHROPIC_API_KEY", "CARTESIA_API_KEY")
     )
-    sys.exit({"serve": _serve, "speak": _speak, "transcribe": _transcribe, "ask": _ask}[a.cmd](st, a))
+    sys.exit(
+        {"serve": _serve, "speak": _speak, "transcribe": _transcribe, "ask": _ask, "announce": _announce}[a.cmd](st, a)
+    )

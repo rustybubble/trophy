@@ -47,6 +47,7 @@ WAITS = {
     "recorder": [6379, 3000],
     "engine": [6379, 3000],
     "referee": [6379],
+    "announcer": [6379],
     "compiler": [3000],
     "caddy": [8000, 5173, 5174, 5175],
     "flight": [6379, 3000, 8000],

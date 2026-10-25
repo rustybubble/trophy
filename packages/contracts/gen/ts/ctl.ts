@@ -24,6 +24,7 @@ export type CtlCmd =
   | "bookmark"
   | "clip_that"
   | "review_call"
+  | "label_rally"
   | "run_check"
   | "request_check";
 
@@ -161,6 +162,18 @@ export interface AdjustScoreArgs {
 export interface SubmitHouseRuleArgs {
   text: string;
   source: "typed" | "voice";
+}
+/**
+ * label_rally (judge): the span t0_s..t1_s (defaults: since the previous label, until now) was ONE rally won by `winner`. The engine fixes the score, exports the span as a labelled sample under data/local/labelled/<sport>/ and files a `correction` house rule for the Droid.
+ *
+ * This interface was referenced by `CtlCommand`'s JSON-Schema
+ * via the `definition` "LabelRallyArgs".
+ */
+export interface LabelRallyArgs {
+  winner: string;
+  t0_s?: number;
+  t1_s?: number;
+  note?: string;
 }
 /**
  * approve_house_rule, reject_house_rule

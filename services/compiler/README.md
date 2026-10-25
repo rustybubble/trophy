@@ -18,6 +18,8 @@ jobs, each from a trigger we designed:
 | a session with no approved module for its sport, plus Agent 2's scene descriptor (`scene.schema.json`)                | **compile**: derive `sports/pickleball/` from the golden `sports/table_tennis/`                                                                        | all three files of the new module                                    |
 | a health metric crossing a threshold (ball lost > 40 % of frames, reprojection error rising)                          | **retune**: adjust thresholds, or the detector logic if a parameter can't fix it                                                                       | `config.yaml`, `events.py`                                           |
 | the judge finishes camera setup: corners, clap sync, a warm-up recording (`field.json` + labelled `track3d` fixtures) | **calibrate_checks**: specialise the golden check library to this calibration (sigma model, surface/floor bands, serve zone, dead-ball gap, edge band) | every `checks/<name>.py` of the copied library; never `library.json` |
+| the judge rules on the dashboard that a span of play was ONE rally won by X (`label_rally`; a `house_rule` row with `source = correction`) | **correction**: repair the pack so the judge-labelled recording replays as the judge ruled, every other sample unchanged | `rules.yaml` only |
+| the CLI, once per sport (`trophy-droid compile-rules`) | **compile_rules**: write the whole `rules:` list from `sports/<sport>/laws.md` against the synthetic samples and every judge-labelled recording | `rules.yaml` only |
 
 Today the house-rule trigger is live through the Spacetime subscription (`trophy-droid watch`); compile, retune and
 calibrate run from the CLI until Agent 1 adds the `droid_run` and `sport_module` tables (row shapes in
@@ -64,7 +66,7 @@ autonomy _off_ offers no Edit tool, autonomy _low_ auto-approves edits without a
    `__import__`, dunder access); the checks loader (`trophy_engine.checks.library`) applies the same allowlist to
    `checks/*.py` and additionally requires a top-level `PARAMS` and `check()`.
 
-**Model.** `DROID_MODEL` defaults to `claude-sonnet-5`. In SDK sessions some models (`claude-opus-5-5`,
+**Model.** `DROID_MODEL` defaults to `claude-sonnet-5`; pack and correction jobs run at reasoning effort `minimal` (`DROID_PACK_EFFORT` / `DROID_CORRECTION_EFFORT`): at `low` two live corrections sat silent for 210-545 s and timed out, at `minimal` the same job was ready in 328 s. In SDK sessions some models (`claude-opus-5-5`,
 `claude-fable-5.1`, `gpt-6-sol`; measured 2026-10-24) run in _script_ tool-execution mode, where edits happen inside a
 script the permission handler can only partly inspect; the runner refuses script confirmations, so pick a model that
 runs in direct mode (`claude-sonnet-5`, `claude-opus-4-8`).
@@ -108,6 +110,36 @@ session_id, field, field_sha256, approved_at_ms, approved_by}` (the engine reads
   replaces it. If the run fails, the session uses the golden library unedited with `calibrated: false` on every check,
   and the judge view says so.
 
+## Laws, labels and evidence: where the Droid's facts come from
+
+The Droid never guesses a rule and never sees a hand-written one for `compile_rules`. Its sandbox carries three
+kinds of evidence and nothing else:
+
+- **`context/laws.md`**: the sport's laws, paraphrased with clause ids (`sports/<sport>/laws.md`; the ITTF Handbook
+  chapter 2 for table tennis). Every rule it writes cites one as `rule_ref`. A retrieval service can replace the
+  file: the seam is `Job.lawsPath`, and `MOSS_PROJECT_ID`/`MOSS_PROJECT_KEY` are reserved in `.env.example` for a Moss
+  index of scraped rulebooks (the Apify -> Moss design of interfaces §17). No Moss project exists yet, so there is no
+  Moss code: the file is the source until the user creates one.
+- **`context/events.md`**: the vocabulary, rendered by `python -m trophy_engine.vocabulary` from the engine's code:
+  every `ev.*` field (event.schema.json payloads plus the engine's derived `ev.n_cams` and `ev.side_p`), every
+  `rally.*` field (`trophy_engine.rally.RALLY_FIELDS`, including the evidence fields `hit_since_last_bounce`,
+  `t_since_last_bounce_s`, `last_bounce_side_p`), `game.*`, the pack's `params.*` and the engine's evidence policy
+  keys (`evidence_min_cams` + `evidence_min_conf`: weaker events never reach the rules). A law that needs a
+  measurement not in this file is declared "not encodable" in the Droid's result instead of being approximated.
+- **Samples**: the labelled synthetic rallies plus **judge-labelled recordings** of real play, both versioned
+  (`evals/fixtures/recorded/<sport>`: pixel samples and the layer-2 events the engine saw, no media) and exported
+  live by the engine when the judge presses "that was one rally, won by X" on the dashboard
+  (`data/local/labelled/<sport>/<game>_labelNN.{l2.jsonl,labels.json}`). The gate's `calls:winner` row demands
+  exactly one point call to the labelled winner, so a pack that calls five points on one rally cannot become
+  `ready`, and `rules:coverage` lists the rules no sample exercised.
+
+The judge's correction is the real-time loop: dashboard button -> `label_rally` -> the engine voids the span's
+points, posts the judge's point, exports the sample and inserts the `correction` row -> `trophy-droid watch` runs
+the job with a 300 s / medium-effort budget -> the Droid panel streams plan, diff and gate table -> Approve
+hot-loads the repaired pack. The hand-written pack this branch started from called five points on the recorded
+rally (`evals/fixtures/recorded/table_tennis/README.md`); that recording is now the regression sample every pack
+job is gated on.
+
 ## Visible work
 
 Every change to the run row (`DroidRun`, `droidrun.schema.json`: plan, steps, diff, test table, blocked calls, timings,
@@ -121,6 +153,11 @@ house rules the Spacetime `house_rule` row via `update_house_rule_progress`, whi
 | House rule "a serve that clips the net and lands in is a let"       | 30.6 s           | 1        | 19/19 in 0.5 s                                                    |
 | Derive `sports/pickleball/` from table tennis + the synthetic scene | 69.2 s           | 1        | 19/19 in 0.5 s                                                    |
 | calibrate_checks on `evals/fixtures/synthetic/table_tennis_3d`      | not yet run live | —        | 25 checks; ~1.9 s per gate run with a scripted agent (2026-10-24) |
+| compile_rules: the whole table-tennis pack from `laws.md` (2026-10-24, effort low, 600 s cap) | 531 s | 1 | 34/34 in 0.8 s (synthetic + the judge-labelled recording); a first run at effort medium read its inputs for 40 s and then produced nothing until its 480 s cap |
+| correction: "9.2-48.1 s was ONE rally, won by B" on the live stream (2026-10-24, effort low, 300 s cap) | timed out | 1 | partial fix (`ev.side_p > 0.95` on double_bounce) after a 210 s silent gap; the cap is now 600 s and the label carries per-call evidence digests |
+| correction run #2 (600 s cap, labels with evidence digests) | timed out | 1 | 36 s of reading, 545 s silent, then two edits in the right direction (evidence params, `!rally.hit_since_last_bounce`), gate 41/46 at the cap |
+| compile_rules run #3, gated on 7 samples incl. 3 live-labelled rallies (600 s cap) | timed out | 1 | first edit at ~390 s; its pack failed `module:load` (multi-line `when:`) until the cap |
+| correction run #3 for live game g_tcfktwyn (effort **minimal**, 600 s cap), gated on 7 samples | **328 s** | 1 | **52/52** in 1.3 s: `evidence_min_conf` 0.82, new `double_bounce_min_p_in 0.9` (ittf:2.1.2); the shipped pack |
 
 ## Approval
 
@@ -152,7 +189,9 @@ cd services/engine && uv sync                  # the gate's interpreter
 cd ../compiler && npm run cli -- house-rule --sport table_tennis --text "a serve that clips the net is a let"
 npm run cli -- compile --sport pickleball --from table_tennis    # scene + samples default to evals/fixtures/synthetic/pickleball
 npm run cli -- calibrate --sport table_tennis --session s_demo01 # field + samples default to evals/fixtures/synthetic/table_tennis_3d
-npm run cli -- watch                           # subscribe to pending house rules in Spacetime (needs SPACETIME_COMPILER_TOKEN)
+npm run cli -- compile-rules --sport table_tennis   # the whole rules: list from sports/table_tennis/laws.md (600 s cap)
+npm run cli -- correction --sport table_tennis --text "9-48 s was one rally, won by B"   # what watch runs for a dashboard correction
+npm run cli -- watch                           # subscribe to pending house rules and corrections in Spacetime (needs SPACETIME_COMPILER_TOKEN)
 npm run cli -- approve <run_id>
 ```
 

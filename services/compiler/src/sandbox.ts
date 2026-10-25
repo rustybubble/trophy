@@ -49,6 +49,14 @@ export interface Job {
   sessionId?: string;
   gameId?: string;
   ruleVersion?: string;
+  /** correction / compile_rules: the sport's law text (context/laws.md; defaults to sports/<sport>/laws.md) */
+  lawsPath?: string;
+  /** more sample directories (judge-labelled recordings under data/local/labelled/<sport>) copied beside samplesDir */
+  extraSamplesDirs?: string[];
+  /** compile_rules: start from the module's rules.yaml with its `rules:` list emptied */
+  emptyRules?: boolean;
+  /** per-job budget; a correction or a whole pack needs more than a one-line house rule (runner.ts) */
+  budget?: { timeoutS?: number; reasoningEffort?: string; maxAttempts?: number };
   /** new_check: the referee's question that no session check answers (interfaces-v1 section 20) */
   newCheck?: {
     /** the new check's name: checks/<name>.py, [a-z][a-z0-9_]* */
@@ -81,6 +89,7 @@ export function createSandbox(job: Job, dir: string, enginePython: string, root 
   mkdirSync(dir, { recursive: true });
   if (readdirSync(dir).length) throw new Error(`sandbox dir is not empty: ${dir}`);
   const gate = gateScript(job.kind);
+  setVocabularyPython(enginePython);
   const { moduleDir, allowlist, samples, gateCmd } =
     job.kind === "new_check"
       ? layoutNewCheck(job, dir, root)
@@ -130,13 +139,16 @@ function layoutModule(job: Job, dir: string, root: string): Layout {
   const samplesOut = join(dir, "samples");
   mkdirSync(samplesOut);
   const samples: string[] = [];
-  for (const f of readdirSync(job.samplesDir)) {
-    if (f.endsWith(".l1.jsonl") || f.endsWith(".labels.json")) {
-      cpSync(join(job.samplesDir, f), join(samplesOut, f));
-      if (f.endsWith(".l1.jsonl")) samples.push(f);
+  const sampleDirs = [job.samplesDir, ...(job.extraSamplesDirs ?? []).filter((d) => existsSync(d))];
+  for (const sdir of sampleDirs) {
+    for (const f of readdirSync(sdir)) {
+      if (f.endsWith(".l1.jsonl") || f.endsWith(".l2.jsonl") || f.endsWith(".labels.json")) {
+        cpSync(join(sdir, f), join(samplesOut, f));
+        if (f.endsWith(".l1.jsonl") || f.endsWith(".l2.jsonl")) samples.push(f);
+      }
     }
   }
-  if (!samples.length) throw new Error(`${job.samplesDir}: no *.l1.jsonl samples`);
+  if (!samples.length) throw new Error(`${job.samplesDir}: no *.l1.jsonl or *.l2.jsonl samples`);
   if (job.scene) {
     mkdirSync(join(dir, "scene"));
     cpSync(job.scene, join(dir, "scene", "scene.json"));
@@ -157,6 +169,21 @@ function layoutModule(job: Job, dir: string, root: string): Layout {
       if (!existsSync(join(src, f))) throw new Error(`${src}/${f} missing`);
       cpSync(join(src, f), join(moduleDir, f));
     }
+    if (job.emptyRules) {
+      // compile_rules: the Droid writes every rule from the laws; params/field/scoring (the table, not the rules) stay
+      const rulesPath = join(moduleDir, "rules.yaml");
+      writeFileSync(rulesPath, emptyRulesList(readFileSync(rulesPath, "utf8")));
+    }
+  }
+  if (job.kind === "correction" || job.kind === "compile_rules") {
+    // what the Droid reasons from: the laws (paraphrased, see sports/<sport>/laws.md) and the engine's vocabulary,
+    // rendered from the code that defines it (trophy_engine.vocabulary), never a hand-maintained list
+    const ctx = join(dir, "context");
+    mkdirSync(ctx, { recursive: true });
+    const laws = job.lawsPath ?? join(root, "sports", job.sport, "laws.md");
+    if (!existsSync(laws)) throw new Error(`${laws}: no laws.md for ${job.sport}`);
+    cpSync(laws, join(ctx, "laws.md"));
+    writeFileSync(join(ctx, "events.md"), renderVocabulary(job, root));
   }
   return {
     moduleDir,
@@ -215,6 +242,29 @@ function layoutChecks(job: Job, dir: string, root: string): Layout {
       args: `--checks checks --samples samples --field samples/field.json --baseline reference/checks --rules "rules/${job.sport}"`,
     },
   };
+}
+
+/** `rules:` emptied, everything before it kept. The pack schema needs the key, so it stays as an empty list. */
+export function emptyRulesList(yaml: string): string {
+  const i = yaml.search(/^rules:\s*$/m);
+  if (i < 0) return yaml.trimEnd() + "\nrules: []\n";
+  return yaml.slice(0, i) + "rules: []\n";
+}
+
+let vocabularyPython: string | undefined;
+/** The interpreter that renders context/events.md (the engine venv; set by createSandbox from its enginePython). */
+export function setVocabularyPython(p: string): void {
+  vocabularyPython = p;
+}
+
+function renderVocabulary(job: Job, root: string): string {
+  const py = vocabularyPython ?? join(root, "services/engine/.venv/bin/python");
+  const moduleDir = job.moduleDir ?? join(root, "sports", job.sport);
+  return execFileSync(py, ["-m", "trophy_engine.vocabulary", "--module", moduleDir], {
+    cwd: join(root, "services/engine"),
+    encoding: "utf8",
+    env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "" },
+  });
 }
 
 const PROMPTS = join(REPO_ROOT, "services/compiler/prompts");
@@ -292,6 +342,8 @@ export function renderTask(job: Job, allowlist: string[], samples: string[]): st
     allowlist: allowlist.map((f) => `- \`${f}\``).join("\n"),
     samples: samples.map((f) => `- \`samples/${f}\` (labels: \`samples/${labelOf(f)}\`)`).join("\n"),
     scene: job.scene ? "`scene/scene.json`" : "(none)",
+    laws: "`context/laws.md`",
+    vocabulary: "`context/events.md`",
     name: job.newCheck?.name ?? "",
     question: job.newCheck?.question ?? "",
     hint: job.newCheck?.hint ?? "(none)",

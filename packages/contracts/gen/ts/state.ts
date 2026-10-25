@@ -153,7 +153,13 @@ export interface HouseRule {
   game_id: string;
   sport: string;
   text: string;
-  source: "typed" | "voice";
+  source: "typed" | "voice" | "correction";
+  /**
+   * source = correction: the judge's label behind this run (sample name under data/local/labelled/<sport>, span, winner, voided call ids)
+   */
+  evidence?: {
+    [k: string]: unknown;
+  };
   status: HouseRuleStatus;
   backend: "droid" | "claude-fallback";
   plan_md: string;

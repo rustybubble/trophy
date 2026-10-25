@@ -70,6 +70,10 @@ Phones need HTTPS for the camera and microphone, which is why the domain exists.
 
 ## Cartesia
 Voice is how Trophy referees: every call is spoken, and players talk back to the ref.
+**Every call is spoken on the table speaker.** The engine appends each call to Redis `ev:calls`; `referee announce --speaker`
+(the Procfile's `announcer`) speaks it through Sonic with the calls voice: first audio 83-321 ms after the call, measured
+2026-10-24 on the Mac. The phones speak the same calls through their own Cartesia sockets.
+
 
 **Features used**
 - **Sonic TTS over one WebSocket** per phone (`sonic-3.6`, raw `pcm_f32le` at the device's sample rate, `max_buffer_delay_ms: 0`), opened when the game screen loads, so the first call doesn't pay for the handshake (`apps/pwa/src/lib/voice.ts`).
@@ -148,6 +152,12 @@ the per-call hot path.
 - **Trigger:** a `house_rule` row with status `pending` in Spacetime (the judge typed or said "first to 7, win by 1").
   `trophy-droid watch` subscribes and starts a run. A second job, `calibrate_checks`, specialises the geometry check
   library to a camera setup (D-36).
+- **The rules themselves are Droid-written, from the laws.** `trophy-droid compile-rules` gives the Droid the sport's laws
+  (`sports/<sport>/laws.md`, ITTF clause ids), the engine's vocabulary rendered from code (`trophy_engine.vocabulary`: every
+  event field, rally-state field and evidence parameter the engine can supply) and the labelled samples, and starts it from an
+  **empty** `rules:` list; it must cite a clause per rule and declare what it could not encode. A judge's correction on the
+  dashboard ("that was one rally, won by B") becomes a `correction` run: the engine fixes the score, exports the span as a
+  labelled sample, and the Droid repairs the pack against it (D-42).
 - **Sandbox:** a fresh git repository per run in `~/.trophy/droid_runs/<run_id>`, outside the repo, holding only the
   pack to edit, its schemas, labelled synthetic samples, the brief and one gate script. Three layers enforce it: a
   PreToolUse hook (`hooks/guard.py`) that allows edits to the job's allowlisted files, reads only inside the sandbox,

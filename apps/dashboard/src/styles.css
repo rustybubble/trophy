@@ -301,6 +301,18 @@ td {
   stroke: var(--accent);
   stroke-width: 2;
 }
+.world .dot {
+  fill: var(--accent);
+}
+.world .dot.cam1 {
+  fill: #38bdf8;
+}
+.world .dot.cam2 {
+  fill: #f472b6;
+}
+.world .dot.cam3 {
+  fill: #a3e635;
+}
 .world .bounce.in {
   fill: #22c55e55;
   stroke: var(--ok);
