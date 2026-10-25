@@ -291,7 +291,7 @@ export class MockBackend implements Backend {
         const other: Viewer = {
           viewer_id: "c_mockpx01",
           game_id: MOCK_GAME,
-          cam_id: this.feeds.at(-1)!.cam_id,
+          cam_id: this.feeds[0]!.cam_id,
           name: "Pixel 9",
           connected: true,
           playing: clip >= 0,
@@ -484,7 +484,11 @@ export class MockBackend implements Backend {
       backend: "claude",
       model: "claude-opus-5-5 (mock)",
       choice: edge ? "SIDE_FAULT" : players ? "UNSURE" : call.outcome.toUpperCase(),
-      probs: edge ? { SIDE_FAULT: 0.81, EDGE_GOOD: 0.19 } : players ? { YES: 0.52, NO: 0.48 } : { KEEP: 0.9, CHANGE: 0.1 },
+      probs: edge
+        ? { SIDE_FAULT: 0.81, EDGE_GOOD: 0.19 }
+        : players
+          ? { YES: 0.52, NO: 0.48 }
+          : { KEEP: 0.9, CHANGE: 0.1 },
       latency_ms: 1700,
       error: null,
       rationale: edge
@@ -611,7 +615,12 @@ export class MockBackend implements Backend {
     };
     const plan = `## Plan\n1. Read \`rules/table_tennis.yaml\` and the request: “${text}”.\n2. Change **scoring.params** only.\n3. Run \`replay_test\` against this session's plays.`;
     const diff = `--- a/rules/table_tennis.yaml\n+++ b/rules/table_tennis.yaml\n@@ -12,6 +12,7 @@ scoring:\n   params:\n-    points_to_win: 11\n-    win_by: 2\n+    # house rule: ${text}\n+    points_to_win: 7\n+    win_by: 1\n   serve_rotation: 2`;
-    this.after(700, () => push({ status: "compiling", plan_md: plan }, { status: "running", attempt: 1, plan_md: plan, ...step("plan", "Plan: edit scoring.params, then gate") }));
+    this.after(700, () =>
+      push(
+        { status: "compiling", plan_md: plan },
+        { status: "running", attempt: 1, plan_md: plan, ...step("plan", "Plan: edit scoring.params, then gate") },
+      ),
+    );
     this.after(1600, () => {
       const s = step("tool", "Read rules/table_tennis.yaml", "rules/table_tennis.yaml");
       push({ steps: s.steps }, s);

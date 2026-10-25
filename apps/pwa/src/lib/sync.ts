@@ -28,7 +28,8 @@ export type Phase = { kind: "countdown"; seconds: number } | { kind: "playing"; 
 
 /** Where the schedule says this angle is at `serverNowMs`. */
 export function phaseAt(feed: FeedTiming, serverNowMs: number): Phase {
-  if (serverNowMs < feed.wall0_ms) return { kind: "countdown", seconds: Math.ceil((feed.wall0_ms - serverNowMs) / 1000) };
+  if (serverNowMs < feed.wall0_ms)
+    return { kind: "countdown", seconds: Math.ceil((feed.wall0_ms - serverNowMs) / 1000) };
   const t = targetClipTime(feed, serverNowMs);
   if (t >= feed.offset_s + feed.duration_s) return { kind: "ended" };
   return { kind: "playing", t };

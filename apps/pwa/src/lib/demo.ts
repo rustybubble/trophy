@@ -27,7 +27,11 @@ export function pickAngle(
 ): string | undefined {
   const sorted = sortFeeds(feeds.filter((f) => f.status !== "failed"));
   if (current && sorted.some((f) => f.cam_id === current)) return current;
-  const taken = new Set(liveViewers(viewers, nowMs).filter((v) => v.viewer_id !== meId).map((v) => v.cam_id));
+  const taken = new Set(
+    liveViewers(viewers, nowMs)
+      .filter((v) => v.viewer_id !== meId)
+      .map((v) => v.cam_id),
+  );
   return (sorted.find((f) => !taken.has(f.cam_id)) ?? sorted[0])?.cam_id;
 }
 
@@ -45,7 +49,10 @@ export class SpeechGate {
   private recent = new Map<string, number>();
   constructor(private readonly windowMs = 6000) {}
   allow(text: string, nowMs: number = Date.now()): boolean {
-    const k = text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const k = text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
     if (!k) return false;
     for (const [t, at] of this.recent) if (nowMs - at > this.windowMs) this.recent.delete(t);
     if (this.recent.has(k)) return false;
@@ -99,7 +106,9 @@ export function challengeTarget(calls: Call[]): Call | undefined {
 
 /** The call the big banner shows: the newest decision (info lines are shown separately). */
 export function bannerCall(calls: Call[]): Call | undefined {
-  return [...calls].sort((a, b) => b.created_at_ms - a.created_at_ms).find((c) => c.kind !== "info" && c.status !== "voided");
+  return [...calls]
+    .sort((a, b) => b.created_at_ms - a.created_at_ms)
+    .find((c) => c.kind !== "info" && c.status !== "voided");
 }
 
 export interface ClipWindow {
@@ -129,6 +138,7 @@ export function mdToText(md: string): string {
   return md
     .replace(/```[a-z]*\n?/gi, "")
     .split("\n")
+    .filter((l) => !/^\s{0,3}#{1,6}\s+plan\s*:?\s*$/i.test(l)) // the sheet already labels it "Plan"
     .map((l) =>
       l
         .replace(/^\s{0,3}#{1,6}\s+/, "")

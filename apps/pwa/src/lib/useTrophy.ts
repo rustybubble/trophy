@@ -76,6 +76,12 @@ export class TrackBuffer {
       const k = (t - a.t_game_s) / (b.t_game_s - a.t_game_s);
       return [a.px[0] + (b.px[0] - a.px[0]) * k, a.px[1] + (b.px[1] - a.px[1]) * k];
     }
+    // past the newest sample (the live edge): extrapolate from the last two for up to 150 ms
+    const p = list[hi - 2];
+    if (!b && a?.px && p?.px && t - a.t_game_s <= 0.15 && a.t_game_s - p.t_game_s <= gapS) {
+      const k = (t - a.t_game_s) / (a.t_game_s - p.t_game_s);
+      return [a.px[0] + (a.px[0] - p.px[0]) * k, a.px[1] + (a.px[1] - p.px[1]) * k];
+    }
     const near = [a, b].find((s) => s?.px && Math.abs(s.t_game_s - t) <= gapS / 2);
     return near?.px ? [near.px[0], near.px[1]] : undefined;
   }
