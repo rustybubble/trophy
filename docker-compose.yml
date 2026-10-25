@@ -1,33 +1,114 @@
-# Linux deployment sketch for after the weekend. NOT used at Cal Hacks: on the Mac every service runs
-# natively via `make dev` (Docker on macOS has no GPU access). Agents create the Dockerfiles when deploying.
-# Video frames stay on Redis + the recorder; SpacetimeDB holds metadata only (D-21).
-x-gpu: &gpu
-  deploy:
-    resources:
-      reservations:
-        devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+# The live backend on one Vultr NVIDIA GPU box (D-30); the Mac runs the same services natively with `make dev`.
+#   docker compose up -d --build                      # everything that exists today
+#   docker compose run --rm stdb-admin                # first boot / module change: publish + service identities
+#   docker compose --profile gpu up -d flight         # BlurBall on CUDA (Agent 2's services/flight/Dockerfile)
+# Secrets: only in $TROPHY_ENV_FILE (default /etc/trophy/trophy.env, chmod 600) and $TROPHY_CADDY_ENV_FILE
+# (TROPHY_DOMAIN + PORKBUN_* only). Never in images or git. Footage: $TROPHY_DATA (the gitignored data/local layout).
+# BlurBall weights: $TROPHY_WEIGHTS, a host directory mounted read-only; never baked into an image or pushed to a
+# registry (license unstated; used, not redistributed). Video stays on Redis + the recorder, never Spacetime (D-21).
+# Only Caddy publishes ports (80/443). Redis, SpacetimeDB and the services talk on the compose network.
+
+x-env: &env
+  env_file: ${TROPHY_ENV_FILE:-/etc/trophy/trophy.env}
+  restart: unless-stopped
+
+x-backend: &backend
+  REDIS_URL: redis://redis:6379/0
+  SPACETIME_URI: http://spacetimedb:3000
+  TROPHY_DATA_DIR: /data/local
 
 services:
-  redis: {image: "redis:7"}
-  spacetimedb: {build: ./spacetime, ports: ["3000:3000"], volumes: ["spacetime-data:/var/lib/spacetime"]}
-  gateway: {build: ./services/gateway, env_file: .env, depends_on: [redis]}
-  recorder: {build: ./services/recorder, env_file: .env, depends_on: [redis], volumes: ["./data/local:/data/local"]}
-  courtcam-adapter: {build: ./services/courtcam-adapter, env_file: .env}
-  flight: {build: ./services/flight, <<: *gpu, env_file: .env, depends_on: [redis, spacetimedb]}
-  engine: {build: ./services/engine, env_file: .env, depends_on: [redis, spacetimedb]}
-  compiler: {build: ./services/compiler, env_file: .env, depends_on: [spacetimedb]}
-  rules: {build: ./services/rules, env_file: .env}
-  caddy:
-    image: caddy:2
-    ports: ["80:80", "443:443"]
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+
+  spacetimedb:
+    image: clockworklabs/spacetime:v2.13.0
+    command: ["start", "--listen-addr", "0.0.0.0:3000", "--data-dir", "/stdb/data", "--non-interactive"]
+    user: root
+    volumes: ["stdb-data:/stdb"]
+    restart: unless-stopped
+
+  stdb-admin:
+    profiles: [admin]
+    build: {context: ., dockerfile: infra/docker/stdb-admin.Dockerfile}
+    environment:
+      SPACETIME_URI: http://spacetimedb:3000
+      TROPHY_ENV_FILE_IN_CONTAINER: /etc/trophy/trophy.env
     volumes:
-      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./apps/pwa/dist:/srv/cam:ro
-      - ./apps/dashboard/dist:/srv/dashboard:ro
-      - caddy-data:/data
-    env_file: .env
-    depends_on: [gateway]
+      - ${TROPHY_ENV_FILE:-/etc/trophy/trophy.env}:/etc/trophy/trophy.env
+      - stdb-cli:/root/.config/spacetime
+      - stdb-cli-share:/root/.local/share/spacetime
+    depends_on: [spacetimedb]
+
+  gateway:
+    <<: *env
+    build: {context: ., dockerfile: infra/docker/python-service.Dockerfile, args: {SERVICE: gateway}}
+    command: ["python", "-m", "gateway"]
+    environment:
+      <<: *backend
+      GATEWAY_HOST: 0.0.0.0
+      # Add RULES_URL: http://rules:8100 / ADAPTER_URL: http://courtcam-adapter:8050 only once those services run:
+      # lookups of a missing compose name stall uvloop's resolver threads and starve the gateway's other lookups.
+    volumes: ["${TROPHY_DATA:-/srv/trophy/data}:/data/local"]
+    depends_on: [redis, spacetimedb]
+
+  recorder:
+    <<: *env
+    build: {context: ., dockerfile: infra/docker/python-service.Dockerfile, args: {SERVICE: recorder}}
+    command: ["python", "-m", "recorder"]
+    environment: *backend
+    volumes: ["${TROPHY_DATA:-/srv/trophy/data}:/data/local"]
+    depends_on: [redis, spacetimedb]
+
+  caddy:
+    build: {context: ., dockerfile: infra/docker/caddy.Dockerfile}
+    env_file: ${TROPHY_CADDY_ENV_FILE:-/etc/trophy/caddy.env}
+    ports: ["80:80", "443:443"]
+    volumes: ["caddy-data:/data", "caddy-config:/config"]
+    depends_on: [gateway, spacetimedb]
+    restart: unless-stopped
+
+  # Agent 2: BlurBall on CUDA, the only service with a GPU. Needs services/flight/Dockerfile (CUDA 12 base).
+  flight:
+    <<: *env
+    profiles: [gpu]
+    build: {context: ., dockerfile: services/flight/Dockerfile}
+    environment:
+      <<: *backend
+      BLURBALL_WEIGHTS_DIR: /weights
+    volumes: ["${TROPHY_WEIGHTS:-/srv/trophy/weights}:/weights:ro"]
+    depends_on: [redis, spacetimedb]
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+
+  # Agent 3's services, enabled once each exists (the python-service image fits engine and rules).
+  engine:
+    <<: *env
+    profiles: [engine]
+    build: {context: ., dockerfile: infra/docker/python-service.Dockerfile, args: {SERVICE: engine}}
+    command: ["python", "-m", "engine"]
+    environment: *backend
+    depends_on: [redis, spacetimedb]
+  rules:
+    <<: *env
+    profiles: [rules]
+    build: {context: ., dockerfile: infra/docker/python-service.Dockerfile, args: {SERVICE: rules}}
+    command: ["python", "-m", "rules"]
+    environment: *backend
+  compiler:
+    <<: *env
+    profiles: [compiler]
+    build: {context: ., dockerfile: services/compiler/Dockerfile}
+    environment: *backend
+    depends_on: [spacetimedb]
 
 volumes:
-  spacetime-data:
+  stdb-data:
+  stdb-cli:
+  stdb-cli-share:
   caddy-data:
+  caddy-config:

@@ -87,6 +87,7 @@ def main() -> int:
     args = parser.parse_args()
     ENV_PATH = args.env_file
     env = read_env()
+    env = {**env, **{k: os.environ[k] for k in ("SPACETIME_URI", "SPACETIME_MODULE") if os.environ.get(k)}}  # compose
     uri = (env.get("SPACETIME_URI") or "http://127.0.0.1:3000").rstrip("/")
     module = env.get("SPACETIME_MODULE") or "trophy"
     owner = owner_token()

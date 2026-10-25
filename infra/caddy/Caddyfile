@@ -1,11 +1,38 @@
-{$TROPHY_DOMAIN} {
+# The public origin on the Vultr GPU box (docker compose, D-30). Same routes as Caddyfile.dev, but the apps are built
+# static files and upstreams are compose service names. Certificate: ACME DNS-01 through Porkbun (as on the PC), so it
+# works before the A record points here. TROPHY_TLS=internal uses Caddy's local CA instead (local compose tests).
+(tls_porkbun) {
+	tls {
+		dns porkbun {
+			api_key {env.PORKBUN_API_KEY}
+			api_secret_key {env.PORKBUN_SECRET_API_KEY}
+		}
+	}
+}
+(tls_internal) {
+	tls internal
+}
+
+{$TROPHY_DOMAIN:trophy.photo} {
+	import tls_{$TROPHY_TLS:porkbun}
 	encode zstd gzip
 
-	handle_path /api/* {
-		reverse_proxy gateway:8000
+	redir /cam /cam/ 308
+	redir /watch /watch/ 308
+
+	# gateway: routes live under /api (§13), so keep the prefix
+	handle /api/* {
+		reverse_proxy {$GATEWAY_UPSTREAM:gateway:8000}
 	}
-	handle_path /stdb/* {
-		reverse_proxy spacetimedb:3000
+	# SpacetimeDB: browsers only get the subscription WebSocket (+ identity, ping); reducer calls, SQL and publishing
+	# stay on the compose network for the backend services.
+	@stdb_client path_regexp ^/stdb/v1/(ping|identity(/websocket-token)?|database/[A-Za-z0-9_-]+/subscribe)$
+	handle @stdb_client {
+		uri strip_prefix /stdb
+		reverse_proxy {$STDB_UPSTREAM:spacetimedb:3000}
+	}
+	handle /stdb/* {
+		respond "forbidden" 403
 	}
 	handle_path /cam/* {
 		root * /srv/cam
@@ -21,5 +48,10 @@
 		root * /srv/dashboard
 		try_files {path} /index.html
 		file_server
+	}
+
+	handle_errors 404 502 503 504 {
+		header Content-Type "text/html; charset=utf-8"
+		respond `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font:18px -apple-system,system-ui,sans-serif;padding:24px;background:#0f1115;color:#f3f4f6"><h1>Trophy</h1><p>This part isn't running right now ({err.status_code}).</p><p><a style="color:#f59e0b" href="/cam/">Camera</a></p></body>` {err.status_code}
 	}
 }

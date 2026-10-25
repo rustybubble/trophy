@@ -1,0 +1,21 @@
+# Images carry code only: no secrets, footage, weights or local environments (D-30).
+.env
+.env.*
+!.env.example
+**/.venv
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+.git
+data
+evals/labels
+weights
+**/*.pth
+**/*.pt
+**/*.onnx
+**/*.mp4
+**/*.mov
+apps/*/dist
+spacetime/dist
+spikes
