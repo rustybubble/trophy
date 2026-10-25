@@ -1,8 +1,8 @@
 .PHONY: dev e2e contracts fixtures check smoke stdb-publish stdb-provision stdb-bindings stdb-seed
 dev:        ## (re)start the whole stack natively from the Procfile (also: npm run dev; stop: python scripts/dev.py --stop)
 	python scripts/dev.py
-e2e:        ## headless clip -> calls -> Spacetime check (Agent 1, checkpoint C2)
-	@echo "not implemented yet (Agent 1, checkpoint C2)"; exit 1
+e2e:        ## CC BY clip as a phone -> frames -> recorder/replay -> Spacetime observations + calls (C2; stack running)
+	uv run --project services/gateway --frozen python scripts/e2e.py
 contracts:  ## regenerate TS (@trophy/contracts) + Pydantic (py-trophy) from packages/contracts/*.schema.json
 	node scripts/gen-contracts.mjs
 fixtures:   ## rebuild the labelled-synthetic MockState scripts
