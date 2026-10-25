@@ -9,7 +9,7 @@ redis: redis-server --port 6379 --bind 127.0.0.1 --save '' --appendonly no
 spacetime: $SPACETIME start --listen-addr 127.0.0.1:3000 --non-interactive
 gateway: uv run --directory services/gateway --frozen python -m gateway
 recorder: uv run --project services/recorder --frozen python -m recorder
-engine: uv run --directory services/engine --frozen trophy-engine --dead-after-point 3 --server-from-first-hit
+engine: uv run --directory services/engine --frozen trophy-engine --dead-after-point 3 --server-from-first-hit --votes
 flight: uv run --directory services/flight --frozen python -m flight.live
 live: uv run --directory services/engine --frozen trophy-live
 referee: uv run --directory services/referee --frozen referee serve
