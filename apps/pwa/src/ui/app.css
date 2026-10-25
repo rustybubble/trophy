@@ -1215,6 +1215,10 @@ button:disabled {
   .body .row-link {
     display: none;
   }
+  .stage .angle-tag,
+  .stage .drift-tag {
+    display: none;
+  }
   .controls {
     position: fixed;
     right: var(--sr);
