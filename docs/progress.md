@@ -11,7 +11,7 @@ Tick items and record **measured** numbers (not estimates). The gates are in `do
 - [ ] **C3** live: rallies ___/___ correct (CI ___); staged edge ___/___; staged serves ___/12 (height err ___ cm, angle err ___°); votes never delayed a call ✓/✗; call spoken p50 ___ ms; challenge → replay ___ s; 3 votes shown in ___ s; Droid rule end to end ___ s; voice ask → answer starts ___ s
 - [ ] **Referee voice** (`services/referee`, D-37, branch `voice/referee`): Cartesia Sonic server-side ✓ **measured on this Mac, real key, single runs:** first audio 201 / 723 ms (ref voice, 2 lines), 371 ms (calls voice, `excited`), line done 1.8–3.0 s for 2.7–3.5 s of audio, socket open 1.3–2.8 s incl. token mint; 37 referee tests + 1 gateway + 1 PWA test green with fakes; Claude routing/phrasing **not run live (no ANTHROPIC_API_KEY)**; engine `run_check`/`request_check` **not built yet** (Agent 3), so voice ask → spoken answer latency is **not measured**
 - [ ] **C3b** Trophy Watch core on ping pong ✓/✗ and basketball ✓/✗: recap, moments, highlights + ★ Play of the game, condensed, replay, stats, moment search (5 queries/game: ___/5 correct)
-- [ ] **C4** frozen, rehearsed 3×; 2-min video; README (Cartesia, Factory, Spacetime, Anthropic limits, Bitdeer, Moss, Apify, Gemini); Devpost writeup; Apify actor published (with the user's OK)
+- [ ] **C4** frozen, rehearsed 3×; 2-min video; README (Cartesia, Factory, Spacetime, Anthropic limits, Bitdeer, Gemini); Devpost writeup (Moss and Apify dropped by the user, 2026-10-24)
 
 ## Measured accuracy (from labelled evals only)
 | Sport / call | n | correct | 95% CI | source clips |

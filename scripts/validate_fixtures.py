@@ -60,6 +60,8 @@ def main() -> int:
                 "ai_vote": "AiVote",
                 "track_sample": "TrackSample",
                 "ask": "Ask",
+                "moment": "Moment",
+                "commentary": "Commentary",
             }.items()
         },
     }

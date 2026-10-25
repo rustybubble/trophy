@@ -201,3 +201,39 @@ def test_automatic_spacetime_end_finalizes_without_control_command(tmp_path, ffm
         assert not r.exists("ctl:engine")
     finally:
         rec.close()
+
+
+def test_restart_skips_an_existing_archive_instead_of_crashing(tmp_path, ffmpeg):
+    r = fakeredis.FakeRedis()
+    writer = FrameWriter(r)
+
+    def write(i, game, cam):
+        f = frame(i, 1 + i / 30, game, cam)
+        writer.write(
+            game_id=game,
+            cam_id=cam,
+            seq=i,
+            t_phone_ms=0,
+            t_srv_ms=0,
+            t_game_s=f.t_game_s,
+            sync_err_ms=1,
+            jpeg=f.data,
+            source="file",
+        )
+
+    for i in range(5):
+        write(i, "game1", "cam1")
+    first = Recorder(r, tmp_path, 30, "libx264")
+    try:
+        assert first.poll() == 5
+    finally:
+        first.close()
+    for i in range(5):
+        write(i, "game2", "cam2")
+    again = Recorder(r, tmp_path, 30, "libx264")  # cam1's old frames are still on the bus
+    try:
+        assert again.poll() == 5  # cam2 recorded; cam1 skipped, not overwritten, no crash
+        assert again.store.meta("game1", "cam1")["frame_count"] == 5
+        assert again.store.meta("game2", "cam2")["frame_count"] == 5
+    finally:
+        again.close()

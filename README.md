@@ -17,17 +17,17 @@ Point a phone at a ping-pong table and Trophy referees the game:
 |---|---|
 | `apps/pwa` | Phone app: camera, calls, voice, challenge, replay |
 | `apps/dashboard` | Judges' screen: score, calls, AI votes, Droid panel, ask-the-ref, live world state |
-| `services/gateway`, `services/recorder`, `services/ingest` | Phone API, replay recording, optional WebRTC |
-| `services/courtcam-adapter`, `services/flight` | Calibration and the ping-pong vision module |
-| `services/engine`, `services/compiler`, `services/referee` | Rule engine + AI votes, Factory Droid house rules, the referee voice (ask the ref: checks → Claude phrasing → Cartesia) |
-| `services/players`, `services/possession` | Basketball (if time allows) |
+| `apps/watch` | Trophy Watch: post-game recap, highlights, moments, replay, stats |
+| `services/gateway`, `services/recorder` | Phone API and replay recording |
+| `services/flight` | The ping-pong vision module (arriving with #19) |
+| `services/engine`, `services/compiler`, `services/referee` | Rule engine + AI votes, Factory Droid house rules, the referee voice (arriving with #19) |
 | `spacetime/` | SpacetimeDB module: the shared world state (metadata only, no video) |
 | `packages/` | Contracts (JSON Schema), generated types, shared Python lib, state client |
-| `rulepacks/` | One YAML per sport |
-| `docs/` | Plan, interfaces, decisions, progress, research; `docs/archive/` is superseded |
+| `infra/` | Caddy + Porkbun DNS for `https://trophy.photo` |
+| `docs/` | Plan, interfaces, decisions, progress, agent briefs (`docs/plan/prompts/`), research |
 
 ## Run it (macOS, M5 Pro)
-`make dev` starts everything natively. Phones connect to `https://$TROPHY_DOMAIN/cam/`. Copy `.env.example` to `.env` and fill in the keys; never commit `.env`. **The step-by-step demo is [`docs/demo.md`](docs/demo.md): `make dev`, open `http://127.0.0.1:5174/`, start a game and upload a clip; it is tracked, refereed by the live engine and shown on the dashboard and phones. Also: the synthetic live game, a Droid house rule, the voice, the 3D map.**
+`make dev` starts everything natively. Phones connect to `https://$TROPHY_DOMAIN/cam/`. Copy `.env.example` to `.env` and fill in the keys; never commit `.env`. Mac bring-up: [`docs/plan/prompts/mac-bringup.md`](docs/plan/prompts/mac-bringup.md).
 
 ## Prize-track sections (filled in at submission)
 - **Factory Droid:** where Droid runs, its trigger, its sandbox and what it can touch, and what the dashboard shows.
@@ -35,7 +35,6 @@ Point a phone at a ping-pong table and Trophy referees the game:
 - **Spacetime:** the shared world state (vision observations, game state, votes, house rules, ask log).
 - **Anthropic:** our community and their problem, how Claude is used, and **where it could go wrong** and how we contain it.
 - **Bitdeer AI Model Studio, Gemini:** each one's role as a challenge voter.
-- **Moss, Apify:** dropped (D-36); rules answers are grounded in the sport's own rule pack instead.
 - **Meta:** how Trophy brings people closer.
 
 ## License

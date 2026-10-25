@@ -42,7 +42,7 @@ Vision modules use `trophy.world.ObservationWriter` / `TrackSampleWriter` instea
 
 ## Run it (Windows PC; on a Mac drop `--root-dir`)
 ```bash
-S="$HOME/.spacetimedb/spacetime.exe --root-dir=$HOME/.spacetimedb"   # see spikes/spacetime-latency/README.md
+S="$HOME/.spacetimedb/spacetime.exe --root-dir=$HOME/.spacetimedb"   # Windows: the CLI lives under ~/.spacetimedb
 $S start --listen-addr 127.0.0.1:3000 --non-interactive               # keep running
 $S publish -s local -p spacetime --yes=skip-login trophy               # add --delete-data=on-conflict for breaking changes
 python spacetime/scripts/provision.py                                  # engine/vision/compiler identities -> .env
