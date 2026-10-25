@@ -221,3 +221,19 @@ def test_watch_commands_survive_live_ctl_parsing():
     assert role_allows("display", "bookmark")
     assert role_allows("cam", "clip_that")
     assert not role_allows("display", "review_call")
+
+
+def test_consumer_acks_and_skips_malformed_entries_instead_of_raising():
+    """Review blocker 6: one bad entry on ev:* must not stop the engine's consumer."""
+    import fakeredis
+
+    from trophy.streams import EV_FLIGHT, EventConsumer
+
+    r = fakeredis.FakeRedis()
+    c = EventConsumer(r, streams=[EV_FLIGHT], start="0")
+    r.xadd(EV_FLIGHT, {"json": "{not json"})
+    r.xadd(EV_FLIGHT, {"other": "no json field"})
+    r.xadd(EV_FLIGHT, {"json": '{"schema": "trophy.event.v1"}'})
+    assert c.read(block_ms=0) == []
+    assert c.rejected == 3
+    assert r.xpending(EV_FLIGHT, "engine")["pending"] == 0  # acked, so never redelivered

@@ -227,10 +227,9 @@ def test_double_bounce_and_net_and_ball_dead() -> None:
     }
     calls = eng.feed(net)
     assert calls[-1]["outcome"] == "net" and calls[-1]["team_id"] == "B"
-    # next rally: silence after a bounce on A's side -> A loses
-    eng.feed(point_call(9.0, "A"))
-    eng.feed(point_call(9.4, "B"))
-    eng.feed(point_call(9.9, "A"))
+    # next rally (two points played, so B serves): silence after a bounce on A's side -> A loses
+    eng.feed(point_call(9.0, "B"))
+    eng.feed(point_call(9.4, "A"))
     dead = {
         "schema": "trophy.event.v1",
         "id": "d1",
@@ -333,10 +332,10 @@ def test_house_rule_submit_and_approve_hot_loads_the_pack(tmp_path: Path) -> Non
     g = eng.games[GAME]
     assert g.scoring.points_to_win == 7 and g.rule_version == hr["rule_version"]
     assert any("House rule added" in c["text"] for c in st.rows("call"))
-    for i in range(7):
-        eng.feed(point_call(10 + i * 2, "A"))
-        eng.feed(point_call(10.5 + i * 2, "B"))
-        eng.feed(floor(11 + i * 2, "A"))
+    for i in range(7):  # 4 s apart: a point's trailing ball is dead for DEAD_AFTER_POINT_S (blocker 4)
+        eng.feed(point_call(10 + i * 4, "A"))
+        eng.feed(point_call(10.5 + i * 4, "B"))
+        eng.feed(floor(11 + i * 4, "A"))
     assert g.score().game_over and g.score().winner == "A"
     assert st.rows("call")[-1]["rule_version"] == hr["rule_version"]
     assert g.game["status"] == "ended"
@@ -467,3 +466,54 @@ def test_droid_net_let_house_rule_replays_the_point(tmp_path: Path) -> None:
     eng.feed(point_call(5.0, "A"))
     eng.feed(point_call(5.4, "B"))
     assert eng.feed({**touch, "id": "nt2", "t_game_s": 5.6}) == []
+
+
+def _bounce(t: float, side: str, surface: str = "table") -> dict:
+    return {
+        "schema": "trophy.event.v1",
+        "id": f"tb{t}",
+        "game_id": GAME,
+        "t_game_s": t,
+        "sport": "table_tennis",
+        "type": "bounce",
+        "source": "synthetic",
+        "cams": ["c_syn001"],
+        "conf": 0.95,
+        "side": side,
+        "payload": {"surface": surface, "side": side},
+    }
+
+
+def _fresh() -> Engine:
+    eng = Engine(MemoryState(), modules_dir=ROOT / "sports")
+    eng.create_game(GAME, "table_tennis", t0_ms=0)
+    eng.start_game(GAME, "A")
+    return eng
+
+
+def test_trailing_floor_bounces_after_a_point_score_nothing():
+    """Review blocker 4: serve, B bounce, three floor bounces -> 1-0, not 2-1."""
+    eng = _fresh()
+    for ev in [_bounce(1.0, "A"), _bounce(1.4, "B"), _bounce(2.0, "B", "floor"), _bounce(2.3, "A", "floor"),
+               _bounce(2.6, "B", "floor")]:  # fmt: skip
+        eng.feed(ev)
+    assert dict(eng.games[GAME].score().points) == {"A": 1, "B": 0}
+
+
+def test_a_bounce_after_a_double_bounce_does_not_start_a_rally():
+    """Review blocker 4: a double bounce plus a third bounce -> 1-0, not 1-1."""
+    eng = _fresh()
+    for ev in [_bounce(1.0, "A"), _bounce(1.4, "B"), _bounce(1.8, "B"), _bounce(2.1, "B")]:
+        eng.feed(ev)
+    assert dict(eng.games[GAME].score().points) == {"A": 1, "B": 0}
+    # the ball is live again after a ball_dead (or the dead window): the next rally scores normally
+    eng.feed({**_bounce(2.5, "B"), "id": "dead", "type": "ball_dead", "payload": {"reason": "lost", "last_side": "B"}})
+    for ev in [_bounce(4.0, "B"), _bounce(4.4, "A"), _bounce(4.8, "A")]:  # B serves (2 points each), A double bounce
+        eng.feed(ev)
+    assert dict(eng.games[GAME].score().points) == {"A": 1, "B": 1}
+
+
+def test_floor_bounces_before_the_serve_are_ignored():
+    eng = _fresh()
+    assert eng.feed(_bounce(0.5, "A", "floor")) == [] and eng.feed(_bounce(0.8, "A", "floor")) == []
+    assert eng.games[GAME].rally is None

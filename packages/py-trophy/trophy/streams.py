@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -12,6 +13,8 @@ from .contracts import CtlCommand, Event
 from .events import event_json, parse_event
 from .ids import new_ulid
 from .timebase import now_ms
+
+log = logging.getLogger("trophy.streams")
 
 # ---- keys ----
 EV_FLIGHT = "ev:flight"
@@ -87,6 +90,7 @@ class EventConsumer:
     ) -> None:
         self.r = r
         self.streams = list(streams)
+        self.rejected = 0
         self.group = group
         self.consumer = consumer
         for s in self.streams:
@@ -97,12 +101,23 @@ class EventConsumer:
                     raise
 
     def read(self, block_ms: int = 100, count: int = 100) -> list[tuple[str, str, Event]]:
+        """New events. An entry that isn't a valid trophy.event.v1 is acked, logged and skipped (counted in
+        ``rejected``): one bad producer must never stop the consumer."""
         resp = self.r.xreadgroup(self.group, self.consumer, {s: ">" for s in self.streams}, count=count, block=block_ms)
         out: list[tuple[str, str, Event]] = []
         for stream, entries in resp or []:
             for entry_id, fields in entries:
                 raw = fields.get(b"json", fields.get("json"))
-                out.append((_s(stream), _s(entry_id), parse_event(raw)))
+                try:
+                    if raw is None:
+                        raise ValueError("no `json` field")
+                    ev = parse_event(raw)
+                except (ValueError, TypeError) as e:  # pydantic's ValidationError and json errors are ValueErrors
+                    self.rejected += 1
+                    log.warning("dropped a malformed entry %s on %s: %s", _s(entry_id), _s(stream), str(e)[:200])
+                    self.ack(_s(stream), _s(entry_id))
+                    continue
+                out.append((_s(stream), _s(entry_id), ev))
         return out
 
     def ack(self, stream: str, *entry_ids: str) -> None:

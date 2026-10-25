@@ -152,10 +152,13 @@ def run(argv: list[str] | None = None) -> int:
     ap.add_argument("--modules", type=Path, default=ROOT / "sports")
     ap.add_argument("--log-json", action="store_true")
     ap.add_argument(
+        "--exit-when-idle", type=float, default=0.0, help="stop after this many seconds without events (tests, replays)"
+    )
+    ap.add_argument(
         "--dead-after-point",
         type=float,
-        default=0.0,
-        help="real play: after a point called on a bounce, ignore events until ball_dead or this many seconds",
+        default=2.0,
+        help="after a point called on a bounce, ignore events until ball_dead or this many seconds (0 = off)",
     )
     ap.add_argument(
         "--server-from-first-hit",
@@ -261,6 +264,7 @@ def run(argv: list[str] | None = None) -> int:
             {"svc": "engine", "msg": "started", "state": a.state, "votes": a.votes, "track3d": a.field is not None}
         )
     )
+    idle_since = time.monotonic()
     while True:
         if track_src is not None:
             for row, _now_s in track_src.poll(block_ms=10):
@@ -292,34 +296,59 @@ def run(argv: list[str] | None = None) -> int:
                             }
                         )
                     )
-        for stream, entry_id, ev in consumer.read(block_ms=50):
-            t0 = time.perf_counter()
-            try:
-                calls = engine.feed(ev.model_dump(by_alias=True, exclude_none=True, mode="json"))
-            except Exception:  # noqa: BLE001 - one bad event must not stop the referee
-                log.exception("event failed")
-                calls = []
-            consumer.ack(stream, entry_id)
-            for c in calls:
-                log.info(
-                    json.dumps(
-                        {
-                            "svc": "engine",
-                            "game_id": c["game_id"],
-                            "msg": "call",
-                            "rule": c["rule_id"],
-                            "text": c["text"],
-                            "ms": round((time.perf_counter() - t0) * 1000, 1),
-                        }
-                    )
+        rejected0 = consumer.rejected
+        ctl_last, n = step(engine, consumer, r, ctl_last)
+        if a.exit_when_idle > 0:
+            if n or consumer.rejected != rejected0:
+                idle_since = time.monotonic()
+            elif time.monotonic() - idle_since > a.exit_when_idle:
+                return 0
+
+
+def step(engine: Engine, consumer: EventConsumer, r: redis.Redis, ctl_last: str, block_ms: int = 50) -> tuple[str, int]:
+    """One pass of the live loop: new events into the engine, then new ctl commands. Returns the ctl cursor and how
+    many entries (events, commands, rejected entries) it handled. A bad
+    event, a malformed entry or a failing command is logged and skipped, never fatal (review blocker 6)."""
+    rejected0 = consumer.rejected
+    try:
+        entries = consumer.read(block_ms=block_ms)
+    except redis.RedisError:
+        log.exception("event read failed")
+        entries = []
+    for stream, entry_id, ev in entries:
+        t0 = time.perf_counter()
+        try:
+            calls = engine.feed(ev.model_dump(by_alias=True, exclude_none=True, mode="json"))
+        except Exception:  # noqa: BLE001 - one bad event must not stop the referee
+            log.exception("event failed")
+            calls = []
+        consumer.ack(stream, entry_id)
+        for c in calls:
+            log.info(
+                json.dumps(
+                    {
+                        "svc": "engine",
+                        "game_id": c["game_id"],
+                        "msg": "call",
+                        "rule": c["rule_id"],
+                        "text": c["text"],
+                        "ms": round((time.perf_counter() - t0) * 1000, 1),
+                    }
                 )
-        for entry_id, fields in _read_ctl(r, ctl_last):
-            ctl_last = entry_id
-            try:
-                cmd = parse_ctl(fields[b"json"])
-                engine.handle_ctl(cmd.model_dump(by_alias=True, exclude_none=True, mode="json"))
-            except Exception:  # noqa: BLE001
-                log.exception("ctl failed")
+            )
+    try:
+        ctl_entries = _read_ctl(r, ctl_last)
+    except redis.RedisError:
+        log.exception("ctl read failed")
+        ctl_entries = []
+    for entry_id, fields in ctl_entries:
+        ctl_last = entry_id
+        try:
+            cmd = parse_ctl(fields[b"json"])
+            engine.handle_ctl(cmd.model_dump(by_alias=True, exclude_none=True, mode="json"))
+        except Exception:  # noqa: BLE001
+            log.exception("ctl failed")
+    return ctl_last, len(entries) + len(ctl_entries) + consumer.rejected - rejected0
 
 
 def _stream_tail(r: redis.Redis, stream: str) -> str:

@@ -26,6 +26,9 @@ log = logging.getLogger("trophy.engine")
 ROOT = Path(__file__).resolve().parents[3]
 RALLY_OPENERS = frozenset({"bounce", "contact", "serve_toss", "shot"})
 SCORING_KINDS = frozenset({"point", "violation", "basket"})
+# After a point called on a bounce the ball is dead until a ball_dead event, or this long: a trailing bounce or the
+# ball rolling off must not open a rally of its own and score again (review blocker 4).
+DEAD_AFTER_POINT_S = 2.0
 ENSEMBLE_LO, ENSEMBLE_HI = 0.35, 0.75
 
 
@@ -85,14 +88,14 @@ class Engine:
         decider: Decider | None = None,
         now_ms=None,
         labels_dir: Path | None = None,
-        dead_after_point_s: float = 0.0,
+        dead_after_point_s: float = DEAD_AFTER_POINT_S,
         server_from_first_hit: bool = False,
     ) -> None:
         self.state = state
-        # Real play (recorded or live cameras), off for the hand-written rally sequences of the tests and the gate:
-        # the ball stays dead after a point called on a bounce until a ball_dead event (or this many seconds), and the
-        # first racket hit of a rally names the server (a serve is a hit, ITTF 2.6.3); when that hit was not seen,
-        # the side of the first bounce does (a legal serve lands there first), so no serve fault is called unseen.
+        # The ball stays dead after a point called on a bounce until a ball_dead event (or this many seconds; 0 turns
+        # it off). server_from_first_hit (real play; off for the hand-written sequences of the tests and the gate):
+        # the first racket hit of a rally names the server (a serve is a hit, ITTF 2.6.3); when that hit was not
+        # seen, the side of the first bounce does (a legal serve lands there first), so no serve fault is unseen.
         self.dead_after_point_s = dead_after_point_s
         self.server_from_first_hit = server_from_first_hit
         self.modules_dir = modules_dir or ROOT / "sports"
@@ -182,7 +185,7 @@ class Engine:
                 g.dead_since_t_s = None
             if ev.get("type") == "ball_dead" or g.dead_since_t_s is not None:
                 return []
-        if self.server_from_first_hit and _pre_serve_floor_bounce(ev, g):
+        if _pre_serve_floor_bounce(ev, g):
             return []  # the ball bounced on the floor before the serve (players do that): not part of a rally
         if g.rally is None:
             if ev.get("type") not in RALLY_OPENERS:
