@@ -759,7 +759,8 @@ class Engine(DroidMixin):
         name = {a: g.team(a).get("name", a), b: g.team(b).get("name", b)}
         why = re.sub(
             r"net (into|touch) from side (\w+)",
-            lambda m: f"the ball {'went into' if m[1] == 'into' else 'touched'} the net from {name.get(m[2], m[2])}'s side",
+            lambda m: f"the ball {'went into' if m[1] == 'into' else 'touched'} the net "
+            f"from {name.get(m[2], m[2])}'s side",
             why,
         )
         return re.sub(r",?\s*σ\s*(\d+)\s*cm", r", give or take \1 cm", why)
