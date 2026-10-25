@@ -8,7 +8,7 @@ You are **Agent 3 (rules, AI and Droid)**, one of three implementation agents bu
 
 **Trophy** is a universal AI referee for pickup games. Phones become cameras. Trophy keeps score and identifies fouls with honest confidence (AUTO ≥ 0.90; BETA shows p and can be challenged; judgment fouls are `foul_flag`, capped at BETA). Calls are spoken.
 
-**The weekend demo is live ping pong on one phone**: rally scoring, the edge rule, and **illegal serves** (house rules from the user: **the toss must rise more than 6 in = 0.1524 m off the open palm**, and **the path from the hand to the hit must stay within 30° of vertical**). **Spacetime is the shared world state**, and video never goes into it: vision modules write `observation` rows (metadata), and your engine, Droid and LLM judge all reason over that same record (plan §2, interfaces §7.1). You own most of the sponsor-facing intelligence:
+**The weekend demo is live ping pong on one phone**: rally scoring, the edge rule, and **illegal serves** (official ITTF law, D-31: the toss rises **at least 16 cm** from the open palm to its apex (ITTF Law 2.6.2), projected near vertically (**within 30° of vertical on the way up**, the ITTF review criterion), and is struck as it falls; plus a hidden serve (2.6.5), the ball above the table and behind the end line (2.6.4), and a let when the serve touches the net (2.9.1.1)). **Spacetime is the shared world state**, and video never goes into it: vision modules write `observation` rows (metadata), and your engine, Droid and LLM judge all reason over that same record (plan §2, interfaces §7.1). You own most of the sponsor-facing intelligence:
 - the **rule engine and scoring**;
 - the **AI second opinion on challenges** (Claude ‖ Gemini ‖ Bitdeer Model Studio voters);
 - the **Factory Droid "add your own rule" compiler**;
@@ -67,8 +67,8 @@ You write the README sections for **Factory Droid, Anthropic/Claude (including "
    - The rally rules over `bounce`, `contact`, `net` and `ball_dead`: a serve must bounce server-side then receiver-side; a return must land on the opponent's side; two bounces on one side; net into own side; off the table.
    - **The edge rule:** `edge.top_edge` → good, `side_face` → fault; `check: ensemble`, so a challenge triggers the voters.
    - **The serve rules (MUST), over `serve_toss` observations:**
-     - `serve_toss_too_low`: `height_m ≤ toss_min_height_m` (0.1524 m = 6 in). The probability comes from Φ((limit − h)/σ).
-     - `serve_toss_angle`: `angle_from_vertical_rad > toss_max_from_vertical_rad` (0.5236 rad = 30°) over the path from the hand to the hit.
+     - `serve_toss_too_low`: `height_m < toss_min_height_m` (0.16 m, Law 2.6.2; the `house` variant uses 0.1524 m). The probability comes from Φ((limit − h)/σ).
+     - `serve_toss_angle`: `angle_from_vertical_rad > toss_max_from_vertical_rad` (0.5236 rad = 30°) on the rise (`toss_angle_segment: rise`; the `house` variant uses `house_hand_to_hit_angle_rad`). Also `serve_not_on_descent` (`struck_on_descent == false`), `serve_hidden` (Law 2.6.5, `visible_fraction`), `serve_position` (Law 2.6.4, `p_above`/`p_behind`) and the serve let (`net` kind `touch` + `serve`, then a correct bounce, Law 2.9.1.1). Anything in `evidence_missing` that a rule needs makes it PLAYERS DECIDE.
      - Both are **faults → point to the receiver**, tier ceiling AUTO, and the gate makes near-limit tosses BETA. `check: ensemble` lets close tosses get votes.
      - Speech: "Fault. Toss too low." / "Fault. Toss not vertical."
      - An `ittf_strict` variant (0.16 m, a few degrees) is a param set.

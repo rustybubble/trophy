@@ -78,19 +78,36 @@ def test_make_event_validates_payload():
         )
 
 
+def mark(t: float, z: float, x: float = -1.5) -> dict:
+    return {
+        "t_s": t,
+        "t0_s": t - 0.017,
+        "t1_s": t + 0.017,
+        "sigma_t_s": 0.01,
+        "pos_m": {"x": x, "y": 0.2, "z": z},
+        "sigma_m": 0.01,
+    }
+
+
+EST = {"name": "synthetic", "version": "0"}
+
+
 def test_serve_toss_payload():
     p = ServeTossPayload.model_validate(
         {
             "server_side": "A",
-            "release": {"t_s": 1.0, "pos_m": {"x": -1.5, "y": 0.2, "z": 0.0}},
-            "apex": {"t_s": 1.3, "pos_m": {"x": -1.5, "y": 0.2, "z": 0.2}},
-            "contact": {"t_s": 1.6, "pos_m": {"x": -1.45, "y": 0.2, "z": 0.05}},
+            "release": mark(1.0, 0.0),
+            "apex": mark(1.3, 0.2),
+            "contact": mark(1.6, 0.05, -1.45),
             "height_m": 0.2,
             "sigma_height_m": 0.01,
-            "rise_angle_rad": 0.0,
-            "fall_angle_rad": 0.32,
-            "angle_from_vertical_rad": 0.32,
+            "angle_from_vertical_rad": 0.05,
             "sigma_angle_rad": 0.05,
+            "angle_segment": "rise",
+            "struck_on_descent": True,
+            "struck_on_descent_p": 0.97,
+            "evidence_missing": ["spin"],
+            "estimator": EST,
             "observable_plane": "xz",
         }
     )
@@ -104,7 +121,68 @@ def test_serve_toss_payload():
         conf=0.9,
         payload=p,
     )
-    assert ev.payload["height_m"] == 0.2
+    assert ev.payload["height_m"] == 0.2 and ev.payload["angle_segment"] == "rise"
+    with pytest.raises(ValidationError):  # the angle is on the rise only (ITTF Law 2.6.2, D-31)
+        ServeTossPayload.model_validate({**p.model_dump(), "angle_segment": "hand_to_hit"})
+    with pytest.raises(ValidationError):
+        ServeTossPayload.model_validate({**p.model_dump(), "evidence_missing": ["vibes"]})
+
+
+def test_serve_hidden_and_position_payloads():
+    hidden = make_event(
+        game_id=GAME,
+        t_game_s=1.6,
+        sport="table_tennis",
+        type="serve_hidden",
+        source="synthetic",
+        cams=["c_abcdef"],
+        conf=0.8,
+        payload={
+            "server_side": "A",
+            "t0_s": 1.0,
+            "t1_s": 1.6,
+            "visible_fraction": 0.1,
+            "sigma_visible_fraction": 0.1,
+            "occluder": "free_arm",
+            "cams_used": [{"cam_id": "c_abcdef", "view": "receiver_side", "visible_fraction": 0.1}],
+            "evidence_missing": [],
+            "estimator": EST,
+        },
+    )
+    assert hidden.payload["occluder"] == "free_arm"
+    pos = make_event(
+        game_id=GAME,
+        t_game_s=1.6,
+        sport="table_tennis",
+        type="serve_position",
+        source="synthetic",
+        cams=["c_abcdef"],
+        conf=0.9,
+        payload={
+            "server_side": "A",
+            "t0_s": 0.5,
+            "t1_s": 1.6,
+            "min_above_surface_m": 0.04,
+            "min_behind_end_line_m": -0.05,
+            "sigma_m": 0.02,
+            "p_above": 0.98,
+            "p_behind": 0.01,
+            "evidence_missing": [],
+            "estimator": EST,
+        },
+    )
+    assert pos.payload["p_behind"] == 0.01
+    net = make_event(
+        game_id=GAME,
+        t_game_s=1.7,
+        sport="table_tennis",
+        type="net",
+        source="synthetic",
+        cams=["c_abcdef"],
+        conf=0.9,
+        payload={"kind": "touch", "from_side": "A", "serve": True},
+    )
+    assert net.payload["serve"] is True
 
 
 def test_publish_and_consume(r):

@@ -6,30 +6,83 @@
   "type": "object",
   "required": ["schema", "id", "game_id", "t_game_s", "sport", "type", "source", "cams", "conf"],
   "properties": {
-    "schema": { "const": "trophy.event.v1" },
-    "id": { "type": "string", "description": "ULID" },
-    "game_id": { "type": "string", "pattern": "^g_[0-9a-hjkmnp-tv-z]{8}$" },
-    "t_game_s": { "type": "number", "description": "Game time in seconds, copied from the frames/onsets used (§2)" },
-    "sport": { "type": "string", "description": "Rule-pack sport id, e.g. table_tennis" },
-    "type": { "$ref": "#/$defs/EventType" },
-    "source": { "$ref": "#/$defs/EventSource" },
-    "cams": { "type": "array", "items": { "type": "string" } },
-    "conf": { "type": "number", "minimum": 0, "maximum": 1, "description": "Probability the event happened at all" },
-    "evidence": { "type": "array", "items": { "$ref": "#/$defs/EvidenceRef" } },
-    "track_id": { "type": "string" },
-    "actor_id": { "type": "string", "description": "player_id or track_id" },
-    "team_id": { "type": "string" },
-    "side": { "$ref": "#/$defs/Side" },
-    "pos_m": { "$ref": "#/$defs/PosM" },
-    "sigma_m": { "type": "number", "minimum": 0, "description": "Isotropic 1-sigma position uncertainty, metres" },
+    "schema": {
+      "const": "trophy.event.v1"
+    },
+    "id": {
+      "type": "string",
+      "description": "ULID"
+    },
+    "game_id": {
+      "type": "string",
+      "pattern": "^g_[0-9a-hjkmnp-tv-z]{8}$"
+    },
+    "t_game_s": {
+      "type": "number",
+      "description": "Game time in seconds, copied from the frames/onsets used (§2)"
+    },
+    "sport": {
+      "type": "string",
+      "description": "Rule-pack sport id, e.g. table_tennis"
+    },
+    "type": {
+      "$ref": "#/$defs/EventType"
+    },
+    "source": {
+      "$ref": "#/$defs/EventSource"
+    },
+    "cams": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "conf": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Probability the event happened at all"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/EvidenceRef"
+      }
+    },
+    "track_id": {
+      "type": "string"
+    },
+    "actor_id": {
+      "type": "string",
+      "description": "player_id or track_id"
+    },
+    "team_id": {
+      "type": "string"
+    },
+    "side": {
+      "$ref": "#/$defs/Side"
+    },
+    "pos_m": {
+      "$ref": "#/$defs/PosM"
+    },
+    "sigma_m": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Isotropic 1-sigma position uncertainty, metres"
+    },
     "cov_m2": {
       "type": "array",
-      "items": { "type": "number" },
+      "items": {
+        "type": "number"
+      },
       "minItems": 4,
       "maxItems": 9,
       "description": "Optional covariance, 2x2 or 3x3 row-major, m^2"
     },
-    "supersedes": { "type": "string", "description": "id of an earlier event this one replaces" },
+    "supersedes": {
+      "type": "string",
+      "description": "id of an earlier event this one replaces"
+    },
     "payload": {
       "type": "object",
       "description": "Type-specific payload; see the *Payload $defs. Any payload may carry calib_untrusted=true."
@@ -45,6 +98,8 @@
         "net",
         "ball_dead",
         "serve_toss",
+        "serve_hidden",
+        "serve_position",
         "person_feet",
         "shot",
         "line_cross",
@@ -58,16 +113,26 @@
       "title": "EventSource",
       "enum": ["flight", "players", "possession", "audio", "manual", "synthetic", "file"]
     },
-    "Side": { "title": "Side", "enum": ["A", "B"] },
+    "Side": {
+      "title": "Side",
+      "enum": ["A", "B"]
+    },
     "PosM": {
       "title": "PosM",
       "description": "Field-frame position in metres, z up (§3)",
       "type": "object",
       "required": ["x", "y"],
       "properties": {
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "z": { "type": "number", "default": 0 }
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number",
+          "default": 0
+        }
       }
     },
     "EvidenceRef": {
@@ -75,11 +140,23 @@
       "type": "object",
       "required": ["cam_id"],
       "properties": {
-        "cam_id": { "type": "string" },
-        "seq0": { "type": "integer", "minimum": 0 },
-        "seq1": { "type": "integer", "minimum": 0 },
-        "t0_s": { "type": "number" },
-        "t1_s": { "type": "number" }
+        "cam_id": {
+          "type": "string"
+        },
+        "seq0": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "seq1": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "t0_s": {
+          "type": "number"
+        },
+        "t1_s": {
+          "type": "number"
+        }
       }
     },
     "AudioOnsetPayload": {
@@ -87,9 +164,15 @@
       "type": "object",
       "required": ["peak", "energy", "cam_id"],
       "properties": {
-        "peak": { "type": "number" },
-        "energy": { "type": "number" },
-        "cam_id": { "type": "string" }
+        "peak": {
+          "type": "number"
+        },
+        "energy": {
+          "type": "number"
+        },
+        "cam_id": {
+          "type": "string"
+        }
       }
     },
     "EdgeProbs": {
@@ -98,9 +181,21 @@
       "type": "object",
       "required": ["top_edge", "side_face", "surface"],
       "properties": {
-        "top_edge": { "type": "number", "minimum": 0, "maximum": 1 },
-        "side_face": { "type": "number", "minimum": 0, "maximum": 1 },
-        "surface": { "type": "number", "minimum": 0, "maximum": 1 }
+        "top_edge": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "side_face": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "surface": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
       }
     },
     "BouncePayload": {
@@ -108,18 +203,43 @@
       "type": "object",
       "required": ["surface", "side", "d_lines_m", "p_in"],
       "properties": {
-        "surface": { "enum": ["table", "floor", "court"] },
-        "side": { "$ref": "#/$defs/Side" },
+        "surface": {
+          "enum": ["table", "floor", "court"]
+        },
+        "side": {
+          "$ref": "#/$defs/Side"
+        },
         "d_lines_m": {
           "type": "object",
-          "additionalProperties": { "type": "number" },
+          "additionalProperties": {
+            "type": "number"
+          },
           "description": "Signed distance to each named line in metres, + = inside"
         },
-        "p_in": { "type": "number", "minimum": 0, "maximum": 1 },
-        "edge": { "anyOf": [{ "$ref": "#/$defs/EdgeProbs" }, { "type": "null" }] },
-        "timing": { "enum": ["audio", "track"] },
-        "onset_id": { "type": "string" },
-        "calib_untrusted": { "type": "boolean" }
+        "p_in": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "edge": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EdgeProbs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timing": {
+          "enum": ["audio", "track"]
+        },
+        "onset_id": {
+          "type": "string"
+        },
+        "calib_untrusted": {
+          "type": "boolean"
+        }
       }
     },
     "ContactPayload": {
@@ -127,11 +247,21 @@
       "type": "object",
       "required": ["side", "kind"],
       "properties": {
-        "side": { "$ref": "#/$defs/Side" },
-        "kind": { "enum": ["racket", "hand", "body", "unknown"] },
-        "height_m": { "type": "number" },
-        "onset_id": { "type": "string" },
-        "calib_untrusted": { "type": "boolean" }
+        "side": {
+          "$ref": "#/$defs/Side"
+        },
+        "kind": {
+          "enum": ["racket", "hand", "body", "unknown"]
+        },
+        "height_m": {
+          "type": "number"
+        },
+        "onset_id": {
+          "type": "string"
+        },
+        "calib_untrusted": {
+          "type": "boolean"
+        }
       }
     },
     "NetPayload": {
@@ -139,10 +269,21 @@
       "type": "object",
       "required": ["kind", "from_side"],
       "properties": {
-        "kind": { "enum": ["touch", "into", "over"] },
-        "from_side": { "$ref": "#/$defs/Side" },
-        "calib_untrusted": { "type": "boolean" }
-      }
+        "kind": {
+          "enum": ["touch", "into", "over"]
+        },
+        "from_side": {
+          "$ref": "#/$defs/Side"
+        },
+        "calib_untrusted": {
+          "type": "boolean"
+        },
+        "serve": {
+          "type": "boolean",
+          "description": "true for the served ball's first crossing. A serve with kind=touch that then lands correctly is a let (ITTF Law 2.9.1.1); the rule pack decides, not perception."
+        }
+      },
+      "description": "kind=touch: the ball touched the net assembly and went over; into: it stopped at the net; over: a clean crossing."
     },
     "BallDeadPayload": {
       "title": "BallDeadPayload",
@@ -150,49 +291,325 @@
       "type": "object",
       "required": ["reason"],
       "properties": {
-        "reason": { "enum": ["lost", "floor", "stopped", "out_of_view"] },
-        "last_side": { "$ref": "#/$defs/Side" }
+        "reason": {
+          "enum": ["lost", "floor", "stopped", "out_of_view"]
+        },
+        "last_side": {
+          "$ref": "#/$defs/Side"
+        }
       }
     },
-    "TossPoint": {
-      "title": "TossPoint",
+    "TossMark": {
+      "title": "TossMark",
+      "description": "An instant of the toss in time and space with uncertainty. t0_s..t1_s brackets the frames it can be in (e.g. release lies between the last frame on the palm and the first frame clearly off it).",
       "type": "object",
-      "required": ["t_s", "pos_m"],
+      "required": ["t_s", "t0_s", "t1_s", "sigma_t_s", "pos_m", "sigma_m"],
       "properties": {
-        "t_s": { "type": "number", "description": "Game time, s" },
-        "pos_m": { "$ref": "#/$defs/PosM" }
+        "t_s": {
+          "type": "number",
+          "description": "Best estimate, game time, s"
+        },
+        "t0_s": {
+          "type": "number"
+        },
+        "t1_s": {
+          "type": "number"
+        },
+        "sigma_t_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "pos_m": {
+          "$ref": "#/$defs/PosM"
+        },
+        "sigma_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "1-sigma position uncertainty, metres (largest axis)"
+        }
+      }
+    },
+    "Estimator": {
+      "title": "Estimator",
+      "description": "Which estimator produced the measurement, for audit and labelled evaluation",
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "e.g. blurball-toss"
+        },
+        "version": {
+          "type": "string",
+          "description": "semver or git sha"
+        }
+      }
+    },
+    "EvidenceMissing": {
+      "title": "EvidenceMissing",
+      "description": "What the estimator could not observe. A rule whose evidence is missing is undecided (PLAYERS DECIDE), never legal or illegal by default.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "release",
+          "apex",
+          "contact",
+          "descent",
+          "palm",
+          "spin",
+          "depth",
+          "calibration",
+          "receiver_view",
+          "free_arm",
+          "end_line",
+          "playing_surface",
+          "second_camera"
+        ]
       }
     },
     "ServeTossPayload": {
       "title": "ServeTossPayload",
-      "description": "Weekend MUST (D-22). height_m = apex.z - release.z; angle_from_vertical_rad = max(rise_angle_rad, fall_angle_rad).",
+      "description": "ITTF Law 2.6.2 (D-31): the ball is projected near vertically upwards from the open palm, without spin, rises at least 16 cm after leaving the palm, and falls without touching anything before it is struck. height_m = apex.pos_m.z - release.pos_m.z (palm release to apex). angle_from_vertical_rad is the angle of the UPWARD segment release -> apex from vertical. The optional house variant's hand-to-hit angle is house_hand_to_hit_angle_rad.",
       "type": "object",
       "required": [
         "server_side",
         "release",
         "apex",
-        "contact",
         "height_m",
         "sigma_height_m",
-        "rise_angle_rad",
-        "fall_angle_rad",
         "angle_from_vertical_rad",
-        "sigma_angle_rad"
+        "sigma_angle_rad",
+        "angle_segment",
+        "struck_on_descent",
+        "struck_on_descent_p",
+        "evidence_missing",
+        "estimator"
       ],
       "properties": {
-        "server_side": { "$ref": "#/$defs/Side" },
-        "release": { "$ref": "#/$defs/TossPoint" },
-        "apex": { "$ref": "#/$defs/TossPoint" },
-        "contact": { "$ref": "#/$defs/TossPoint" },
-        "height_m": { "type": "number" },
-        "sigma_height_m": { "type": "number", "minimum": 0 },
-        "rise_angle_rad": { "type": "number" },
-        "fall_angle_rad": { "type": "number" },
-        "angle_from_vertical_rad": { "type": "number" },
-        "sigma_angle_rad": { "type": "number", "minimum": 0 },
-        "palm_still_s": { "type": "number", "minimum": 0 },
-        "observable_plane": { "enum": ["xz", "yz", "mixed"] },
-        "calib_untrusted": { "type": "boolean" }
+        "server_side": {
+          "$ref": "#/$defs/Side"
+        },
+        "release": {
+          "$ref": "#/$defs/TossMark",
+          "description": "The ball leaves the open palm"
+        },
+        "apex": {
+          "$ref": "#/$defs/TossMark",
+          "description": "Top of the toss"
+        },
+        "contact": {
+          "$ref": "#/$defs/TossMark",
+          "description": "Racket strike (onset + reversal), if seen"
+        },
+        "height_m": {
+          "type": "number",
+          "description": "apex.z - release.z, metres"
+        },
+        "sigma_height_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "angle_from_vertical_rad": {
+          "type": "number",
+          "minimum": 0,
+          "description": "release -> apex, from vertical"
+        },
+        "sigma_angle_rad": {
+          "type": "number",
+          "minimum": 0
+        },
+        "angle_segment": {
+          "const": "rise",
+          "description": "The segment the angle is measured on (Law 2.6.2: projected near vertically upwards)"
+        },
+        "struck_on_descent": {
+          "type": ["boolean", "null"],
+          "description": "Struck while falling (after the apex); null = not observed"
+        },
+        "struck_on_descent_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "touched_before_strike_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "P(the ball touched anything between release and strike)"
+        },
+        "palm_still_s": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Law 2.6.1: how long the ball rested still on the open palm before release"
+        },
+        "observable_plane": {
+          "enum": ["xz", "yz", "mixed"],
+          "description": "Which plane the cameras measure well; one side-on camera at the net line sees xz"
+        },
+        "house_hand_to_hit_angle_rad": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Optional house variant only: max angle from vertical over release -> apex -> contact"
+        },
+        "evidence_missing": {
+          "$ref": "#/$defs/EvidenceMissing"
+        },
+        "estimator": {
+          "$ref": "#/$defs/Estimator"
+        },
+        "calib_untrusted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "ServeHiddenPayload": {
+      "title": "ServeHiddenPayload",
+      "description": "ITTF Law 2.6.5: from the start of service until it is struck, the ball must not be hidden from the receiver by the server or their doubles partner or anything they wear or carry, and the free arm is removed from between the ball and the net once the ball is projected. visible_fraction is the minimum over release -> strike of the fraction of the ball visible from the receiver's side.",
+      "type": "object",
+      "required": [
+        "server_side",
+        "t0_s",
+        "t1_s",
+        "visible_fraction",
+        "sigma_visible_fraction",
+        "occluder",
+        "cams_used",
+        "evidence_missing",
+        "estimator"
+      ],
+      "properties": {
+        "server_side": {
+          "$ref": "#/$defs/Side"
+        },
+        "t0_s": {
+          "type": "number",
+          "description": "Window start (release), game time"
+        },
+        "t1_s": {
+          "type": "number",
+          "description": "Window end (strike), game time"
+        },
+        "visible_fraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "sigma_visible_fraction": {
+          "type": "number",
+          "minimum": 0
+        },
+        "min_visible_t_s": {
+          "type": "number",
+          "description": "When the ball was least visible"
+        },
+        "occluder": {
+          "enum": ["none", "server_body", "server_clothing", "free_arm", "partner", "racket", "other", "unknown"]
+        },
+        "cams_used": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/HiddenCamView"
+          }
+        },
+        "evidence_missing": {
+          "$ref": "#/$defs/EvidenceMissing"
+        },
+        "estimator": {
+          "$ref": "#/$defs/Estimator"
+        },
+        "calib_untrusted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "HiddenCamView": {
+      "title": "HiddenCamView",
+      "type": "object",
+      "required": ["cam_id", "view", "visible_fraction"],
+      "properties": {
+        "cam_id": {
+          "type": "string"
+        },
+        "view": {
+          "enum": ["receiver_side", "side_on", "server_side", "overhead"],
+          "description": "Where the camera looks from, relative to the receiver"
+        },
+        "visible_fraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "ServePositionPayload": {
+      "title": "ServePositionPayload",
+      "description": "ITTF Law 2.6.4: from the start of service until it is struck, the ball is above the level of the playing surface and behind the server's end line. Distances are signed (+ = legal side) and minimised over the window start of service -> strike.",
+      "type": "object",
+      "required": [
+        "server_side",
+        "t0_s",
+        "t1_s",
+        "min_above_surface_m",
+        "min_behind_end_line_m",
+        "sigma_m",
+        "p_above",
+        "p_behind",
+        "evidence_missing",
+        "estimator"
+      ],
+      "properties": {
+        "server_side": {
+          "$ref": "#/$defs/Side"
+        },
+        "t0_s": {
+          "type": "number",
+          "description": "Start of service (ball still on the palm), game time"
+        },
+        "t1_s": {
+          "type": "number",
+          "description": "Strike, game time"
+        },
+        "min_above_surface_m": {
+          "type": "number",
+          "description": "min(ball z - surface z); + = above the surface"
+        },
+        "min_behind_end_line_m": {
+          "type": "number",
+          "description": "min distance behind the server's end line (or its extension); + = behind"
+        },
+        "worst_above_t_s": {
+          "type": "number"
+        },
+        "worst_behind_t_s": {
+          "type": "number"
+        },
+        "sigma_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "p_above": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "P(above the surface throughout)"
+        },
+        "p_behind": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "P(behind the end line throughout)"
+        },
+        "evidence_missing": {
+          "$ref": "#/$defs/EvidenceMissing"
+        },
+        "estimator": {
+          "$ref": "#/$defs/Estimator"
+        },
+        "calib_untrusted": {
+          "type": "boolean"
+        }
       }
     },
     "PersonFeetPayload": {
@@ -200,17 +617,44 @@
       "type": "object",
       "required": ["feet_m", "min_signed_dist_m", "sigma_m"],
       "properties": {
-        "player_id": { "type": "string" },
-        "team_id": { "type": "string" },
+        "player_id": {
+          "type": "string"
+        },
+        "team_id": {
+          "type": "string"
+        },
         "feet_m": {
           "type": "array",
-          "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
         },
-        "min_signed_dist_m": { "type": "object", "additionalProperties": { "type": "number" } },
-        "sigma_m": { "type": "number", "minimum": 0 },
-        "airborne_p": { "type": "number", "minimum": 0, "maximum": 1 },
-        "ref_event_id": { "type": "string" },
-        "calib_untrusted": { "type": "boolean" }
+        "min_signed_dist_m": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "sigma_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "airborne_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "ref_event_id": {
+          "type": "string"
+        },
+        "calib_untrusted": {
+          "type": "boolean"
+        }
       }
     },
     "ShotPayload": {
@@ -218,15 +662,45 @@
       "type": "object",
       "required": ["shooter_track_id", "release_pos_m", "behind_arc_p", "made"],
       "properties": {
-        "shooter_track_id": { "type": "string" },
-        "team_id": { "type": "string" },
-        "release_pos_m": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-        "behind_arc_p": { "type": "number", "minimum": 0, "maximum": 1 },
-        "on_line_p": { "type": "number", "minimum": 0, "maximum": 1 },
-        "made": { "type": ["boolean", "null"], "description": "null = can't tell (caps at BETA)" },
-        "made_p": { "type": "number", "minimum": 0, "maximum": 1 },
-        "attempt_points_hint": { "enum": [2, 3] },
-        "calib_untrusted": { "type": "boolean" }
+        "shooter_track_id": {
+          "type": "string"
+        },
+        "team_id": {
+          "type": "string"
+        },
+        "release_pos_m": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "behind_arc_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "on_line_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "made": {
+          "type": ["boolean", "null"],
+          "description": "null = can't tell (caps at BETA)"
+        },
+        "made_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "attempt_points_hint": {
+          "enum": [2, 3]
+        },
+        "calib_untrusted": {
+          "type": "boolean"
+        }
       }
     },
     "LineCrossPayload": {
@@ -234,11 +708,23 @@
       "type": "object",
       "required": ["object", "boundary", "p_out"],
       "properties": {
-        "object": { "enum": ["ball", "player"] },
-        "boundary": { "type": "string" },
-        "holder_track_id": { "type": "string" },
-        "p_out": { "type": "number", "minimum": 0, "maximum": 1 },
-        "calib_untrusted": { "type": "boolean" }
+        "object": {
+          "enum": ["ball", "player"]
+        },
+        "boundary": {
+          "type": "string"
+        },
+        "holder_track_id": {
+          "type": "string"
+        },
+        "p_out": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "calib_untrusted": {
+          "type": "boolean"
+        }
       }
     },
     "PlayerContactPayload": {
@@ -246,12 +732,24 @@
       "type": "object",
       "required": ["a_track_id", "b_track_id", "min_dist_m"],
       "properties": {
-        "a_track_id": { "type": "string" },
-        "b_track_id": { "type": "string" },
-        "min_dist_m": { "type": "number" },
-        "closing_speed_mps": { "type": "number" },
-        "first_mover_track_id": { "type": "string" },
-        "during": { "enum": ["shot", "drive", "other"] }
+        "a_track_id": {
+          "type": "string"
+        },
+        "b_track_id": {
+          "type": "string"
+        },
+        "min_dist_m": {
+          "type": "number"
+        },
+        "closing_speed_mps": {
+          "type": "number"
+        },
+        "first_mover_track_id": {
+          "type": "string"
+        },
+        "during": {
+          "enum": ["shot", "drive", "other"]
+        }
       }
     },
     "ReachOverNetPayload": {
@@ -259,12 +757,29 @@
       "type": "object",
       "required": ["team_id", "beyond_m", "sigma_m"],
       "properties": {
-        "player_id": { "type": "string" },
-        "team_id": { "type": "string" },
-        "beyond_m": { "type": "number" },
-        "sigma_m": { "type": "number", "minimum": 0 },
-        "touched_ball_p": { "type": "number", "minimum": 0, "maximum": 1 },
-        "before_opp_attack_p": { "type": "number", "minimum": 0, "maximum": 1 }
+        "player_id": {
+          "type": "string"
+        },
+        "team_id": {
+          "type": "string"
+        },
+        "beyond_m": {
+          "type": "number"
+        },
+        "sigma_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "touched_ball_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "before_opp_attack_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
       }
     },
     "TouchPayload": {
@@ -272,10 +787,20 @@
       "type": "object",
       "required": ["defender_track_id", "carrier_track_id", "both_hands_p"],
       "properties": {
-        "defender_track_id": { "type": "string" },
-        "carrier_track_id": { "type": "string" },
-        "both_hands_p": { "type": "number", "minimum": 0, "maximum": 1 },
-        "dt_s": { "type": "number" }
+        "defender_track_id": {
+          "type": "string"
+        },
+        "carrier_track_id": {
+          "type": "string"
+        },
+        "both_hands_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "dt_s": {
+          "type": "number"
+        }
       }
     },
     "HeartbeatPayload": {
@@ -284,12 +809,25 @@
       "type": "object",
       "required": ["service"],
       "properties": {
-        "service": { "type": "string" },
-        "fps": { "type": "number" },
-        "lag_ms": { "type": "number" },
-        "model": { "type": "string" },
-        "device": { "type": "string" },
-        "ep": { "type": "string", "description": "Execution provider actually used (e.g. CoreML, CPU, MPS)" }
+        "service": {
+          "type": "string"
+        },
+        "fps": {
+          "type": "number"
+        },
+        "lag_ms": {
+          "type": "number"
+        },
+        "model": {
+          "type": "string"
+        },
+        "device": {
+          "type": "string"
+        },
+        "ep": {
+          "type": "string",
+          "description": "Execution provider actually used (e.g. CoreML, CPU, MPS)"
+        }
       }
     }
   }

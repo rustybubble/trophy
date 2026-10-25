@@ -133,21 +133,34 @@ function tableTennis(): MockScript {
     }
   };
   const toss = (t: number, height: number, angleDeg: number, side: "A" | "B") => {
+    // ITTF Law 2.6.2 (D-31): height from palm release to apex; angle on the rise.
     const x = side === "A" ? -1.5 : 1.5;
     const a = (angleDeg * Math.PI) / 180;
+    const mark = (ts: number, px: number, z: number) => ({
+      t_s: ts,
+      t0_s: ts - 0.017,
+      t1_s: ts + 0.017,
+      sigma_t_s: 0.01,
+      pos_m: { x: px, y: 0.3, z },
+      sigma_m: 0.012,
+    });
+    const apexX = x + Math.tan(a) * height * (side === "A" ? 1 : -1);
     return ev(t + 0.6, "serve_toss", {
       server_side: side,
-      release: { t_s: t, pos_m: { x, y: 0.3, z: 0.0 } },
-      apex: { t_s: t + 0.3, pos_m: { x, y: 0.3, z: height } },
-      contact: { t_s: t + 0.6, pos_m: { x: x + Math.sin(a) * height * 0.5, y: 0.3, z: height * 0.4 } },
+      release: mark(t, x, 0.0),
+      apex: mark(t + 0.3, apexX, height),
+      contact: mark(t + 0.6, apexX, height * 0.4),
       height_m: height,
       sigma_height_m: 0.012,
-      rise_angle_rad: 0.05,
-      fall_angle_rad: a,
       angle_from_vertical_rad: a,
       sigma_angle_rad: 0.06,
+      angle_segment: "rise",
+      struck_on_descent: true,
+      struck_on_descent_p: 0.95,
       palm_still_s: 0.6,
       observable_plane: "xz",
+      evidence_missing: ["spin"],
+      estimator: { name: "synthetic-fixture", version: "1" },
     });
   };
   const bounce = (t: number, side: "A" | "B", x: number, y: number, edge?: Record<string, number>) =>
@@ -244,10 +257,10 @@ function tableTennis(): MockScript {
       p: 0.96,
       tier: "AUTO",
       shown: "auto",
-      text: "Fault: toss too low (9 cm < 15.2 cm) — point B",
+      text: "Fault: toss too low (9 cm < 16 cm) — point B",
       speech: "Fault. Toss too low. Point, B.",
       overlay: { serve_toss_event_id: t2.id },
-      why: "Toss rose 0.09 m; the rule needs more than 0.1524 m.",
+      why: "Toss rose 0.09 m; ITTF Law 2.6.2 needs at least 0.16 m.",
     },
     [t2.id],
     7.6,

@@ -11,6 +11,8 @@ export type EventType =
   | "net"
   | "ball_dead"
   | "serve_toss"
+  | "serve_hidden"
+  | "serve_position"
   | "person_feet"
   | "shot"
   | "line_cross"
@@ -28,6 +30,27 @@ export type EventSource = "flight" | "players" | "possession" | "audio" | "manua
  * via the `definition` "Side".
  */
 export type Side = "A" | "B";
+/**
+ * What the estimator could not observe. A rule whose evidence is missing is undecided (PLAYERS DECIDE), never legal or illegal by default.
+ *
+ * This interface was referenced by `Event`'s JSON-Schema
+ * via the `definition` "EvidenceMissing".
+ */
+export type EvidenceMissing = (
+  | "release"
+  | "apex"
+  | "contact"
+  | "descent"
+  | "palm"
+  | "spin"
+  | "depth"
+  | "calibration"
+  | "receiver_view"
+  | "free_arm"
+  | "end_line"
+  | "playing_surface"
+  | "second_camera"
+)[];
 
 /**
  * trophy.event.v1: a measurement from a vision/audio module (interfaces-v1 §7). Perception emits measurements; only rule packs decide (D-18). Carried on Redis ev:* (field `json`) and mirrored 1:1 into the Spacetime `observation` table (§7.1).
@@ -162,6 +185,8 @@ export interface ContactPayload {
   calib_untrusted?: boolean;
 }
 /**
+ * kind=touch: the ball touched the net assembly and went over; into: it stopped at the net; over: a clean crossing.
+ *
  * This interface was referenced by `Event`'s JSON-Schema
  * via the `definition` "NetPayload".
  */
@@ -169,6 +194,10 @@ export interface NetPayload {
   kind: "touch" | "into" | "over";
   from_side: Side;
   calib_untrusted?: boolean;
+  /**
+   * true for the served ball's first crossing. A serve with kind=touch that then lands correctly is a let (ITTF Law 2.9.1.1); the rule pack decides, not perception.
+   */
+  serve?: boolean;
 }
 /**
  * A hint that the rally has ended
@@ -181,35 +210,222 @@ export interface BallDeadPayload {
   last_side?: Side;
 }
 /**
+ * An instant of the toss in time and space with uncertainty. t0_s..t1_s brackets the frames it can be in (e.g. release lies between the last frame on the palm and the first frame clearly off it).
+ *
  * This interface was referenced by `Event`'s JSON-Schema
- * via the `definition` "TossPoint".
+ * via the `definition` "TossMark".
  */
-export interface TossPoint {
+export interface TossMark {
   /**
-   * Game time, s
+   * Best estimate, game time, s
    */
   t_s: number;
+  t0_s: number;
+  t1_s: number;
+  sigma_t_s: number;
   pos_m: PosM;
+  /**
+   * 1-sigma position uncertainty, metres (largest axis)
+   */
+  sigma_m: number;
 }
 /**
- * Weekend MUST (D-22). height_m = apex.z - release.z; angle_from_vertical_rad = max(rise_angle_rad, fall_angle_rad).
+ * Which estimator produced the measurement, for audit and labelled evaluation
+ *
+ * This interface was referenced by `Event`'s JSON-Schema
+ * via the `definition` "Estimator".
+ */
+export interface Estimator {
+  /**
+   * e.g. blurball-toss
+   */
+  name: string;
+  /**
+   * semver or git sha
+   */
+  version: string;
+}
+/**
+ * ITTF Law 2.6.2 (D-31): the ball is projected near vertically upwards from the open palm, without spin, rises at least 16 cm after leaving the palm, and falls without touching anything before it is struck. height_m = apex.pos_m.z - release.pos_m.z (palm release to apex). angle_from_vertical_rad is the angle of the UPWARD segment release -> apex from vertical. The optional house variant's hand-to-hit angle is house_hand_to_hit_angle_rad.
  *
  * This interface was referenced by `Event`'s JSON-Schema
  * via the `definition` "ServeTossPayload".
  */
 export interface ServeTossPayload {
   server_side: Side;
-  release: TossPoint;
-  apex: TossPoint;
-  contact: TossPoint;
+  release: TossMark1;
+  apex: TossMark2;
+  contact?: TossMark3;
+  /**
+   * apex.z - release.z, metres
+   */
   height_m: number;
   sigma_height_m: number;
-  rise_angle_rad: number;
-  fall_angle_rad: number;
+  /**
+   * release -> apex, from vertical
+   */
   angle_from_vertical_rad: number;
   sigma_angle_rad: number;
+  /**
+   * The segment the angle is measured on (Law 2.6.2: projected near vertically upwards)
+   */
+  angle_segment: "rise";
+  /**
+   * Struck while falling (after the apex); null = not observed
+   */
+  struck_on_descent: boolean | null;
+  struck_on_descent_p: number;
+  /**
+   * P(the ball touched anything between release and strike)
+   */
+  touched_before_strike_p?: number;
+  /**
+   * Law 2.6.1: how long the ball rested still on the open palm before release
+   */
   palm_still_s?: number;
+  /**
+   * Which plane the cameras measure well; one side-on camera at the net line sees xz
+   */
   observable_plane?: "xz" | "yz" | "mixed";
+  /**
+   * Optional house variant only: max angle from vertical over release -> apex -> contact
+   */
+  house_hand_to_hit_angle_rad?: number;
+  evidence_missing: EvidenceMissing;
+  estimator: Estimator;
+  calib_untrusted?: boolean;
+}
+/**
+ * The ball leaves the open palm
+ */
+export interface TossMark1 {
+  /**
+   * Best estimate, game time, s
+   */
+  t_s: number;
+  t0_s: number;
+  t1_s: number;
+  sigma_t_s: number;
+  pos_m: PosM;
+  /**
+   * 1-sigma position uncertainty, metres (largest axis)
+   */
+  sigma_m: number;
+}
+/**
+ * Top of the toss
+ */
+export interface TossMark2 {
+  /**
+   * Best estimate, game time, s
+   */
+  t_s: number;
+  t0_s: number;
+  t1_s: number;
+  sigma_t_s: number;
+  pos_m: PosM;
+  /**
+   * 1-sigma position uncertainty, metres (largest axis)
+   */
+  sigma_m: number;
+}
+/**
+ * Racket strike (onset + reversal), if seen
+ */
+export interface TossMark3 {
+  /**
+   * Best estimate, game time, s
+   */
+  t_s: number;
+  t0_s: number;
+  t1_s: number;
+  sigma_t_s: number;
+  pos_m: PosM;
+  /**
+   * 1-sigma position uncertainty, metres (largest axis)
+   */
+  sigma_m: number;
+}
+/**
+ * ITTF Law 2.6.5: from the start of service until it is struck, the ball must not be hidden from the receiver by the server or their doubles partner or anything they wear or carry, and the free arm is removed from between the ball and the net once the ball is projected. visible_fraction is the minimum over release -> strike of the fraction of the ball visible from the receiver's side.
+ *
+ * This interface was referenced by `Event`'s JSON-Schema
+ * via the `definition` "ServeHiddenPayload".
+ */
+export interface ServeHiddenPayload {
+  server_side: Side;
+  /**
+   * Window start (release), game time
+   */
+  t0_s: number;
+  /**
+   * Window end (strike), game time
+   */
+  t1_s: number;
+  visible_fraction: number;
+  sigma_visible_fraction: number;
+  /**
+   * When the ball was least visible
+   */
+  min_visible_t_s?: number;
+  occluder: "none" | "server_body" | "server_clothing" | "free_arm" | "partner" | "racket" | "other" | "unknown";
+  /**
+   * @minItems 1
+   */
+  cams_used: [HiddenCamView, ...HiddenCamView[]];
+  evidence_missing: EvidenceMissing;
+  estimator: Estimator;
+  calib_untrusted?: boolean;
+}
+/**
+ * This interface was referenced by `Event`'s JSON-Schema
+ * via the `definition` "HiddenCamView".
+ */
+export interface HiddenCamView {
+  cam_id: string;
+  /**
+   * Where the camera looks from, relative to the receiver
+   */
+  view: "receiver_side" | "side_on" | "server_side" | "overhead";
+  visible_fraction: number;
+}
+/**
+ * ITTF Law 2.6.4: from the start of service until it is struck, the ball is above the level of the playing surface and behind the server's end line. Distances are signed (+ = legal side) and minimised over the window start of service -> strike.
+ *
+ * This interface was referenced by `Event`'s JSON-Schema
+ * via the `definition` "ServePositionPayload".
+ */
+export interface ServePositionPayload {
+  server_side: Side;
+  /**
+   * Start of service (ball still on the palm), game time
+   */
+  t0_s: number;
+  /**
+   * Strike, game time
+   */
+  t1_s: number;
+  /**
+   * min(ball z - surface z); + = above the surface
+   */
+  min_above_surface_m: number;
+  /**
+   * min distance behind the server's end line (or its extension); + = behind
+   */
+  min_behind_end_line_m: number;
+  worst_above_t_s?: number;
+  worst_behind_t_s?: number;
+  sigma_m: number;
+  /**
+   * P(above the surface throughout)
+   */
+  p_above: number;
+  /**
+   * P(behind the end line throughout)
+   */
+  p_behind: number;
+  evidence_missing: EvidenceMissing;
+  estimator: Estimator;
   calib_untrusted?: boolean;
 }
 /**

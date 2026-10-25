@@ -1,6 +1,6 @@
 # Sport catalog for the Cal Hacks build (scope from the user's outline). status: built | should | next
 sports:
-  - {id: table_tennis, family: flight, status: built, calls: [rally scoring, edge rule, illegal serve (toss > 6 in, path within 30 deg of vertical)]}
+  - {id: table_tennis, family: flight, status: built, calls: [rally scoring, edge rule, illegal serve (ITTF Law 2.6: toss >= 16 cm, within 30 deg of vertical on the rise, struck on descent, hidden, position, net let)]}
   - {id: basketball, family: possession, status: should, calls: [2 vs 3 pointers + score, outs (next), foul flags (next)]}
   - {id: pickleball, family: flight, status: next, calls: [kitchen rule, outs]}
   - {id: tennis, family: flight, status: next, calls: [outs]}

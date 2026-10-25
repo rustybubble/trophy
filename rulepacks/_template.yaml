@@ -8,7 +8,7 @@ teams:
   - {team_id: A, name: Team A, color: "#e4572e"}
   - {team_id: B, name: Team B, color: "#2e86ab"}
 params: {}                # readable from CEL as params.*, e.g. edge_band_m
-variants: {}              # named param overrides, e.g. ittf_strict: {serve_min_toss_m: 0.16}
+variants: {}              # named param overrides, e.g. house: {toss_min_height_m: 0.1524, toss_angle_segment: hand_to_hit}
 field:
   units: m
   frame: "origin and axes in words (interfaces-v1 §3)"

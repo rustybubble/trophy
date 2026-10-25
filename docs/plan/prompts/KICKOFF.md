@@ -46,7 +46,7 @@ Start now, in this order:
 (3) Ship /calibrate and the table_tennis field template early. Agent 1's UI needs them.
 (4) Build the clip player and the synthetic rally, including tosses of known height and angle.
 
-The demo calls are rally scoring, the edge rule, and illegal serves: the toss must rise more than 6 in (0.1524 m) off the open palm, and the path from the hand to the hit must stay within 30° of vertical.
+The demo calls are rally scoring, the edge rule, and illegal serves: official ITTF law (D-31): the toss rises **at least 16 cm** from the open palm to its apex (ITTF Law 2.6.2), projected near vertically (**within 30° of vertical on the way up**, the ITTF review criterion), and is struck as it falls; plus a hidden serve (2.6.5), the ball above the table and behind the end line (2.6.4), and a let when the serve touches the net (2.9.1.1).
 
 You emit measurements, never rulings. Mirror every event into Spacetime observations, and never send video there.
 
@@ -65,7 +65,7 @@ Read docs/plan/prompts/agent-3-rules-ai-droid.md in full and follow it. It is yo
 Start now, in this order:
 (1) Create docs/status/a3.md.
 (2) Hello-world each sponsor API and record the latency: Claude structured output, Gemini, a Bitdeer Model Studio vision call, a Factory Droid SDK session editing a toy YAML in a temp sandbox, and a Moss index + query.
-(3) Build the engine core and rulepacks/table_tennis.yaml against synthetic fixtures. That covers rally scoring, the edge rule, and the serve rules (toss height > 0.1524 m; path from the hand to the hit within 30° of vertical).
+(3) Build the engine core and rulepacks/table_tennis.yaml against synthetic fixtures. That covers rally scoring, the edge rule, and the serve rules (ITTF Law 2.6: toss ≥ 0.16 m, within 30° of vertical on the rise, struck on descent; hidden serve; position; net let).
 (4) Start the Apify rulebook actor (ITTF first), then the Moss index and /ask. They don't depend on perception, so they can be finished early.
 
 AI votes must never delay a live call. Run them in the background, in parallel, with a 4 s timeout.

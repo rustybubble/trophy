@@ -143,36 +143,56 @@
      "server_side": "A",
      "release": {
       "t_s": 1,
+      "t0_s": 0.983,
+      "t1_s": 1.017,
+      "sigma_t_s": 0.01,
       "pos_m": {
        "x": -1.5,
        "y": 0.3,
        "z": 0
-      }
+      },
+      "sigma_m": 0.012
      },
      "apex": {
       "t_s": 1.3,
+      "t0_s": 1.2830000000000001,
+      "t1_s": 1.317,
+      "sigma_t_s": 0.01,
       "pos_m": {
-       "x": -1.5,
+       "x": -1.4532375564325952,
        "y": 0.3,
        "z": 0.22
-      }
+      },
+      "sigma_m": 0.012
      },
      "contact": {
       "t_s": 1.6,
+      "t0_s": 1.5830000000000002,
+      "t1_s": 1.617,
+      "sigma_t_s": 0.01,
       "pos_m": {
-       "x": -1.4771297140100466,
+       "x": -1.4532375564325952,
        "y": 0.3,
        "z": 0.08800000000000001
-      }
+      },
+      "sigma_m": 0.012
      },
      "height_m": 0.22,
      "sigma_height_m": 0.012,
-     "rise_angle_rad": 0.05,
-     "fall_angle_rad": 0.20943951023931953,
      "angle_from_vertical_rad": 0.20943951023931953,
      "sigma_angle_rad": 0.06,
+     "angle_segment": "rise",
+     "struck_on_descent": true,
+     "struck_on_descent_p": 0.95,
      "palm_still_s": 0.6,
-     "observable_plane": "xz"
+     "observable_plane": "xz",
+     "evidence_missing": [
+      "spin"
+     ],
+     "estimator": {
+      "name": "synthetic-fixture",
+      "version": "1"
+     }
     }
    }
   },
@@ -905,36 +925,56 @@
      "server_side": "A",
      "release": {
       "t_s": 7,
+      "t0_s": 6.983,
+      "t1_s": 7.017,
+      "sigma_t_s": 0.01,
       "pos_m": {
        "x": -1.5,
        "y": 0.3,
        "z": 0
-      }
+      },
+      "sigma_m": 0.012
      },
      "apex": {
       "t_s": 7.3,
+      "t0_s": 7.2829999999999995,
+      "t1_s": 7.317,
+      "sigma_t_s": 0.01,
       "pos_m": {
-       "x": -1.5,
+       "x": -1.4873513248767847,
        "y": 0.3,
        "z": 0.09
-      }
+      },
+      "sigma_m": 0.012
      },
      "contact": {
       "t_s": 7.6,
+      "t0_s": 7.582999999999999,
+      "t1_s": 7.617,
+      "sigma_t_s": 0.01,
       "pos_m": {
-       "x": -1.493737210456797,
+       "x": -1.4873513248767847,
        "y": 0.3,
        "z": 0.036
-      }
+      },
+      "sigma_m": 0.012
      },
      "height_m": 0.09,
      "sigma_height_m": 0.012,
-     "rise_angle_rad": 0.05,
-     "fall_angle_rad": 0.13962634015954636,
      "angle_from_vertical_rad": 0.13962634015954636,
      "sigma_angle_rad": 0.06,
+     "angle_segment": "rise",
+     "struck_on_descent": true,
+     "struck_on_descent_p": 0.95,
      "palm_still_s": 0.6,
-     "observable_plane": "xz"
+     "observable_plane": "xz",
+     "evidence_missing": [
+      "spin"
+     ],
+     "estimator": {
+      "name": "synthetic-fixture",
+      "version": "1"
+     }
     }
    }
   },
@@ -985,12 +1025,12 @@
     "p": 0.96,
     "tier": "AUTO",
     "shown": "auto",
-    "text": "Fault: toss too low (9 cm < 15.2 cm) — point B",
+    "text": "Fault: toss too low (9 cm < 16 cm) — point B",
     "speech": "Fault. Toss too low. Point, B.",
     "overlay": {
      "serve_toss_event_id": "01JDEMOBS00000000000000007"
     },
-    "why": "Toss rose 0.09 m; the rule needs more than 0.1524 m."
+    "why": "Toss rose 0.09 m; ITTF Law 2.6.2 needs at least 0.16 m."
    }
   },
   {
@@ -1047,36 +1087,56 @@
      "server_side": "B",
      "release": {
       "t_s": 10,
+      "t0_s": 9.983,
+      "t1_s": 10.017,
+      "sigma_t_s": 0.01,
       "pos_m": {
        "x": 1.5,
        "y": 0.3,
        "z": 0
-      }
+      },
+      "sigma_m": 0.012
      },
      "apex": {
       "t_s": 10.3,
+      "t0_s": 10.283000000000001,
+      "t1_s": 10.317,
+      "sigma_t_s": 0.01,
       "pos_m": {
-       "x": 1.5,
+       "x": 1.4747749835362376,
        "y": 0.3,
        "z": 0.24
-      }
+      },
+      "sigma_m": 0.012
      },
      "contact": {
       "t_s": 10.6,
+      "t0_s": 10.583,
+      "t1_s": 10.616999999999999,
+      "sigma_t_s": 0.01,
       "pos_m": {
-       "x": 1.5125434155921185,
+       "x": 1.4747749835362376,
        "y": 0.3,
        "z": 0.096
-      }
+      },
+      "sigma_m": 0.012
      },
      "height_m": 0.24,
      "sigma_height_m": 0.012,
-     "rise_angle_rad": 0.05,
-     "fall_angle_rad": 0.10471975511965977,
      "angle_from_vertical_rad": 0.10471975511965977,
      "sigma_angle_rad": 0.06,
+     "angle_segment": "rise",
+     "struck_on_descent": true,
+     "struck_on_descent_p": 0.95,
      "palm_still_s": 0.6,
-     "observable_plane": "xz"
+     "observable_plane": "xz",
+     "evidence_missing": [
+      "spin"
+     ],
+     "estimator": {
+      "name": "synthetic-fixture",
+      "version": "1"
+     }
     }
    }
   },

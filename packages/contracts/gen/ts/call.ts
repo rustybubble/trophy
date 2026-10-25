@@ -125,7 +125,7 @@ export interface Overlay {
   lines?: string[];
   highlight_track_ids?: string[];
   /**
-   * For serve calls: the serve_toss observation the viewer draws (trace, 6 in line, 30 deg cone)
+   * For serve calls: the serve_toss observation the viewer draws (trace, 16 cm line, 30 deg cone on the rise)
    */
   serve_toss_event_id?: string;
 }

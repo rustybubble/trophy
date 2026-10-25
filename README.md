@@ -4,7 +4,7 @@
 
 Point a phone at a ping-pong table and Trophy referees the game:
 - It **keeps score**.
-- It **calls the edge rule and illegal serves**: the toss must rise more than 6 in off the palm and stay within 30° of vertical from the hand to the hit.
+- It **calls the edge rule and illegal serves**: under the official ITTF law, the toss must rise at least 16 cm off the open palm, go up within 30° of vertical and be struck on the way down; hidden serves and net-touch lets are called too.
 - It **speaks every call** in a referee voice.
 - Close calls show their probability and can be **challenged**. A challenge brings an **instant replay** and a second opinion from three AI models.
 - Players can **ask the ref** about any rule by voice and get an answer quoted from the official rulebook.
