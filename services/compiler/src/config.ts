@@ -56,7 +56,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, root = REPO_ROO
     );
   }
   const off = Number(e.PORT_OFFSET || 0);
-  const enginePython = e.ENGINE_PYTHON || join(root, "services/engine/.venv/bin/python");
+  const enginePython = e.ENGINE_PYTHON || defaultEnginePython(root);
   return {
     factoryApiKey: key,
     droidExecPath: e.DROID_EXEC_PATH || undefined,
@@ -72,4 +72,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, root = REPO_ROO
     spacetimeCompilerToken: e.SPACETIME_COMPILER_TOKEN || "",
     port: 8200 + off,
   };
+}
+
+/** The engine venv's interpreter, as uv lays it out: bin/python on macOS/Linux, Scripts\\python.exe on Windows. */
+export function defaultEnginePython(root = REPO_ROOT): string {
+  return join(root, "services/engine/.venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
 }

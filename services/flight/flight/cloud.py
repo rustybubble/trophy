@@ -38,7 +38,7 @@ VIEWER = Path(__file__).with_name("viewer.html")
 
 
 def _load_field(path: Path) -> tuple[dict, dict[str, Camera]]:
-    fj = json.loads(Path(path).read_text())
+    fj = json.loads(Path(path).read_text(encoding="utf8"))
     cams = {c["cam_id"]: Camera.from_json(c) for c in fj.get("cameras", [])}
     return fj, cams
 
@@ -51,7 +51,7 @@ def cmd_synth(a):
     cams = [solve_pose(cid, c["corners_px"], c["width"], c["height"]).to_json() for cid, c in truth["cameras"].items()]
     fj = F.field_json(cams, {"sync_method": "synthetic", "skew_sigma_s": 0.012})
     fj["synthetic"] = True
-    (Path(a.out) / "field.json").write_text(json.dumps(fj, indent=1))
+    (Path(a.out) / "field.json").write_text(json.dumps(fj, indent=1), encoding="utf8")
     print(f"wrote {a.out}/side.mp4, diag.mp4, *-blurball-like.json, truth.json, field.json (SYNTHETIC)")
 
 
@@ -73,7 +73,7 @@ def cmd_calibrate(a):
     fj, _ = _load_field(a.field) if Path(a.field).exists() else (F.field_json(), {})
     fj["cameras"] = [c for c in fj.get("cameras", []) if c["cam_id"] != a.cam] + [cam.to_json()]
     fj.setdefault("time", {"sync_method": "manual_offset", "skew_sigma_s": 0.008})
-    Path(a.field).write_text(json.dumps(fj, indent=1))
+    Path(a.field).write_text(json.dumps(fj, indent=1), encoding="utf8")
     print(
         f"{a.cam}: f={cam.K[0, 0]:.0f}px ({cam.f_source}), centre={np.round(cam.centre_m, 2).tolist()} m, "
         f"reproj={cam.reproj_err_px:.2f}px -> {a.field}"
@@ -114,11 +114,11 @@ def cmd_run(a):
         tracks[cid] = Tracker().run(cands)
         sources[cid] = how
         print(f"{cid}: {len(tracks[cid])} tracked samples from {how}")
-        (out / f"track2d-{cid}.json").write_text(json.dumps(tracks[cid]))
+        (out / f"track2d-{cid}.json").write_text(json.dumps(tracks[cid]), encoding="utf8")
     skew = float(fj.get("time", {}).get("skew_sigma_s", 0.008))
     fps = a.fps or 30.0
     t3 = fuse(tracks, cams, px_sigma=a.px_sigma, skew_sigma_s=skew, fps=fps)
-    with open(out / "track3d.jsonl", "w") as f:
+    with open(out / "track3d.jsonl", "w", encoding="utf8") as f:
         for r in t3:
             f.write(json.dumps(r) + "\n")
     bounces = detect_bounces(t3, cams=cams, tracks2d=tracks)
@@ -126,13 +126,13 @@ def cmd_run(a):
     dead = detect_dead(t3)
     serve = serve_toss(t3, hits)
     events = {"bounces": bounces, "hits": hits, "dead": dead, "serve_toss": serve, "sources": sources}
-    (out / "events.json").write_text(json.dumps(events, indent=1))
-    (out / "field.json").write_text(json.dumps(fj, indent=1))
-    html = VIEWER.read_text().replace(
+    (out / "events.json").write_text(json.dumps(events, indent=1), encoding="utf8")
+    (out / "field.json").write_text(json.dumps(fj, indent=1), encoding="utf8")
+    html = VIEWER.read_text(encoding="utf8").replace(
         "/*__DATA__*/",
         "const DATA = " + json.dumps({"field": fj, "track3d": t3, "events": events, "tracks2d": tracks}) + ";",
     )
-    (out / "viewer.html").write_text(html)
+    (out / "viewer.html").write_text(html, encoding="utf8")
     n2 = sum(r["n_views"] >= 2 for r in t3)
     sig = np.median([r["sigma_m"] for r in t3]) if t3 else float("nan")
     print(
@@ -144,9 +144,9 @@ def cmd_run(a):
 
 def cmd_eval(a):
     out = Path(a.out)
-    truth = json.loads(Path(a.truth).read_text())
-    t3 = [json.loads(line) for line in (out / "track3d.jsonl").read_text().splitlines() if line.strip()]
-    ev = json.loads((out / "events.json").read_text())
+    truth = json.loads(Path(a.truth).read_text(encoding="utf8"))
+    t3 = [json.loads(line) for line in (out / "track3d.jsonl").read_text(encoding="utf8").splitlines() if line.strip()]
+    ev = json.loads((out / "events.json").read_text(encoding="utf8"))
     tt = np.array([r["t_s"] for r in truth["track"]])
     tp = np.array([r["xyz_m"] for r in truth["track"]])
     errs, sig = [], []
@@ -183,7 +183,7 @@ def cmd_eval(a):
     if ev.get("serve_toss") and truth.get("serve", {}).get("apex"):
         th = truth["serve"]["apex"]["xyz_m"][2] - truth["serve"]["release"]["xyz_m"][2]
         rep["serve_toss"] = {"truth_height_m": th, "measured_height_m": ev["serve_toss"]["height_m"]}
-    (out / "eval.json").write_text(json.dumps(rep, indent=1))
+    (out / "eval.json").write_text(json.dumps(rep, indent=1), encoding="utf8")
     print(json.dumps(rep, indent=1))
 
 

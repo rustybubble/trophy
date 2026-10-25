@@ -255,7 +255,8 @@ def blurball_like_json(per_frame: dict, path: Path, noise_px: float, miss_p: flo
             row.update(x=float(rng.uniform(0, 1280)), y=float(rng.uniform(0, 720)), score=1.0, status="observed_2d")
         rows.append(row)
     Path(path).write_text(
-        json.dumps({"frames": rows, "report": {"detector": "synthetic BlurBall-like", "synthetic": True}})
+        json.dumps({"frames": rows, "report": {"detector": "synthetic BlurBall-like", "synthetic": True}}),
+        encoding="utf8",
     )
 
 
@@ -283,7 +284,7 @@ def make_dataset(out_dir: Path, seed: int = 0, fps: float = 30.0, skews: dict | 
             per, out_dir / f"{cid}-blurball-like.json", noise_px=1.5, miss_p=0.08, false_p=0.05, seed=seed
         )
         truth["cameras"][cid] = {**cam.to_json(), "video": f"{cid}.mp4", **per}
-    (out_dir / "truth.json").write_text(json.dumps(truth))
+    (out_dir / "truth.json").write_text(json.dumps(truth), encoding="utf8")
     return truth
 
 

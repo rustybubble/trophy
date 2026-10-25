@@ -214,7 +214,9 @@ export function installGuard(dir: string, allowlist: string[], commands: string[
   const allowPath = join(dir, ".trophy", "allowlist.json");
   writeFileSync(allowPath, JSON.stringify({ files: allowlist, commands }, null, 1));
   chmodSync(allowPath, 0o444);
-  const cmd = `python3 "${GUARD}" "${dir}"`;
+  // the hook runs with whatever python the host has: `python` on Windows (python3 there is often a Store stub)
+  const py = process.env.GUARD_PYTHON || (process.platform === "win32" ? "python" : "python3");
+  const cmd = `${py} "${GUARD}" "${dir}"`;
   const hooks = {
     hooksDisabled: false,
     PreToolUse: [

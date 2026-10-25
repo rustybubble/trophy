@@ -23,7 +23,7 @@ COLOUR_HSV = {
 
 def blurball_json_candidates(path: str | Path, t_offset_s: float = 0.0) -> Iterator[dict]:
     """The tracker branch's cache format: {"frames": [{seq, t_source_s, x, y, score, status, ...}]}."""
-    data = json.loads(Path(path).read_text())
+    data = json.loads(Path(path).read_text(encoding="utf8"))
     for r in data["frames"]:
         cands = []
         if r.get("x") is not None and r.get("y") is not None:
@@ -40,7 +40,7 @@ def blurball_json_candidates(path: str | Path, t_offset_s: float = 0.0) -> Itera
 
 def blurball_csv_candidates(path: str | Path, fps: float, t_offset_s: float = 0.0) -> Iterator[dict]:
     """BlurBall's own output: Frame, X, Y, Visibility, L, Theta (pixels in the source resolution)."""
-    with open(path, newline="") as f:
+    with open(path, newline="", encoding="utf8") as f:
         for row in csv.DictReader(f):
             frame = int(row["Frame"])
             vis = int(float(row.get("Visibility", 1)))
