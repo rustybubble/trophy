@@ -29,8 +29,13 @@ scoring is a common streetball convention with no official rulebook; what we obs
   (D-17) and never decides it alone.
 
 ## What the annotated clip exercises
-`evals/fixtures/annotated/basketball/halfcourt-game2.*`: six made baskets in game (session) 2. There are four 1-point
-baskets (inside the arc) and two 2-point baskets (beyond the arc): one by team B from the right wing and one by team A
-from the top of the key. The score goes from A 0–1 B to A 4–5 B. Teams A and B are named as in the clip's overlay.
-Made and points come from that overlay. Release positions are estimated by eye from one far camera. The 75 s window
-contains no clear out-of-bounds play, so that rule is not exercised.
+`evals/fixtures/annotated/basketball/halfcourt-arc.*`: five made baskets in a 60 s window of game (session) 2: three
+1-point baskets (inside the arc) and two 2-point baskets (beyond it). The score goes from A 0–1 B to A 4–4 B. Teams A
+and B are named as in the clip's overlay; made and points come from that overlay. Release positions are estimated by
+eye from one far camera.
+
+The 23.3 s basket by team B is the close call: the shooter's feet are on the arc at the gather, and from this camera
+we can't tell whether his toes touch the line (inside, 1 point) or sit just behind it (2 points). The overlay counted 2.
+The event says so with `behind_arc_p: 0.55` and `on_line_p: 0.4`. The pack should take the call's confidence from the
+measurement (`p = behind_arc_p` for the 2-point rule, `1 - behind_arc_p` for the 1-point rule), so this basket is BETA
+(challengeable) rather than AUTO. The window contains no clear out-of-bounds play, so that rule is not exercised.

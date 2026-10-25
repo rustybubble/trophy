@@ -35,9 +35,15 @@ points. Check the numbering against the current edition before quoting it.
 - Rally-point system (6.1): every rally scores one point, for the team that wins it. Sets go to 25, win by 2, and the
   fifth set to 15. The team that wins the rally serves next.
 
-## What the annotated clip exercises
-`evals/fixtures/annotated/volleyball/amateur-set.*`: four rallies. In three, the ball goes down in AZM's court (an
-attack that gets through, and a serve AZM touches into the floor). In one, an HND touch sends the ball away and isn't
-returned. Team A is HND (near court) and team B is AZM (far court). The rally winners match the clip's own score
-overlay. The camera is low and behind the near court, so lines aren't resolvable: no line-margin call is annotated,
-and the third rally is low confidence (0.5).
+## What the annotated clips exercise
+Team A is HND (near court) and team B is AZM (far court) in both; rally winners match the clip's own score overlay.
+- `evals/fixtures/annotated/volleyball/sideline-ball.*` (the judging-demo clip): one close line call. The ball comes
+  down on the near (HND) court's right sideline: `bounce` with `side: "A"`, `in: true`, `line: "side_right"`,
+  `margin_m: 0.025`, `sigma_m: 0.05`, `p_in: 0.69`. A ball touching the line is in (8.3), so AZM wins the rally (the
+  overlay agrees). The call's confidence must come from the measurement (`p = p_in` for an in call, `1 - p_in` for an
+  out call), so this close ball is BETA, not AUTO.
+- `evals/fixtures/annotated/volleyball/amateur-set.*`: four rallies. In three, the ball goes down in AZM's court (an
+  attack that gets through, and a serve AZM touches into the floor). In one, an HND touch sends the ball away and isn't
+  returned. Lines aren't resolvable in those rallies (`d_lines_m` empty) and the third rally is low confidence (0.5).
+- No fixture has a ball landing out (`in: false`). If one does, the team that touched it last is at fault
+  (`payload.last_touch_side` when present, otherwise the team that sent it over: `opponent(ev.side)`).

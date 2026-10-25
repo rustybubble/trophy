@@ -1,5 +1,5 @@
-# Written by the Factory Droid (interpreter job, D-43), live run 01M5S267AAK2ER89Q6Z9SWM0HZ on 2026-10-25: ready in 65 s,
-# 1 attempt, gate passed on evals/fixtures/annotated/basketball (hand-annotated). Gated sandbox commit 0561ab28fb7dc29fd8a8058edadc3c64ab25774a.
+# Written by the Factory Droid (interpreter job, D-43), live run 01M5SCPQJ2Y95HM2MZJN0CAAKJ on 2026-10-25: ready in 52 s,
+# 1 attempt, gate passed on evals/fixtures/annotated/basketball (hand-annotated). Gated sandbox commit 8c186b825ca5f3afc0fb25aff6468ae2cf559ce5.
 # Regenerate with: npm run cli -w @trophy/compiler -- interpreter --sport basketball
 sport: basketball
 family: possession
@@ -20,13 +20,16 @@ scoring:
     points_to_win: 11
 rules:
   # Pickup scoring ("1s and 2s", RULES.md): a made shot scores 2 if the shooter's release was beyond the
-  # three-point arc (behind_arc_p > 0.5), 1 otherwise. The release position, not where the ball lands, decides it.
+  # three-point arc, 1 otherwise. The release position (behind_arc_p), not where the ball lands, decides it.
+  # A close call near the line (RULES.md: the 23.3 s basket) is judged, not measured, so it runs BETA with
+  # the call's confidence taken from the measurement itself (p = behind_arc_p for 2, 1 - behind_arc_p for 1).
   - id: basket_made_beyond_arc
     name: Made basket beyond the arc
-    tier: AUTO
+    tier: BETA
     kind: basket
     when: "ev.type == 'shot' && ev.payload.made == true && ev.payload.behind_arc_p > 0.5"
     check: code
+    p: "ev.payload.behind_arc_p"
     outcome: basket
     team: "ev.team_id"
     points: 2
@@ -37,10 +40,11 @@ rules:
     rule_ref: "FIBA Article 16; RULES.md pickup 1s and 2s"
   - id: basket_made_inside_arc
     name: Made basket inside the arc
-    tier: AUTO
+    tier: BETA
     kind: basket
     when: "ev.type == 'shot' && ev.payload.made == true"
     check: code
+    p: "1.0 - ev.payload.behind_arc_p"
     outcome: basket
     team: "ev.team_id"
     points: 1

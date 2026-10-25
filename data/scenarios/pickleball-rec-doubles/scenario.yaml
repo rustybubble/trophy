@@ -1,17 +1,22 @@
+# Judging-demo pickleball scenario: one close line call (a ball just outside the sideline). Two-angle CC footage of one
+# pickleball game was searched for on 2026-10-25 and not found (see the agent report / credits.json), so this stays
+# one angle. Media is local and ignored: data/local/scenarios/pickleball-rec-doubles/mixer-corner.mp4.
 id: pickleball-rec-doubles
-title: Pickleball · rec doubles
+title: Pickleball · mixer doubles, sideline call
 sport: pickleball
 teams:
-  - {team_id: A, name: Near team}
-  - {team_id: B, name: Far team}
+  - {team_id: A, name: Near team, note: "near court (camera side); navy shirt with red knee sleeve dives for the ball at 14 s"}
+  - {team_id: B, name: Far team, note: "far court, beyond the net"}
 source: cc_by_online
-credit: "\"Pickleball Doubles Challenge Court in Melbourne, FL 06/09/2023 Game 1\" by BT Pickleball, CC BY (Creative Commons Attribution), youtube.com/watch?v=QhLECLlXU3c; segment 0:14-1:14, trimmed and re-encoded to 720p"
-source_url: https://www.youtube.com/watch?v=QhLECLlXU3c
-source_segment_s: [14.0, 74.0]
+credit: "\"Pickleball - Ultimate Mixer | SportsAlgo Coverage | BaselineSports x Kica x NetGala | Oct 2024' 3/8\" by SportsAlgo, CC BY (Creative Commons Attribution), youtube.com/watch?v=dVJ-fLqjE9A; segment 5:43.8-6:13.8, trimmed and re-encoded to 720p; SportsAlgo's own overlays (logo, minimap) are kept"
+source_url: https://www.youtube.com/watch?v=dVJ-fLqjE9A
+source_segment_s: [343.8, 373.8]
 annotated: true
-events: evals/fixtures/annotated/pickleball/rec-doubles.events.jsonl   # t_game_s = seconds from the segment start
-labels: evals/fixtures/annotated/pickleball/rec-doubles.labels.json
+events: evals/fixtures/annotated/pickleball/mixer-sideline.events.jsonl   # t_game_s = seconds from the segment start
+labels: evals/fixtures/annotated/pickleball/mixer-sideline.labels.json
 events_angle: Corner
-first_server: B
+close_calls:
+  - {t_s: 13.95, what: "far team's drive lands just outside the near left sideline", margin_m: -0.09, sigma_m: 0.12, p_in: 0.23, expected: "out, BETA (challengeable, p 0.77)"}
 angles:
-  - {label: Corner, file: data/local/scenarios/pickleball-rec-doubles/corner.mp4, start_s: 0, duration_s: 60.0, offset_s: 0}
+  - {label: Corner, file: data/local/scenarios/pickleball-rec-doubles/mixer-corner.mp4, start_s: 0, duration_s: 30.0, offset_s: 0}
+window_note: "One rally from 2 s to 15.4 s ends with the out call; the next rally starts at 17.5 s and is still going at 30 s."
