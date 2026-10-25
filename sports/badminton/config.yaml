@@ -11,3 +11,22 @@ court:
   surface: court
   net_x_m: 0.0
   net_height_m: 1.524           # at the centre
+# perception blocks the schema requires; unused here (annotated events, no events.py)
+ball:
+  diameter_m: 0.065              # shuttlecock skirt
+  colour: white
+  radius_px: {min: 2, max: 12}
+capture:
+  fps: 30
+  min_conf: 0.3
+bounce:
+  min_track_len: 2
+  min_vy_px_s: 40
+  plane_margin_m: 0.5
+  edge_band_m: 0.04              # lines are 40 mm wide and count as in
+  sigma_m: 0.10
+  merge_window_s: 0.12
+net:
+  window_m: 0.3
+dead:
+  gap_s: 1.5

@@ -1,0 +1,92 @@
+# Written by the Factory Droid (interpreter job, D-43), live run 01M5S1Y7HK3HER1YZC3Q1DWRM4 on 2026-10-25: ready in 65 s,
+# 1 attempt, gate passed on evals/fixtures/annotated/pickleball (hand-annotated). Gated sandbox commit 625cfedb61fd1e23c7abff3924f9fe87f5127bf8.
+# Regenerate with: npm run cli -w @trophy/compiler -- interpreter --sport pickleball
+# Sport module: pickleball (doubles) rule pack. CEL conditions run over ev (the current layer-2 event), rally
+# (rally.phase, bounces, last_bounce_side, at_fault_side, server_side, receiver, last_hitter) and params;
+# functions opponent(side) and phi(x). Rules are checked in order; the first scoring rule ends the rally.
+sport: pickleball
+family: flight
+version: 1
+name: Pickleball (doubles)
+teams:
+  - {team_id: A, name: Near team, color: "#1a1a1a"}
+  - {team_id: B, name: Far team, color: "#2e8b57"}
+params:
+  edge_band_m: 0.05        # config.yaml edge_band_m: lines are 2 in wide and count as in
+  kitchen_depth_m: 2.13
+field:
+  units: m
+  frame: "Origin on the ground under the centre of the net; +x toward team B's baseline; +y left looking from A to B; z up."
+  dims: {length: 13.41, width: 6.10, net_height: 0.914}
+  landmarks: []
+  lines:
+    baseline_A: [[-6.705, -3.05], [-6.705, 3.05]]
+    baseline_B: [[6.705, -3.05], [6.705, 3.05]]
+    sideline_left: [[-6.705, 3.05], [6.705, 3.05]]
+    sideline_right: [[-6.705, -3.05], [6.705, -3.05]]
+    kitchen_A: [[-2.13, -3.05], [-2.13, 3.05]]
+    kitchen_B: [[2.13, -3.05], [2.13, 3.05]]
+  zones:
+    kitchen_A: [[-2.13, -3.05], [0.0, -3.05], [0.0, 3.05], [-2.13, 3.05]]
+    kitchen_B: [[0.0, -3.05], [2.13, -3.05], [2.13, 3.05], [0.0, 3.05]]
+scoring:
+  template: side_out
+  params:
+    points_to_win: 11
+    win_by: 2
+    serves_per_turn: 2
+    deuce_serves_per_turn: 2
+    games_to_win: 1
+rules:
+  # Section 7: a ball into the net, or that does not clear it and falls back on the hitter's own side, is a fault
+  # on the team that hit it. There are no service lets: a ball that touches the net and still lands in is in play
+  # (that case does not match `kind: into`, so it does not reach this rule).
+  - id: net_fault
+    name: Ball into the net / does not clear
+    tier: AUTO
+    kind: point
+    when: "ev.type == 'net' && ev.payload.kind == 'into'"
+    check: code
+    outcome: fault
+    team: "opponent(ev.payload.from_side)"
+    at_fault: "ev.payload.from_side"
+    points: 1
+    text: "Fault: net. Point {team}"
+    speech: "Fault. Point, {team}."
+    requires: [net]
+    rule_ref: "USA Pickleball 2025, Section 7"
+
+  # Section 7: the rally is lost by the team that lets the ball bounce twice on its own side before returning it.
+  - id: not_returned_double_bounce
+    name: Ball not returned before the second bounce
+    tier: AUTO
+    kind: point
+    when: "ev.type == 'bounce' && ev.payload.surface == 'court' && rally.last_bounce_side == ev.side"
+    check: code
+    outcome: fault
+    team: "opponent(ev.side)"
+    at_fault: "ev.side"
+    points: 1
+    text: "Fault: not returned. Point {team}"
+    speech: "Fault. Point, {team}."
+    requires: [bounce]
+    rule_ref: "USA Pickleball 2025, Section 7"
+
+  # Section 6: a ball that first lands outside the baseline or sideline is out, a fault on the team that hit it.
+  - id: ball_out
+    name: Ball lands out of bounds
+    tier: AUTO
+    kind: point
+    when: "ev.type == 'bounce' && has(ev.payload.in) && ev.payload.in == false"
+    check: code
+    p: "1.0 - ev.payload.p_in"
+    outcome: out
+    team: "opponent(ev.side)"
+    at_fault: "ev.side"
+    points: 1
+    text: "Out. Point {team}"
+    speech: "Out. Point, {team}."
+    requires: [bounce]
+    rule_ref: "USA Pickleball 2025, Section 6"
+calibration:
+  T: 1.0

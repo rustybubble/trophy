@@ -1,0 +1,63 @@
+# Written by the Factory Droid (interpreter job, D-43), live run 01M5S20J4Z4C7EQNW68MXAFX13 on 2026-10-25: ready in 43 s,
+# 1 attempt, gate passed on evals/fixtures/annotated/volleyball (hand-annotated). Gated sandbox commit b34c127c4f308515eafbf5386ca562eb03e7b84c.
+# Regenerate with: npm run cli -w @trophy/compiler -- interpreter --sport volleyball
+# Sport module: indoor volleyball rule pack. Validated by rulepack.schema.json.
+# CEL conditions run over ev (the current layer-2 event), rally (rally.phase, bounces, last_bounce_side,
+# at_fault_side, server_side, receiver, last_hitter), game (points) and params; functions opponent(side), phi(x).
+# Rules are checked in order; the first scoring rule (kind point/violation/basket with points, or outcome let)
+# ends the rally.
+sport: volleyball
+family: flight
+version: 1
+name: Volleyball (indoor, amateur)
+teams:
+  - {team_id: A, name: Handymen, color: "#1f6fb2"}
+  - {team_id: B, name: AZIAN Mixed, color: "#2e2e2e"}
+params: {}
+field:
+  units: m
+  frame: "Origin on the floor under the centre of the net; +x toward team B's end line, +y to the left looking from A to B, z up."
+  dims: {length: 18.0, width: 9.0, net_height: 2.35}
+  landmarks: []
+scoring:
+  template: rally
+  params:
+    points_to_win: 25
+    win_by: 2
+    serves_per_turn: 1
+    deuce_serves_per_turn: 1
+    games_to_win: 1
+rules:
+  # Rule 8.3: the ball is in when it touches the floor of the playing court. The team on whose court it lands
+  # loses the rally (the other side scores).
+  - id: ball_in
+    name: Ball lands in on a side
+    tier: AUTO
+    kind: point
+    when: "ev.type == 'bounce' && ev.payload.surface == 'court' && has(ev.payload.in) && ev.payload.in == true"
+    check: code
+    outcome: point
+    team: "opponent(ev.side)"
+    at_fault: "ev.side"
+    points: 1
+    text: "Point {team}: ball in on {ev.side}'s side"
+    speech: "Point, {team}."
+    requires: [bounce]
+    rule_ref: "FIVB 8.3"
+  # Rule 9 / 8.4: if the rally dies (lost in flight, out of view) with no bounce yet in the rally, the side that
+  # last touched the ball failed to return it and loses the rally.
+  - id: ball_not_returned
+    name: Ball not returned after last touch
+    tier: BETA
+    kind: point
+    when: "ev.type == 'ball_dead' && rally.bounces == 0 && has(ev.payload.last_side)"
+    check: code
+    p: "0.6"
+    outcome: point
+    team: "opponent(ev.payload.last_side)"
+    at_fault: "ev.payload.last_side"
+    points: 1
+    text: "Point {team}: ball not returned"
+    speech: "Point, {team}."
+    requires: [ball_dead]
+    rule_ref: "FIVB 9.1"
