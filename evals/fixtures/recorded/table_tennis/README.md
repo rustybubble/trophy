@@ -7,3 +7,9 @@ them. Both are labelled by the people who played: ONE rally (70.7-102.0 s), won 
 five points on it (`called` in the labels); the gate's `calls:winner` row fails until a pack scores it as one point
 to B. Nothing here identifies anyone: pixel coordinates, confidences and events only. The footage stays in
 `data/local/` (gitignored). Bounce positions are not labelled (`bounces: []`, tolerances off); the outcome is.
+
+`g_mhwxxzpb_label01`, `g_mnygz0qm_label01`, `g_tcfktwyn_label01` (added 2026-10-25): the same two clips re-streamed live
+on the evidence branch, each labelled by the judge on the dashboard ("that was one rally, won by B") and exported by the
+engine's `label_rally` (layer-2 events plus per-call evidence digests). `g_tcfktwyn` ran on the Droid-written pack: BlurBall
+returned the false side-line bounce at conf 0.81 that time (0.68 in the first recording), so the pack called a double
+bounce; the Droid's correction run (01M5RYXPPF6WP7WXAQDKSJN0ZD) fixed it and is the shipped pack.

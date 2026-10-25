@@ -1,0 +1,211 @@
+{
+ "synthetic": false,
+ "label": "RECORDED 2026-10-24: real play labelled by the judge (layer-2 events as the engine saw them; no media)",
+ "sport": "table_tennis",
+ "labeller": "c_jpnc1x",
+ "game_id": "g_mnygz0qm",
+ "span_s": [
+  9.171,
+  48.235
+ ],
+ "rally_winner": "B",
+ "first_server": "B",
+ "bounces": [],
+ "tol_count": 100000,
+ "tol_t_s": 0.1,
+ "alternate_sides": false,
+ "min_recall": 0.0,
+ "min_precision": 0.0,
+ "engine": {
+  "dead_after_point_s": 3.0,
+  "server_from_first_hit": true
+ },
+ "called": [
+  {
+   "rule_id": "net_into_own_side",
+   "team_id": "A",
+   "t_game_s": 10.3038,
+   "event": {
+    "type": "net",
+    "side": "B",
+    "n_cams": 1,
+    "conf": 0.6,
+    "side_p": null,
+    "p_in": null,
+    "surface": null,
+    "kind": "into",
+    "x_m": null,
+    "sigma_m": null
+   },
+   "rally_before": {
+    "phase": "rally",
+    "bounces": 2,
+    "last_bounce_side": "A",
+    "last_bounce_side_p": 1.0,
+    "hits_since_last_bounce": 0,
+    "t_since_last_bounce_s": 0.2472,
+    "t_since_last_contact_s": -1.0
+   }
+  },
+  {
+   "rule_id": "double_bounce",
+   "team_id": "B",
+   "t_game_s": 14.5784,
+   "event": {
+    "type": "bounce",
+    "side": "A",
+    "n_cams": 2,
+    "conf": 0.9615044,
+    "side_p": 1.0,
+    "p_in": 1.0,
+    "surface": "table",
+    "kind": null,
+    "x_m": -0.6047,
+    "sigma_m": 0.0374
+   },
+   "rally_before": {
+    "phase": "rally",
+    "bounces": 7,
+    "last_bounce_side": "A",
+    "last_bounce_side_p": 0.9003,
+    "hits_since_last_bounce": 1,
+    "t_since_last_bounce_s": 0.8403,
+    "t_since_last_contact_s": 0.5456
+   }
+  },
+  {
+   "rule_id": "double_bounce",
+   "team_id": "A",
+   "t_game_s": 29.3725,
+   "event": {
+    "type": "bounce",
+    "side": "B",
+    "n_cams": 1,
+    "conf": 0.6345,
+    "side_p": 1.0,
+    "p_in": 0.5492,
+    "surface": "table",
+    "kind": null,
+    "x_m": 0.662,
+    "sigma_m": 0.042
+   },
+   "rally_before": {
+    "phase": "rally",
+    "bounces": 25,
+    "last_bounce_side": "B",
+    "last_bounce_side_p": 1.0,
+    "hits_since_last_bounce": 0,
+    "t_since_last_bounce_s": 0.9908,
+    "t_since_last_contact_s": 1.4147
+   }
+  },
+  {
+   "rule_id": "double_bounce",
+   "team_id": "A",
+   "t_game_s": 37.1756,
+   "event": {
+    "type": "bounce",
+    "side": "B",
+    "n_cams": 2,
+    "conf": 0.987454,
+    "side_p": 1.0,
+    "p_in": 1.0,
+    "surface": "table",
+    "kind": null,
+    "x_m": 0.2505,
+    "sigma_m": 0.0317
+   },
+   "rally_before": {
+    "phase": "rally",
+    "bounces": 37,
+    "last_bounce_side": "B",
+    "last_bounce_side_p": 1.0,
+    "hits_since_last_bounce": 0,
+    "t_since_last_bounce_s": 0.4396,
+    "t_since_last_contact_s": 0.5479
+   }
+  },
+  {
+   "rule_id": "double_bounce",
+   "team_id": "B",
+   "t_game_s": 41.5397,
+   "event": {
+    "type": "bounce",
+    "side": "A",
+    "n_cams": 1,
+    "conf": 0.7074,
+    "side_p": 1.0,
+    "p_in": 0.0001,
+    "surface": "table",
+    "kind": null,
+    "x_m": -0.2934,
+    "sigma_m": 0.0457
+   },
+   "rally_before": {
+    "phase": "rally",
+    "bounces": 43,
+    "last_bounce_side": "A",
+    "last_bounce_side_p": 1.0,
+    "hits_since_last_bounce": 0,
+    "t_since_last_bounce_s": 0.721,
+    "t_since_last_contact_s": 1.3711
+   }
+  },
+  {
+   "rule_id": "ball_dead_after_last_bounce",
+   "team_id": "B",
+   "t_game_s": 44.7372,
+   "event": {
+    "type": "ball_dead",
+    "side": "A",
+    "n_cams": 2,
+    "conf": 0.7,
+    "side_p": null,
+    "p_in": null,
+    "surface": null,
+    "kind": null,
+    "x_m": null,
+    "sigma_m": null
+   },
+   "rally_before": {
+    "phase": "rally",
+    "bounces": 45,
+    "last_bounce_side": "A",
+    "last_bounce_side_p": 1.0,
+    "hits_since_last_bounce": 0,
+    "t_since_last_bounce_s": 1.656,
+    "t_since_last_contact_s": 4.5686
+   }
+  },
+  {
+   "rule_id": "net_into_own_side",
+   "team_id": "A",
+   "t_game_s": 48.0705,
+   "event": {
+    "type": "net",
+    "side": "B",
+    "n_cams": 1,
+    "conf": 0.6,
+    "side_p": null,
+    "p_in": null,
+    "surface": null,
+    "kind": "into",
+    "x_m": null,
+    "sigma_m": null
+   },
+   "rally_before": {
+    "phase": "rally",
+    "bounces": 46,
+    "last_bounce_side": "B",
+    "last_bounce_side_p": 1.0,
+    "hits_since_last_bounce": 1,
+    "t_since_last_bounce_s": 1.8236,
+    "t_since_last_contact_s": 0.1696
+   }
+  }
+ ],
+ "end_ball_dead": {
+  "t_game_s": 49.035,
+  "last_side": "A"
+ }
+}

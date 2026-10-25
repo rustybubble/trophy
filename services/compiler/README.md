@@ -66,7 +66,7 @@ autonomy _off_ offers no Edit tool, autonomy _low_ auto-approves edits without a
    `__import__`, dunder access); the checks loader (`trophy_engine.checks.library`) applies the same allowlist to
    `checks/*.py` and additionally requires a top-level `PARAMS` and `check()`.
 
-**Model.** `DROID_MODEL` defaults to `claude-sonnet-5`. In SDK sessions some models (`claude-opus-5-5`,
+**Model.** `DROID_MODEL` defaults to `claude-sonnet-5`; pack and correction jobs run at reasoning effort `minimal` (`DROID_PACK_EFFORT` / `DROID_CORRECTION_EFFORT`): at `low` two live corrections sat silent for 210-545 s and timed out, at `minimal` the same job was ready in 328 s. In SDK sessions some models (`claude-opus-5-5`,
 `claude-fable-5.1`, `gpt-6-sol`; measured 2026-10-24) run in _script_ tool-execution mode, where edits happen inside a
 script the permission handler can only partly inspect; the runner refuses script confirmations, so pick a model that
 runs in direct mode (`claude-sonnet-5`, `claude-opus-4-8`).
@@ -157,6 +157,7 @@ house rules the Spacetime `house_rule` row via `update_house_rule_progress`, whi
 | correction: "9.2-48.1 s was ONE rally, won by B" on the live stream (2026-10-24, effort low, 300 s cap) | timed out | 1 | partial fix (`ev.side_p > 0.95` on double_bounce) after a 210 s silent gap; the cap is now 600 s and the label carries per-call evidence digests |
 | correction run #2 (600 s cap, labels with evidence digests) | timed out | 1 | 36 s of reading, 545 s silent, then two edits in the right direction (evidence params, `!rally.hit_since_last_bounce`), gate 41/46 at the cap |
 | compile_rules run #3, gated on 7 samples incl. 3 live-labelled rallies (600 s cap) | timed out | 1 | first edit at ~390 s; its pack failed `module:load` (multi-line `when:`) until the cap |
+| correction run #3 for live game g_tcfktwyn (effort **minimal**, 600 s cap), gated on 7 samples | **328 s** | 1 | **52/52** in 1.3 s: `evidence_min_conf` 0.82, new `double_bounce_min_p_in 0.9` (ittf:2.1.2); the shipped pack |
 
 ## Approval
 

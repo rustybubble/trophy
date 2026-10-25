@@ -8,6 +8,10 @@
 #   Laws it declared not encodable from the 2D pipeline: 2.6.2 toss, 2.6.4 position, 2.6.5 hidden serve (rules are
 #   present but need the fused 3D track's serve_* events). Validated by rulepack.schema.json. Agent 2 owns field:.
 #   The previous hand-written pack is kept only as a test fixture: services/engine/tests/fixtures/.
+#   Repaired by correction run 01M5RYXPPF6WP7WXAQDKSJN0ZD (effort minimal, first attempt, 328 s; gate 52/52 in 1.3 s), 2026-10-25,
+#   sandbox commit a44ff4b94bd5e41c0c822c5d02cacca6464df251, after the judge labelled live game g_tcfktwyn ("one rally,
+#   won by B"): evidence_min_conf 0.80 -> 0.82 and double_bounce_min_p_in 0.9 (the repeat bounce must be inside the
+#   lines, ittf:2.1.2). Gated on 2 synthetic + 5 judge-labelled recorded rallies.
 sport: table_tennis
 family: flight
 version: 1
@@ -22,9 +26,11 @@ params:
   net_let_on_serve: true        # a serve that clips the net and lands in is replayed (ITTF 2.9.1)
   serve_hidden_min_visible: 0.3 # ittf:2.6.5: below this the ball was effectively hidden from the receiver
   evidence_min_cams: 2          # a bounce/net seen by fewer cams AND below evidence_min_conf never reaches the rules
-  evidence_min_conf: 0.80
+  evidence_min_conf: 0.82       # a single-camera table bounce at conf 0.811 is an edge/side-face graze (p_in ~0.57,
+                                 # 7 mm from the sideline): below this it stays an observation and never updates rally state
   double_bounce_max_gap_s: 1.0  # a same-side bounce pair more than this apart is not treated as one uninterrupted double bounce
   double_bounce_min_side_p: 0.98 # both bounces of the pair must be almost certainly on that side (excludes near-net side_p ambiguity)
+  double_bounce_min_p_in: 0.9   # the repeat bounce must be almost certainly within the table lines (ittf:2.1.2), not an edge/side-face graze
 variants:
   ittf_strict: {serve_min_toss_m: 0.16, serve_max_angle_rad: 0.0873}
 field:
@@ -121,12 +127,15 @@ rules:
   # ittf:2.10.1.3 - the ball bounces twice on the same side with no racket contact between
   # the bounces: the side that let it bounce twice loses the point. Gated tight (quick,
   # no intervening hit, confident side assignment) so a single-camera reversal or a bounce
-  # pair a second apart (same side, hit in between) is never mistaken for this.
+  # pair a second apart (same side, hit in between) is never mistaken for this. Also
+  # requires the repeat bounce to be almost certainly inside the lines (ev.payload.p_in):
+  # a single-camera graze on the side face/edge (p_in near 0.5) is not a confirmed table
+  # touch under ittf:2.1.2, so it must not be allowed to end the rally.
   - id: double_bounce_same_side
     name: Double bounce, same side
     tier: BETA
     kind: point
-    when: "ev.type == 'bounce' && ev.payload.surface == 'table' && rally.last_bounce_surface == 'table' && ev.side == rally.last_bounce_side && !rally.hit_since_last_bounce && rally.t_since_last_bounce_s >= 0.0 && rally.t_since_last_bounce_s <= params.double_bounce_max_gap_s && rally.last_bounce_side_p >= params.double_bounce_min_side_p && ev.side_p >= params.double_bounce_min_side_p"
+    when: "ev.type == 'bounce' && ev.payload.surface == 'table' && ev.payload.p_in >= params.double_bounce_min_p_in && rally.last_bounce_surface == 'table' && ev.side == rally.last_bounce_side && !rally.hit_since_last_bounce && rally.t_since_last_bounce_s >= 0.0 && rally.t_since_last_bounce_s <= params.double_bounce_max_gap_s && rally.last_bounce_side_p >= params.double_bounce_min_side_p && ev.side_p >= params.double_bounce_min_side_p"
     check: code
     outcome: point
     team: "opponent(ev.side)"

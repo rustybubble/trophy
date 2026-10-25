@@ -125,13 +125,14 @@ async function main(argv: string[]): Promise<number> {
     values.labelled
       ? [values.labelled]
       : [join(REPO_ROOT, "evals/fixtures/recorded", sport), join(REPO_ROOT, "data/local/labelled", sport)];
-  // effort "low" like the measured house-rule runs: a first live compile_rules run at "medium" read its inputs for
-  // 40 s and then produced nothing for 440 s until the 480 s cap (2026-10-24); the budgets are wall-clock caps
-  const PACK_BUDGET = { timeoutS: 600, reasoningEffort: "low", maxAttempts: 4 };
-  // DROID_CORRECTION_EFFORT: both live correction runs at "low" spent 210-545 s silent before their first edit
+  // Reasoning effort, measured 2026-10-24/25 (claude-sonnet-5): "medium" read its inputs for 40 s then produced
+  // nothing until the cap; "low" spent 210-545 s silent before its first edit (two corrections timed out, one
+  // compile_rules passed in 531 s); "minimal" repaired the pack in 328 s, first attempt, 52/52. The budgets are
+  // wall-clock caps; DROID_PACK_EFFORT / DROID_CORRECTION_EFFORT override the effort.
+  const PACK_BUDGET = { timeoutS: 600, reasoningEffort: process.env.DROID_PACK_EFFORT || "minimal", maxAttempts: 4 };
   const CORRECTION_BUDGET = {
     timeoutS: 600,
-    reasoningEffort: process.env.DROID_CORRECTION_EFFORT || "low",
+    reasoningEffort: process.env.DROID_CORRECTION_EFFORT || "minimal",
     maxAttempts: 4,
   };
   switch (cmd) {
