@@ -6,7 +6,8 @@
     "packages/contracts",
     "packages/state-client",
     "spacetime",
-    "apps/pwa"
+    "apps/pwa",
+    "apps/dashboard"
   ],
   "scripts": {
     "dev": "python scripts/dev.py",
