@@ -333,6 +333,7 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
                 "X-W": _s(f["w"]),
                 "X-H": _s(f["h"]),
                 "X-T-Game-S": _s(f["t_game_s"]),
+                **({"X-Crop": _s(f["crop"])} if "crop" in f else {}),  # calibrate only on uncropped stills
                 "Cache-Control": "no-store",
             },
         )
@@ -423,6 +424,7 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
                         jpeg=jpeg,
                         source="ws",
                         flags=hdr.flags,
+                        crop=hdr.crop,
                     )
                 except ValueError as e:
                     errors += 1

@@ -1,10 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import type { Calibration, CalibrationRequest } from "@trophy/contracts";
 import type { Api } from "../lib/api.ts";
+import { tableCrop, type Crop } from "../lib/crop.ts";
 import { apply, invert3, TABLE_TENNIS } from "../lib/homography.ts";
 
-/** Calibration taps (interfaces-v1 §6): tap the table corners on a still, team A's end first; drag to adjust. */
-export function CalibrateView({ api, sport, onClose }: { api: Api; sport: string; onClose: (ok: boolean) => void }) {
+/**
+ * Calibration taps (interfaces-v1 §6): tap the table corners on a still, team A's end first; drag to adjust.
+ * The still must show the whole view, so the streamer stops cropping while this is open (the caller does that) and
+ * stills that are still cropped are skipped. On confirm, `onClose` also gets the table crop to stream from now on.
+ */
+export function CalibrateView({
+  api,
+  sport,
+  onClose,
+}: {
+  api: Api;
+  sport: string;
+  onClose: (ok: boolean, crop?: Crop | null) => void;
+}) {
   const [still, setStill] = useState<{ url: string; seq: number; w: number; h: number }>();
   const [pts, setPts] = useState<[number, number][]>([]);
   const [result, setResult] = useState<Calibration>();
@@ -16,14 +29,21 @@ export function CalibrateView({ api, sport, onClose }: { api: Api; sport: string
 
   useEffect(() => {
     let url: string | undefined;
-    api
-      .still()
-      .then((s) => {
-        url = URL.createObjectURL(s.blob);
-        setStill({ url, seq: s.seq, w: s.w, h: s.h });
-      })
-      .catch((e: unknown) => setErr(e instanceof Error ? e.message : String(e)));
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < 20 && !cancelled; i++) {
+        const s = await api.still();
+        if (!s.cropped) {
+          url = URL.createObjectURL(s.blob);
+          setStill({ url, seq: s.seq, w: s.w, h: s.h });
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 150)); // a cropped frame from before the crop was lifted
+      }
+      throw new Error("the camera is still sending cropped frames");
+    })().catch((e: unknown) => setErr(e instanceof Error ? e.message : String(e)));
     return () => {
+      cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
   }, [api]);
@@ -92,7 +112,7 @@ export function CalibrateView({ api, sport, onClose }: { api: Api; sport: string
     setBusy(true);
     try {
       await api.saveCalibration(result);
-      onClose(true);
+      onClose(true, still ? tableCrop(pts, still.w, still.h) : null);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
       setBusy(false);

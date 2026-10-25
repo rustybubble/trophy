@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FLAG_FIRST_AFTER_START, packFrame } from "../src/lib/frame.ts";
+import { tableCrop } from "../src/lib/crop.ts";
+import { FLAG_CROP, FLAG_FIRST_AFTER_START, packFrame } from "../src/lib/frame.ts";
 import { apply, invert3 } from "../src/lib/homography.ts";
 import { parseIntent } from "../src/lib/intent.ts";
 import { OnsetDetector } from "../src/lib/onset.ts";
@@ -25,7 +26,10 @@ describe("parseIntent", () => {
     ["undo", { kind: "undo" }],
     ["What's the score?", { kind: "score" }],
     ["House rule: first to 7, win by 1.", { kind: "house_rule", text: "first to 7, win by 1." }],
-    ["add a rule a serve that clips the net is a let", { kind: "house_rule", text: "a serve that clips the net is a let" }],
+    [
+      "add a rule a serve that clips the net is a let",
+      { kind: "house_rule", text: "a serve that clips the net is a let" },
+    ],
     ["Trophy, what's the rule on edge balls?", { kind: "ask", question: "what's the rule on edge balls?" }],
     ["  ", { kind: "none" }],
   ])("%s", (text, want) => {
@@ -82,5 +86,49 @@ describe("pickSegments", () => {
     expect(pickSegments(segs, 11_000, 13_000).map((s) => s.index)).toEqual([1, 2]);
     expect(pickSegments(segs, 30_000, 31_000)).toEqual([]);
     expect(pickSegments(segs, 12_005, 12_010).map((s) => s.index)).toEqual([]); // inside the restart gap
+  });
+});
+
+describe("table crop", () => {
+  it("packs the crop after the header and sets FLAG_CROP (trophy.framebus.parse_message reads it)", () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]).buffer;
+    const buf = packFrame(5, 1, jpeg, 0, { x: 0.125, y: 0.25, w: 0.5, h: 0.5 });
+    const v = new DataView(buf);
+    expect(v.getUint8(1) & FLAG_CROP).toBe(FLAG_CROP);
+    expect([16, 20, 24, 28].map((o) => v.getFloat32(o, true))).toEqual([0.125, 0.25, 0.5, 0.5]);
+    expect(new Uint8Array(buf, 32)).toEqual(new Uint8Array(jpeg));
+    expect(packFrame(6, 1, jpeg).byteLength).toBe(16 + 4);
+  });
+
+  it("frames the table with margins at 16:9, inside the view", () => {
+    // a side view: table corners spanning x 400..880, y 380..430 of 1280x720
+    const c = tableCrop(
+      [
+        [400, 400],
+        [880, 400],
+        [870, 430],
+        [410, 380],
+      ],
+      1280,
+      720,
+    )!;
+    expect(c.x * 1280).toBeLessThan(400 - 0.3 * 480);
+    expect((c.x + c.w) * 1280).toBeGreaterThan(880 + 0.3 * 480);
+    expect(c.y * 720).toBeLessThan(380 - 0.45 * 480);
+    expect((c.w * 1280) / (c.h * 720)).toBeCloseTo(16 / 9, 3);
+    expect(c.x >= 0 && c.y >= 0 && c.x + c.w <= 1 + 1e-9 && c.y + c.h <= 1 + 1e-9).toBe(true);
+    // a table filling the view: no point cropping
+    expect(
+      tableCrop(
+        [
+          [100, 400],
+          [1180, 400],
+          [1180, 450],
+          [100, 450],
+        ],
+        1280,
+        720,
+      ),
+    ).toBeNull();
   });
 });

@@ -1,5 +1,6 @@
 // JPEG-over-WebSocket frame streamer (interfaces-v1 §5.1): latest frame wins. A frame is encoded only when
 // the previous one is done and sent only when ws.bufferedAmount === 0; otherwise it's skipped.
+import type { Crop } from "./crop.ts";
 import { FLAG_FIRST_AFTER_START, packFrame, phoneMs } from "./frame.ts";
 
 export interface StreamStats {
@@ -10,6 +11,8 @@ export interface StreamStats {
   kbPerFrame: number;
   w: number;
   h: number;
+  /** linear zoom vs streaming the whole view at the same size (1 = uncropped) */
+  zoom: number;
 }
 
 type VideoWithRvfc = HTMLVideoElement & {
@@ -31,7 +34,9 @@ export class FrameStreamer {
   private encodeSum = 0;
   private bytesSum = 0;
   private retry = 500;
-  stats: StreamStats = { connected: false, sentFps: 0, skipped: 0, encodeMs: 0, kbPerFrame: 0, w: 0, h: 0 };
+  stats: StreamStats = { connected: false, sentFps: 0, skipped: 0, encodeMs: 0, kbPerFrame: 0, w: 0, h: 0, zoom: 1 };
+  /** stream only this region of the view (from the full-resolution capture); null = the whole view */
+  crop: Crop | null = null;
 
   constructor(
     private readonly video: VideoWithRvfc,
@@ -95,9 +100,12 @@ export class FrameStreamer {
     const vw = this.video.videoWidth;
     const vh = this.video.videoHeight;
     if (!vw || !vh) return;
-    const scale = Math.min(1, this.maxW / Math.max(vw, vh), this.maxH / Math.min(vw, vh));
-    const w = Math.round(vw * scale);
-    const h = Math.round(vh * scale);
+    const c = this.crop;
+    const [sx, sy, sw, sh] = c ? [c.x * vw, c.y * vh, c.w * vw, c.h * vh] : [0, 0, vw, vh];
+    const scale = Math.min(1, this.maxW / Math.max(sw, sh), this.maxH / Math.min(sw, sh)); // never upscale
+    const w = Math.round(sw * scale);
+    const h = Math.round(sh * scale);
+    const full = Math.min(1, this.maxW / Math.max(vw, vh), this.maxH / Math.min(vw, vh));
     this.busy = true;
     const t = phoneMs(perfTime);
     try {
@@ -106,18 +114,19 @@ export class FrameStreamer {
         this.canvas.height = h;
       }
       const t0 = performance.now();
-      this.g.drawImage(this.video, 0, 0, w, h);
+      this.g.drawImage(this.video, sx, sy, sw, sh, 0, 0, w, h);
       const blob = await new Promise<Blob | null>((res) => this.canvas.toBlob(res, "image/jpeg", this.quality));
       if (!blob) return;
       const jpeg = await blob.arrayBuffer();
       this.encodeSum += performance.now() - t0;
       this.bytesSum += jpeg.byteLength;
       if (ws.readyState !== WebSocket.OPEN) return;
-      ws.send(packFrame(this.seq++, t, jpeg, this.first ? FLAG_FIRST_AFTER_START : 0));
+      ws.send(packFrame(this.seq++, t, jpeg, this.first ? FLAG_FIRST_AFTER_START : 0, c));
       this.first = false;
       this.sentInWindow++;
       this.stats.w = w;
       this.stats.h = h;
+      this.stats.zoom = scale / full;
     } finally {
       this.busy = false;
     }

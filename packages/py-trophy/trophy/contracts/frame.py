@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class FrameMeta(BaseModel):
     """
-    Fields of a Redis frames:{cam_id} entry except `data` (the JPEG bytes), interfaces-v1 §5.2. Redis stores every field as a string; trophy.framebus parses them. The phone->gateway WS message is a 16-byte little-endian header (u8 version=1, u8 flags, u16 reserved, u32 seq, f64 t_capture_phone_ms) followed by the JPEG (§5.1).
+    Fields of a Redis frames:{cam_id} entry except `data` (the JPEG bytes), interfaces-v1 §5.2. Redis stores every field as a string; trophy.framebus parses them. The phone->gateway WS message is a 16-byte little-endian header (u8 version=1, u8 flags, u16 reserved, u32 seq, f64 t_capture_phone_ms) followed by the JPEG (§5.1); if flags bit2 is set, 16 more bytes (4 × f32 LE: crop x, y, w, h) come before the JPEG.
     """
 
     model_config = ConfigDict(
@@ -27,4 +27,11 @@ class FrameMeta(BaseModel):
     h: int = Field(..., ge=1)
     fmt: Literal["jpeg"]
     source: Literal["ws", "webrtc", "file"]
-    flags: int | None = Field(None, description="bit0 calibration still, bit1 first frame after (re)start")
+    flags: int | None = Field(
+        None, description="bit0 calibration still, bit1 first frame after (re)start, bit2 cropped (see crop)"
+    )
+    crop: str | None = Field(
+        None,
+        description="Only on cropped frames: x,y,w,h of the region this frame shows, normalised to the camera's full view (0..1). A pixel (u, v) of the frame is at (x + u/w_px*w, y + v/h_px*h) of the full view. Calibration (§6) is always on uncropped frames.",
+        pattern="^[0-9.eE+-]+(,[0-9.eE+-]+){3}$",
+    )

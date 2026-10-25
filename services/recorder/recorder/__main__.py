@@ -13,11 +13,14 @@ from trophy.recordings import ffmpeg_binary, select_encoder
 from .service import Recorder
 from .state import GameEndMonitor
 
+ROOT = Path(__file__).resolve().parents[3]
+DATA_DIR = Path(os.environ.get("TROPHY_DATA_DIR") or ROOT / "data" / "local")  # same as the gateway's data_dir
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Record local camera streams; Ctrl-C finalizes HLS.")
     parser.add_argument("--redis-url", default=os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0"))
-    parser.add_argument("--root", type=Path, default=Path("data/local/recordings"))
+    parser.add_argument("--root", type=Path, default=DATA_DIR / "recordings")
     parser.add_argument("--fps", type=int, default=30)
     parser.add_argument("--encoder", default="auto")
     parser.add_argument("--stdb-uri", default=os.environ.get("SPACETIME_URI", "http://127.0.0.1:3000"))

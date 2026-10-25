@@ -3,6 +3,7 @@ import type { MockScript } from "@trophy/state-client";
 import { Api, forgetSession, type AskAnswer, type Session } from "../lib/api.ts";
 import { beep, startOnsets } from "../lib/audio.ts";
 import { fakeCamera, openRearCamera, type CameraInfo } from "../lib/camera.ts";
+import type { Crop } from "../lib/crop.ts";
 import { CtlSocket, type SyncState } from "../lib/ctl.ts";
 import { parseIntent } from "../lib/intent.ts";
 import { QUALITY, SegmentRecorder, type Quality } from "../lib/recorder.ts";
@@ -49,6 +50,16 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
   const [answer, setAnswer] = useState<{ q: string; a?: AskAnswer; err?: string }>();
   const [calibrating, setCalibrating] = useState(false);
   const [calibratedHere, setCalibratedHere] = useState(false);
+  const cropKey = `trophy.crop.${session.gameId}.${session.camId}`;
+  const [tableCrop, setTableCrop] = useState<Crop | null>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(cropKey) ?? "null") as Crop | null;
+    } catch {
+      return null;
+    }
+  });
+  const [zoomOn, setZoomOn] = useState(() => pref("zoom", true));
+  const streamerRef = useRef<FrameStreamer | undefined>(undefined);
   const [sheet, setSheet] = useState<"menu" | "judge" | "stats" | undefined>(
     params.get("test") === "1" ? "stats" : undefined,
   );
@@ -128,6 +139,7 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
           session.frame.w,
           session.frame.h,
         );
+        streamerRef.current = streamer;
         streamer.start();
         const q = QUALITY[quality];
         if (q) {
@@ -156,6 +168,7 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
     return () => {
       stopped = true;
       streamer?.stop();
+      streamerRef.current = undefined;
       recorderRef.current?.stop();
       recorderRef.current = undefined;
       setRecording(undefined);
@@ -163,6 +176,12 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
       (videoRef.current?.srcObject as MediaStream | null)?.getTracks().forEach((t) => t.stop());
     };
   }, [isCam, api, ctl, session.frame, quality]);
+
+  // stream only the table region once it's known (never while calibrating: the still must show the whole view)
+  const activeCrop = !calibrating && zoomOn ? tableCrop : null;
+  useEffect(() => {
+    if (streamerRef.current) streamerRef.current.crop = activeCrop;
+  });
 
   // health every 5 s
   useEffect(() => {
@@ -443,6 +462,19 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
               />
               Also read every score change
             </label>
+            {isCam && tableCrop && (
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={zoomOn}
+                  onChange={(e) => {
+                    setZoomOn(e.target.checked);
+                    savePref("zoom", e.target.checked);
+                  }}
+                />
+                Zoom the stream to the table (sharper ball)
+              </label>
+            )}
             {isCam && (
               <label className="toggle">
                 Replay recording
@@ -499,8 +531,9 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
             <div>replay recording: {recording ?? "off"}</div>
             {stats && (
               <div>
-                sending {stats.sentFps.toFixed(1)} fps · {stats.w}×{stats.h} · encode {stats.encodeMs.toFixed(1)} ms ·{" "}
-                {stats.kbPerFrame.toFixed(0)} KB/frame · skipped {stats.skipped}
+                sending {stats.sentFps.toFixed(1)} fps · {stats.w}×{stats.h}
+                {stats.zoom > 1.01 ? ` (table zoom ${stats.zoom.toFixed(1)}×)` : ""} · encode{" "}
+                {stats.encodeMs.toFixed(1)} ms · {stats.kbPerFrame.toFixed(0)} KB/frame · skipped {stats.skipped}
               </div>
             )}
             <div>
@@ -543,9 +576,16 @@ export function LiveView({ session, mock, onLeave }: { session: Session; mock?: 
         <CalibrateView
           api={api}
           sport={g.game?.sport ?? "table_tennis"}
-          onClose={(ok) => {
+          onClose={(ok, crop) => {
             setCalibrating(false);
-            if (ok) setCalibratedHere(true);
+            if (!ok) return;
+            setCalibratedHere(true);
+            setTableCrop(crop ?? null);
+            try {
+              localStorage.setItem(cropKey, JSON.stringify(crop ?? null));
+            } catch {
+              /* storage unavailable */
+            }
           }}
         />
       )}

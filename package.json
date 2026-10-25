@@ -9,6 +9,7 @@
     "apps/pwa"
   ],
   "scripts": {
+    "dev": "python scripts/dev.py",
     "contracts": "node scripts/gen-contracts.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint packages apps",
