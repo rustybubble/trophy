@@ -10,7 +10,7 @@ This file is the source of truth for wire formats **until Agent 1 lands checkpoi
 > - **Event (§7):** every payload in the table is a typed `$def` (`BouncePayload`, `ServeTossPayload`, …); `trophy.events.make_event` validates it. `serve_toss` points use `pos_m: {x, y, z}` like everything else. Any payload may carry `calib_untrusted`.
 > - **Call (§10):** adds optional `rally_no`, `emotion` (Cartesia, game/match point only), `suggested` (the decide() verdict, advisory) and `overlay.serve_toss_event_id` (the toss trace the replay draws).
 > - **`ai_vote` (§11) is keyed by `(call_id, backend)`**, with `challenge_id` nullable: votes start speculatively before any challenge exists (D-23). See D-25.
-> - **Reducer args (§7.1, §11):** reducers take one JSON string argument (e.g. `post_observations(batch_json)`, a JSON array). The HTTP body is the args array, so it's `["<json text>"]`. Verified in the Spacetime spike (`spikes/spacetime-latency/`).
+> - **Reducer args (§7.1, §11):** reducers take one JSON string argument (e.g. `post_observations(batch_json)`, a JSON array). The HTTP body is the args array, so it's `["<json text>"]`. Verified in the Spacetime latency spike (removed in the 2026-10-24 cleanup; numbers in `docs/status/a1.md`).
 > - **Vision identity:** `trophy.world` writers send `Authorization: Bearer $SPACETIME_VISION_TOKEN` (new `.env` key).
 > - **`TrophyState` (§11)** adds `synthetic`, `label`, `calls()`, `scores()`, `onObservation` and `onTrackSample` (the world view), and every `on*` replays known rows first. `MockState` scripts are `trophy.mock_script.v1`.
 > - **`/api/ws/ctl` (§13):** `ping {t0, prev?}` carries the previous completed exchange `{t0, t1, t2, t3}` so the gateway can fit the clock (`trophy.timebase.ClockFit`).
@@ -336,7 +336,7 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 ## 14. Dev and runtime conventions (M5 Pro)
 - **One HTTPS origin for phones** (OPEN-2). Caddy + a DNS-01 certificate for a real domain pointing at the Mac's LAN IP is required for WebRTC and best for 720p30. A tunnel (cloudflared/ngrok) works for WebSocket only and adds latency, so it's acceptable for day-1 UI work only.
 - **Ports:** gateway 8000, courtcam-adapter 8050, SpacetimeDB 3000, Redis 6379, PWA 5173, dashboard 5174. Each worktree adds its offset (A1 +0, A2 +100, A3 +200).
-- **Native processes** in per-service `uv` venvs, run under a `Procfile` (`make dev`). The `docker-compose.yml` is the Linux/AWS path.
+- **Native processes** in per-service `uv` venvs, run under a `Procfile` (`make dev`). A tested compose stack for a later Linux deploy is on the closed rustybubble/trophy#16.
 - **`.env`** is never committed: `TROPHY_TOKEN_SECRET`, `REDIS_URL`, `SPACETIME_URI`, `SPACETIME_MODULE`, `SPACETIME_ENGINE_TOKEN`, `SPACETIME_COMPILER_TOKEN`, `SPACETIME_VISION_TOKEN`, `ANTHROPIC_API_KEY`, `CLAUDE_MODEL`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `BITDEER_API_KEY`, `BITDEER_BASE_URL=https://api-inference.bitdeer.ai/v1`, `BITDEER_VISION_MODEL`, `CARTESIA_API_KEY`, `CARTESIA_VERSION`, `CARTESIA_VOICE_CALLS`, `CARTESIA_VOICE_REF`, `FACTORY_API_KEY`, `MOSS_PROJECT_ID`, `MOSS_PROJECT_KEY`, `APIFY_TOKEN`, optional `ROBOFLOW_API_KEY`. Ports for the new services: `rules` 8100, `compiler` 8200.
 
 ---
@@ -366,6 +366,8 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
 - **As built (2026-10-24, `apps/pwa`):** a new call cancels the line that's still playing (a fresh `context_id` per line, `cancel` on the old one, rather than one continued context per game). Push-to-talk **reuses the raw onset mic** when it's open instead of opening a second, echo-cancelled track, because iOS can mute an earlier capture when a second one starts; Ink-2 transcribed correctly without echo cancellation in the iPhone spike. Calls older than 15 s when they arrive (e.g. after a reconnect) are listed, not announced.
 
 ## 17. Ask the ref: Apify → Moss → Claude (Agent 3, `services/rules`)
+> **Dropped (D-36, the user 2026-10-24):** Moss and Apify are out and `services/rules` was never merged. Ask the ref is the referee service (§20, D-37, rustybubble/trophy#19). This section is kept only as the record of the old design.
+
 - **Apify actor "Sports Rulebook Scraper"** (`actors/rulebook-scraper/`, Python Apify SDK + Crawlee):
   - Input: `{sources: [{sport, url, kind: "html"|"pdf"}]}`.
   - Output dataset items, **one per rule**: `{sport, rule_id, title, text, url, source, license_note, fetched_at}`.

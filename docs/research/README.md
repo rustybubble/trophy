@@ -1,6 +1,6 @@
 # Research notes
 
-Dated integration research (2026-10-22/23). Facts are tagged in each file, and anything marked est./[I] must be measured. They are **evidence, not instructions**: re-verify versions and license terms before adopting anything, and treat upstream benchmark numbers as upstream until we reproduce them. Superseded notes are in `docs/archive/`.
+Dated integration research (2026-10-22/23). Facts are tagged in each file, and anything marked est./[I] must be measured. They are **evidence, not instructions**: re-verify versions and license terms before adopting anything, and treat upstream benchmark numbers as upstream until we reproduce them. Superseded plans were removed in the 2026-10-24 cleanup; they are in git history before that commit.
 
 | Note | Still useful for |
 |---|---|
@@ -13,4 +13,4 @@ Dated integration research (2026-10-22/23). Facts are tagged in each file, and a
 | [rules-violations-video-llm-refs](rules-violations-video-llm-refs.md) | Background on video-LLM refereeing limits (for the Anthropic "where it could go wrong" section) |
 | [replay-3d-highlights-commentary](replay-3d-highlights-commentary.md) | Post-weekend replay angles and highlights |
 | [replay-source-review-2026-10-23](replay-source-review-2026-10-23.md) | **What to reuse from Replay and courtcam** (direct source review) |
-| `clips-*-family-full-list.md` | Alternate CC BY clips per sport |
+| `clips-flight-family-full-list.md`, `clips-possession-family-full-list.md` | Alternate CC BY clips per sport |
