@@ -49,9 +49,9 @@ licences) or upload clips:
 Every clip then joins the game as a camera phone and streams 1280x720 JPEG at 30 fps in real time over the same socket a
 phone uses. Nothing downstream knows it's a file:
 ```
-stream_clips.py --(ws/frames, real time)--> gateway --> frames:{cam} --> flight.live: BlurBall (MPS, fp16) per frame
-   --> trk:ball:{cam} --> trophy-live: short dropouts completed (PCHIP, D-39), then the golden sports/table_tennis/events.py,
-       sliding window, all cameras together
+stream_clips.py --(ws/frames, real time)--> gateway --> frames:{cam} --> flight.live (the one live loop, D-40):
+   BlurBall (MPS) + the gated tracker per frame --> trk:ball:{cam}; then short dropouts completed (PCHIP, D-39) and the
+   golden sports/table_tennis/events.py over all of the game's cameras together (+ flight's serve_toss)
    --> ev:flight --> trophy-engine --> Spacetime --> dashboard (calls, score, world state) + phones (spoken calls)
 ```
 The panel shows each camera's live frame (`/api/demo/cams/<cam>/live`) with BlurBall's detection for that frame. Calls are

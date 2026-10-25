@@ -41,6 +41,7 @@ class Tracker:
         self.tentative: list[_Track] = []
         self._next_id = 1
         self.out: list[dict] = []
+        self.fresh: list[dict] = []  # samples emitted since the last `drain()` (a promotion back-fills its chain)
 
     def _new(self, xy, t, cand, frame) -> _Track:
         tr = _Track(self._next_id, np.asarray(xy, float), np.zeros(2), t)
@@ -99,6 +100,7 @@ class Tracker:
             if best is not None:
                 emitted = self._update(tr, best, t_s, frame)
                 self.out.append(emitted)
+                self.fresh.append(emitted)
                 cands.remove(best)
             else:
                 tr.misses += 1
@@ -144,8 +146,14 @@ class Tracker:
             self.tentative = [x for x in self.tentative if x is not tr]
             self.out.extend(tr.chain)
             self.out.sort(key=lambda s: s["t_s"])
+            self.fresh.extend(tr.chain)
             emitted = tr.chain[-1]
         return emitted
+
+    def drain(self) -> list[dict]:
+        """The samples emitted since the last call, in time order (for a live loop; `out` keeps the whole track)."""
+        got, self.fresh = sorted(self.fresh, key=lambda s: s["t_s"]), []
+        return got
 
     def run(self, frames) -> list[dict]:
         for fr in frames:

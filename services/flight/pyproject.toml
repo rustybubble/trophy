@@ -6,18 +6,21 @@ requires-python = ">=3.11,<3.12"
 dependencies = [
     "numpy==1.26.4",
     "opencv-python-headless==4.10.0.84",
-    # flight.live: BlurBall on MPS (the adapter + weights live in spikes/serve-analysis, Mu's validated pins)
-    "torch==2.9.0",
-    "pyyaml==6.0.3",
     "redis>=5",
     "trophy",
+    "trophy-engine",  # the live seam runs the golden sport module (sports/<sport>/events.py) through its loader
 ]
+
+[project.optional-dependencies]
+# BlurBall on MPS (D-30). Pins from CLAUDE.md Gotchas: numpy < 2, OpenCV 4.10, torch < 2.6.
+blurball = ["torch==2.5.1", "pyyaml>=6"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff==0.14.5", "fakeredis>=2.26"]
 
 [tool.uv.sources]
 trophy = { path = "../../packages/py-trophy", editable = true }
-
-[dependency-groups]
-dev = ["pytest>=8", "ruff==0.14.5"]
+trophy-engine = { path = "../engine", editable = true }
 
 [build-system]
 requires = ["hatchling"]
@@ -29,6 +32,7 @@ packages = ["flight"]
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+extend-exclude = ["vendor"]  # upstream BlurBall, vendored unmodified
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]

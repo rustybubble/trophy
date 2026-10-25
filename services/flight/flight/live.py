@@ -1,17 +1,24 @@
-"""`python -m flight.live`: BlurBall on every live camera stream, in real time.
+"""Live flight: Redis `frames:{cam}` -> ball track -> measurements on `ev:flight` + Spacetime (one or more phones).
 
-    uv run --directory services/flight --frozen python -m flight.live [--stride 3] [--fp32] [--device auto]
+    uv run --extra blurball python -m flight.live --game <g_id | next> [--detector blurball|classical]
+                                                  [--corners cam=x,y,x,y,x,y,x,y]
 
-For each camera that is streaming (`frames:{cam}` on Redis, written by the gateway for phones and for recorded clips
-streamed as phones alike), it decodes the JPEGs as they arrive, runs BlurBall on windows of three consecutive frames
-and publishes one `BallTrackSample` per processed frame to `trk:ball:{cam}` (field `json`; interfaces-v1 §8; `px` null
-when no ball was found). With the camera's calibration (`calib:{cam}`, set by the phone or the clip streamer) it also
-mirrors the ball's table position into Spacetime `track_sample` at 10 Hz for the dashboard's world view.
+Per camera (role "cam"), a worker reads every frame (`trophy.framebus.FrameReader`, never a backlog; frames zoomed to
+the table by the phone, D-29, are mapped back to the full view through their `crop`), runs the ball detector (BlurBall
+on MPS by default, D-30; or the classical MOG2 + colour floor) and #19's gated tracker, and writes `trk:ball:{cam}`
+every frame plus Spacetime `track_sample` at 10 Hz.
 
-It never processes a backlog: a camera that falls more than `--max-lag` frames behind skips to its newest frames
-(counted as `skipped`). Every 5 s it logs, per camera, the processed fps, detection rate, skipped frames, model time
-and the real-time lag (now minus the frame's capture time on the game clock). The engine side
-(`trophy-live`, services/engine) turns the samples into bounces/contacts/dead balls with the golden sport module.
+The seam with the engine (agreed in docs/status/a2.md): flight runs the golden sport module
+`sports/table_tennis/events.py` (the same code the Droid's gate replays) on its layer-1 ball samples, live, and
+publishes the events on `ev:flight`; the engine consumes them unchanged. The module is batch, so it is re-run every
+`--every` seconds over the current rally segment (activity bounded by `dead.gap_s` of no moving ball): events are
+published once they are `--settle` seconds old, deduplicated by their deterministic id, and the "ball lost"
+`ball_dead` only when the segment closes. A `serve_toss` (D-31, `flight.serve`) is measured from the segment's first
+rise and published when its strike is seen (or when the segment closes).
+
+Calibration comes from `calib:{cam}` (the PWA's four taps; reloaded on `ctl:calib`) or `--corners`. Without a trusted
+calibration every event carries `calib_untrusted` and the engine caps tiers at BETA. A camera without any calibration
+is tracked but produces no events (no field geometry, no measurement).
 """
 
 from __future__ import annotations
@@ -19,301 +26,652 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import os
-import signal
+import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import cv2
 import numpy as np
 import redis
-from trophy.framebus import FrameReader
-from trophy.streams import calib_key, cam_key, game_key, trk_ball_key
+from trophy.events import parse_event
+from trophy.framebus import Crop, FrameReader
+from trophy.streams import CTL_CALIB, EV_FLIGHT, EVENT_STREAM_MAXLEN, calib_key, cam_key, game_key
+from trophy.tracks import BallTrackWriter
+from trophy.world import ObservationWriter, SpacetimeClient, TrackSampleWriter
 
-from .blurball import BlurBall, load
+from . import field as F
+from .calib import Camera as PoseCamera
+from .calib import solve_pose
+from .serve import TossParams
+from .serve import estimate as estimate_toss
+from .track import Tracker
 
-ROOT = Path(__file__).resolve().parents[3]
-TRK_MAXLEN = 20_000
-log = logging.getLogger("flight.live")
+log = logging.getLogger("trophy.flight")
+REPO = Path(__file__).resolve().parents[3]
+REF_W, REF_H = 1280, 720  # the reference view: calibration taps and every output pixel live here
+SPORT = "table_tennis"
+# field.json corner order (A-right, B-right, B-left, A-left) <-> the PWA's tap names
+TAP_ORDER = ("A_right", "B_right", "B_left", "A_left")
 
 
-def dotenv() -> dict[str, str]:
+def _env() -> dict[str, str]:
     out: dict[str, str] = {}
-    p = ROOT / ".env"
+    p = REPO / ".env"
     if p.exists():
         for line in p.read_text("utf8").splitlines():
             if "=" in line and not line.lstrip().startswith("#"):
                 k, v = line.split("=", 1)
                 out[k.strip()] = v.split(" #")[0].strip()
-    return out
+    return {**out, **os.environ}
 
 
-def apply_h(h: list[float], u: float, v: float) -> tuple[float, float] | None:
-    w = h[6] * u + h[7] * v + h[8]
-    if abs(w) < 1e-9:
-        return None
-    return ((h[0] * u + h[1] * v + h[2]) / w, (h[3] * u + h[4] * v + h[5]) / w)
+def jlog(msg: str, **kw: Any) -> None:
+    log.info(json.dumps({"svc": "flight", "msg": msg, **kw}, default=str))
+
+
+# ---------------------------------------------------------------- calibration
 
 
 @dataclass
-class Cam:
+class CamCalib:
+    """One camera's geometry: the module's homography view and, when solvable, the pose for the serve toss."""
+
     cam_id: str
-    game_id: str
-    reader: FrameReader
-    t0_ms: float
-    buf: list = field(default_factory=list)  # (seq, t_game_s, t_srv_ms, Future[prepared]) not yet in a window
-    calib_h: list[float] | None = None
-    calib_size: tuple[int, int] | None = None
-    last_frame_wall: float = field(default_factory=time.time)
-    # stats for the current reporting interval
-    n: int = 0
-    det: int = 0
-    lags: list = field(default_factory=list)
-    skipped0: int = 0
-    total: int = 0
-    total_det: int = 0
+    H: tuple[float, ...]
+    trusted: bool
+    reproj_err_px: float
+    image_w: int
+    image_h: int
+    pose: PoseCamera | None
+    source: str
+
+    def module_camera(self, fps: float):
+        from trophy_engine.sportmod.api import Camera
+
+        return Camera(self.cam_id, self.image_w, self.image_h, self.H, self.trusted, self.reproj_err_px, fps)
 
 
-class Live:
-    def __init__(self, r: redis.Redis, bb: BlurBall, stride: int, max_lag: int, world) -> None:
-        self.r = r
-        self.bb = bb
-        self.stride = stride
-        self.max_lag = max_lag
-        self.world = world  # TrackSampleWriter or None
-        self.cams: dict[str, Cam] = {}
-        self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="decode")
-        self.last_scan = 0.0
-        self.last_report = time.time()
-        self.model_ms0 = 0.0
-        self.calls0 = 0
-
-    def scan(self) -> None:
-        """Pick up new camera streams; drop ones silent for 10 s."""
-        now = time.time()
-        if now - self.last_scan < 1.0:
-            return
-        self.last_scan = now
-        for raw in self.r.scan_iter(match="frames:*", count=200):
-            key = raw.decode()
-            cam_id = key.split(":", 1)[1]
-            if cam_id in self.cams:
-                continue
-            gid = self.r.hget(cam_key(cam_id), "game_id")
-            if not gid:
-                continue
-            newest = self.r.xrevrange(key, count=1)
-            if not newest or now * 1000 - float(newest[0][0].decode().split("-")[0]) > 3000:
-                continue  # an old stream: nothing live there
-            gid = gid.decode()
-            t0 = self.r.hget(game_key(gid), "t0_ms")
-            cam = Cam(
-                cam_id,
-                gid,
-                FrameReader(self.r, cam_id, mode="all", max_lag=self.max_lag),
-                float(t0) if t0 else now * 1000,
-            )
-            self.load_calib(cam)
-            self.cams[cam_id] = cam
-            log.info(
-                json.dumps(
-                    {
-                        "svc": "flight",
-                        "msg": "camera live",
-                        "cam_id": cam_id,
-                        "game_id": gid,
-                        "calibrated": cam.calib_h is not None,
-                    }
-                )
-            )
-        for cam_id, cam in list(self.cams.items()):
-            if now - cam.last_frame_wall > 10:
-                log.info(
-                    json.dumps(
-                        {
-                            "svc": "flight",
-                            "msg": "camera idle",
-                            "cam_id": cam_id,
-                            "frames": cam.total,
-                            "detected": cam.total_det,
-                        }
-                    )
-                )
-                del self.cams[cam_id]
-            elif cam.calib_h is None:
-                self.load_calib(cam)
-
-    def load_calib(self, cam: Cam) -> None:
-        raw = self.r.get(calib_key(cam.cam_id))
-        if not raw:
-            return
-        doc = json.loads(raw)
-        h = doc.get("H_img_to_field")
-        size = doc.get("image_size") or {}
-        if h and len(h) == 9:
-            cam.calib_h, cam.calib_size = [float(v) for v in h], (int(size.get("w", 0)), int(size.get("h", 0)))
-
-    def _prepare(self, data: bytes):
-        """JPEG -> RGB -> the model's normalised CHW input. Runs on the thread pool, overlapping the GPU (OpenCV
-        releases the GIL)."""
-        bgr = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
-        if bgr is None:
-            return None
-        h, w = bgr.shape[:2]
-        chw, inverse = self.bb.preprocess(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
-        return chw, inverse, w, h
-
-    def pump(self) -> bool:
-        """Read what each camera has (decoding on the pool); run every window whose frames are ready."""
-        worked = False
-        for cam in list(self.cams.values()):
-            while True:
-                f = cam.reader.read(block_ms=0)
-                if f is None:
-                    break
-                cam.buf.append((f.seq, f.t_game_s, f.t_srv_ms, self.pool.submit(self._prepare, f.data)))
-                cam.last_frame_wall = time.time()
-                if len(cam.buf) > self.max_lag + 3:  # behind real time: keep the newest
-                    cam.buf = cam.buf[-3:]
-            while len(cam.buf) >= 3 and all(w[3].done() for w in cam.buf[:3]):
-                window = cam.buf[:3]
-                prepared = [w[3].result() for w in window]
-                if any(p is None for p in prepared):
-                    cam.buf = cam.buf[3:]
-                    continue
-                hm = self.bb.heatmaps([p[0] for p in prepared])
-                heads = range(3) if self.stride >= 3 else range(self.stride)
-                for i in heads:
-                    _, inverse, w, h = prepared[i]
-                    self.publish(cam, window[i], self.bb.decode(hm[i], inverse, w, h), (w, h))
-                cam.buf = cam.buf[min(3, self.stride) :]
-                worked = True
-        return worked
-
-    def publish(self, cam: Cam, frame, det, size: tuple[int, int]) -> None:
-        seq, t_game_s, t_srv_ms, _ = frame
-        w, h = size
-        sample: dict = {"t_game_s": round(t_game_s, 4), "seq": int(seq), "px": None, "conf": 0.0}
-        pos = None
-        if det is not None:
-            sample.update(
-                px=[round(det.x, 2), round(det.y, 2)],
-                conf=round(min(1.0, det.score), 3),
-                blur_len_px=round(det.blur_len_px, 2),
-                blur_angle_deg=round(det.blur_angle_deg, 1),
-            )
-            if cam.calib_h is not None:
-                sx = (cam.calib_size[0] / w) if cam.calib_size and cam.calib_size[0] else 1.0
-                sy = (cam.calib_size[1] / h) if cam.calib_size and cam.calib_size[1] else 1.0
-                pos = apply_h(cam.calib_h, det.x * sx, det.y * sy)
-            cam.det += 1
-            cam.total_det += 1
-        sample["detector"] = "blurball"
-        self.r.xadd(trk_ball_key(cam.cam_id), {"json": json.dumps(sample)}, maxlen=TRK_MAXLEN, approximate=True)
-        cam.n += 1
-        cam.total += 1
-        cam.lags.append(time.time() * 1000 - t_srv_ms)
-        if self.world is not None and det is not None:
-            self.world.post(
-                cam.game_id,
-                cam.cam_id,
-                sample["t_game_s"],
-                pos_m=[round(pos[0], 4), round(pos[1], 4)] if pos else None,
-                px=sample["px"],
-                conf=sample["conf"],
-            )
-
-    def report(self) -> None:
-        now = time.time()
-        dt = now - self.last_report
-        if dt < 5:
-            return
-        calls = self.bb.calls - self.calls0
-        model = (self.bb.model_ms - self.model_ms0) / max(1, calls)
-        for cam in self.cams.values():
-            if not cam.n:
-                continue
-            lag = np.array(cam.lags)
-            log.info(
-                json.dumps(
-                    {
-                        "svc": "flight",
-                        "msg": "live",
-                        "cam_id": cam.cam_id,
-                        "game_id": cam.game_id,
-                        "fps": round(cam.n / dt, 1),
-                        "detected": round(cam.det / cam.n, 3),
-                        "lag_ms_p50": round(float(np.median(lag)), 1),
-                        "lag_ms_p95": round(float(np.percentile(lag, 95)), 1),
-                        "skipped": cam.reader.skipped - cam.skipped0,
-                        "model_ms": round(model, 1),
-                        "device": self.bb.device,
-                        "half": self.bb.half,
-                        "stride": self.stride,
-                    }
-                )
-            )
-            cam.n = cam.det = 0
-            cam.lags = []
-            cam.skipped0 = cam.reader.skipped
-        self.last_report, self.calls0, self.model_ms0 = now, self.bb.calls, self.bb.model_ms
+def corners_from_h(H: np.ndarray) -> np.ndarray:
+    """Field corners (A-right, B-right, B-left, A-left) projected to pixels through inv(H_img_to_field)."""
+    Hi = np.linalg.inv(H)
+    pts = np.c_[F.CORNERS_M[:, :2], np.ones(4)] @ Hi.T
+    return pts[:, :2] / pts[:, 2:3]
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(prog="flight.live", description=__doc__.split("\n\n")[0])
-    ap.add_argument("--stride", type=int, default=3, choices=[1, 2, 3], help="frames between windows (3 = each once)")
-    ap.add_argument("--max-lag", type=int, default=9, help="frames a camera may fall behind before it skips ahead")
-    ap.add_argument("--device", default=None, help="auto | mps | cpu (default: BLURBALL_DEVICE or auto)")
-    ap.add_argument(
-        "--fp32", action="store_true", help="Mu's validated fp32 path (fp16 is the MPS default; see blurball.load)"
+def calib_from_json(cam_id: str, cal: dict) -> CamCalib:
+    H = np.array(cal["H_img_to_field"], float).reshape(3, 3)
+    size = cal.get("image_size") or {"w": REF_W, "h": REF_H}
+    w, h = int(size["w"]), int(size["h"])
+    try:
+        pose = solve_pose(cam_id, corners_from_h(H), w, h)
+    except ValueError as e:
+        jlog("pose unavailable", cam_id=cam_id, why=str(e))
+        pose = None
+    return CamCalib(
+        cam_id,
+        tuple(float(v) for v in H.ravel()),
+        bool(cal.get("trusted", False)),
+        float(cal.get("reproj_err_px", 0.0)),
+        w,
+        h,
+        pose,
+        str(cal.get("solver", "?")),
     )
-    ap.add_argument("--no-world", action="store_true", help="don't mirror the ball into Spacetime track_sample")
-    a = ap.parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
-    env = {**dotenv(), **os.environ}
-    r = redis.Redis.from_url(env.get("REDIS_URL") or "redis://127.0.0.1:6379/0")
-    bb = load(device=a.device, half=False if a.fp32 else None)
-    warm = bb.warmup(np.zeros((720, 1280, 3), np.uint8))
-    world = None
-    if not a.no_world and env.get("SPACETIME_VISION_TOKEN"):
-        from trophy.world import SpacetimeClient, TrackSampleWriter
 
-        world = TrackSampleWriter(SpacetimeClient(token=env["SPACETIME_VISION_TOKEN"]))
-    log.info(
-        json.dumps(
-            {
-                "svc": "flight",
-                "msg": "started",
-                "detector": "blurball",
-                "device": bb.device,
-                "half": bb.half,
-                "stride": a.stride,
-                "warmup_ms": round(warm, 1),
-                "weights_sha256": bb.pred.weight_sha256[:12],
-                "world": world is not None,
-            }
+
+def calib_from_corners(cam_id: str, corners: list[float]) -> CamCalib:
+    """--corners in the PWA's tap order (A_left, A_right, B_right, B_left), reference pixels; always untrusted."""
+    taps = np.asarray(corners, float).reshape(4, 2)
+    px = taps[[1, 2, 3, 0]]  # -> A-right, B-right, B-left, A-left
+    H, _ = cv2.findHomography(px, F.CORNERS_M[:, :2])
+    if H is None:
+        raise SystemExit(f"--corners {cam_id}: degenerate")
+    return calib_from_json(
+        cam_id,
+        {
+            "H_img_to_field": (H / H[2, 2]).ravel().tolist(),
+            "image_size": {"w": REF_W, "h": REF_H},
+            "trusted": False,
+            "solver": "flight --corners",
+        },
+    )
+
+
+# ---------------------------------------------------------------- per-camera worker
+
+
+@dataclass(frozen=True)
+class View:
+    """Maps a frame's pixels to reference pixels (the full view at REF_W x REF_H). A frame zoomed to the table
+    (`crop`, D-29) keeps its own resolution; uncropped frames of another size are scaled."""
+
+    crop: Crop | None
+    w: int
+    h: int
+
+    def pt(self, x: float, y: float) -> tuple[float, float]:
+        if self.crop is None:
+            return x * REF_W / self.w, y * REF_H / self.h
+        cx, cy, cw, ch = self.crop
+        return (cx + x / self.w * cw) * REF_W, (cy + y / self.h * ch) * REF_H
+
+
+def make_detector(kind: str, args):
+    if kind == "classical":
+        from .detect import ClassicalDetector
+
+        det = ClassicalDetector(colour=args.ball)
+        return det, {"model": "classical-mog2", "device": "cpu", "ep": "opencv"}
+    from .blurball import BlurBallDetector, Predictor
+
+    pred = Predictor(device=args.device)
+    det = BlurBallDetector(pred, threshold=args.threshold, stride=args.stride, photometric=args.photometric)
+    info = {"model": f"blurball@{pred.weights_sha256[:8]}", "device": pred.device, "ep": f"torch {pred.torch_version}"}
+    return det, info
+
+
+class CamWorker(threading.Thread):
+    def __init__(
+        self, r: redis.Redis, game_id: str, cam_id: str, sink: Analyzer, trk: TrackSampleWriter | None, args
+    ) -> None:
+        super().__init__(name=f"flight-{cam_id}", daemon=True)
+        self.r, self.game_id, self.cam_id, self.sink, self.trk, self.args = r, game_id, cam_id, sink, trk, args
+        self.stop = threading.Event()
+        self.stats: dict[str, float] = {"frames": 0, "samples": 0, "fps": 0.0, "ms": 0.0, "skipped": 0, "lag_ms": 0.0}
+        self.detector_info: dict[str, str] = {}
+        self.t_last = 0.0  # game time of the newest frame
+
+    def run(self) -> None:
+        reader = FrameReader(self.r, self.cam_id, mode="all", max_lag=45)
+        balls = BallTrackWriter(self.r, self.cam_id)
+        det, self.detector_info = make_detector(self.args.detector, self.args)
+        jlog("detector", cam_id=self.cam_id, **self.detector_info)
+        tracker = Tracker()
+        view: View | None = None
+        t_win, n_win = time.monotonic(), 0
+        last_seq: int | None = None
+        while not self.stop.is_set():
+            f = reader.read(block_ms=200)
+            if f is None:
+                continue
+            t0 = time.perf_counter()
+            img = cv2.imdecode(np.frombuffer(f.data, np.uint8), cv2.IMREAD_COLOR)
+            if img is None:
+                continue
+            v = View(f.crop, img.shape[1], img.shape[0])
+            gap = last_seq is not None and f.seq != last_seq + 1
+            if v != view or gap:  # new geometry, or dropped frames: the track (and BlurBall's window) restart
+                tracker, view = Tracker(), v
+                if hasattr(det, "reset"):
+                    det.reset()
+            last_seq = f.seq
+            self.t_last = f.t_game_s
+            if self.args.detector == "classical":
+                resolved = [{"frame": f.seq, "t_s": f.t_game_s, "candidates": det(img)}]
+            else:
+                resolved = det.push(f.seq, f.t_game_s, img)
+            for fr in resolved:
+                for c in fr["candidates"]:  # the tracker works in reference pixels
+                    c["xy_px"] = list(v.pt(*c["xy_px"]))
+                tracker.step(fr["frame"], fr["t_s"], fr["candidates"])
+            got = {s["frame"]: s for s in tracker.drain()}
+            tracker.out.clear()  # the live loop keeps its own buffer
+            for fr in resolved:
+                s = got.pop(fr["frame"], None)
+                self._write(balls, fr["frame"], fr["t_s"], s)
+            for s in got.values():  # a promotion back-filled earlier frames
+                self._write(balls, s["frame"], s["t_s"], s)
+            self.stats["frames"] += 1
+            n_win += 1
+            self.stats["ms"] = 0.9 * self.stats["ms"] + 0.1 * (time.perf_counter() - t0) * 1000
+            self.stats["skipped"] = reader.skipped
+            self.stats["lag_ms"] = time.time() * 1000 - f.t_srv_ms
+            now = time.monotonic()
+            if now - t_win >= 2:
+                self.stats["fps"] = n_win / (now - t_win)
+                t_win, n_win = now, 0
+
+    def _write(self, balls: BallTrackWriter, seq: int, t_s: float, s: dict | None) -> None:
+        if s is None:
+            balls.write({"t_game_s": t_s, "seq": seq, "px": None, "conf": 0.0})
+            self.sink.tick(self.cam_id, t_s, seq)
+            return
+        xy = [round(s["xy_px"][0], 1), round(s["xy_px"][1], 1)]
+        rec: dict[str, Any] = {"t_game_s": t_s, "seq": seq, "px": xy, "conf": round(s["conf"], 3)}
+        if s.get("L_px") is not None:
+            rec["blur_len_px"] = round(float(s["L_px"]), 1)
+            rec["blur_angle_rad"] = round(math.radians(float(s.get("theta_deg") or 0.0)), 3)
+        balls.write(rec)
+        if self.trk is not None:
+            self.trk.post(self.game_id, self.cam_id, t_s, px=xy, conf=rec["conf"])
+        self.stats["samples"] += 1
+        self.sink.add(self.cam_id, t_s, seq, xy[0], xy[1], s["conf"])
+
+
+# ---------------------------------------------------------------- the module seam
+
+
+class Analyzer:
+    """All cameras' samples -> the sport module, re-run over the open rally segment; new events out, once."""
+
+    def __init__(self, r: redis.Redis, game_id: str, obs: ObservationWriter | None, args) -> None:
+        from trophy_engine.sportmod.loader import load_module
+
+        self.r, self.game_id, self.obs, self.args = r, game_id, obs, args
+        self.mod = load_module(args.module)
+        self.gap_s = float(self.mod.config["dead"]["gap_s"])
+        self.min_conf = float(self.mod.config["capture"]["min_conf"])
+        self.lock = threading.Lock()
+        # cam -> seq -> (t, seq, u, v, conf); a processed frame without a ball has u = v = None (the module and the
+        # short-gap completion both need the misses); a tracker back-fill replaces the miss on its seq
+        self.samples: dict[str, dict[int, tuple[float, int, float | None, float | None, float]]] = {}
+        self.last_meas: dict[str, tuple[float, float, float]] = {}  # cam -> (t, u, v) of the newest detection
+        self.fill_gaps_s = float(getattr(args, "fill_gaps", 0.0))
+        self.n_filled = 0
+        self.t_now: dict[str, float] = {}
+        self.wall_last = time.monotonic()
+        self.calib: dict[str, CamCalib] = {}
+        self.seg_start: float | None = None
+        self.last_move: float | None = None
+        self.sent: set[str] = set()
+        self.sent_tt: list[tuple[str, float]] = []  # (type, t) published, to absorb a refined event's new id
+        self.toss_done = False
+        self.toss_cut: float | None = None
+        t0 = r.hget(game_key(game_id), "t0_ms")
+        self.t0_ms = float(t0) if t0 else None
+        self.latency_ms: list[float] = []
+        self.n_events = 0
+
+    # -- input
+    def set_calib(self, c: CamCalib) -> None:
+        with self.lock:
+            self.calib[c.cam_id] = c
+        jlog(
+            "calibration",
+            cam_id=c.cam_id,
+            trusted=c.trusted,
+            solver=c.source,
+            pose=c.pose is not None,
+            f_px=round(float(c.pose.K[0, 0])) if c.pose else None,
         )
+
+    def tick(self, cam_id: str, t_s: float, seq: int | None = None) -> None:
+        """A processed frame with no ball."""
+        with self.lock:
+            self.wall_last = time.monotonic()
+            self.t_now[cam_id] = max(t_s, self.t_now.get(cam_id, t_s))
+            if seq is not None:
+                self.samples.setdefault(cam_id, {}).setdefault(seq, (t_s, seq, None, None, 0.0))
+                self._prune(cam_id, t_s)
+
+    def _prune(self, cam_id: str, t_s: float) -> None:
+        buf = self.samples[cam_id]
+        if len(buf) > 2400:  # ~80 s at 30 fps: keep the last 60 s
+            self.samples[cam_id] = {k: x for k, x in buf.items() if x[0] >= t_s - 60.0}
+
+    def series(self, cam_id: str, t_lo: float, t_hi: float) -> list[tuple]:
+        """One camera's processed frames in [t_lo, t_hi], in time order (call with the lock held)."""
+        return sorted((x for x in self.samples.get(cam_id, {}).values() if t_lo <= x[0] <= t_hi), key=lambda x: x[0])
+
+    def add(self, cam_id: str, t_s: float, seq: int, u: float, v: float, conf: float) -> None:
+        with self.lock:
+            self.wall_last = time.monotonic()
+            self.samples.setdefault(cam_id, {})[seq] = (t_s, seq, u, v, conf)
+            prev = self.last_meas.get(cam_id)
+            if prev is None or t_s > prev[0]:
+                self.last_meas[cam_id] = (t_s, u, v)
+            self.t_now[cam_id] = max(t_s, self.t_now.get(cam_id, t_s))
+            moving = prev is not None and 0 < t_s - prev[0] < 0.2 and math.hypot(u - prev[1], v - prev[2]) > 4.0
+            if moving:
+                if self.seg_start is None:
+                    self.seg_start = prev[0]
+                    self.toss_done = False
+                    self.toss_cut = None
+                self.last_move = max(t_s, self.last_move or t_s)
+            self._prune(cam_id, t_s)
+
+    # -- analysis
+    def step(self) -> None:
+        with self.lock:
+            if self.seg_start is None or not self.calib or not self.t_now:
+                return
+            now = min(self.t_now.values()) if len(self.t_now) > 1 else next(iter(self.t_now.values()))
+            closing = self.last_move is not None and now - self.last_move >= self.gap_s
+            if not closing and self.last_move is not None and time.monotonic() - self.wall_last > self.gap_s + 1.0:
+                closing = True  # every camera stopped streaming: close on the wall clock
+            t_lo = self.seg_start - 0.1
+            t_hi = self.last_move + 0.05 if closing else now
+            seg = {c: self.series(c, t_lo, t_hi) for c in self.samples if c in self.calib}
+            calib = dict(self.calib)
+            seg_start = self.seg_start
+            if closing:
+                self.seg_start = None
+        if not self.toss_done:
+            self._serve_toss(calib, seg_start, final=closing)
+        # The toss belongs to the serve measurement: the module would read its release (the lowest point before the
+        # rise) as a bounce, off the table, i.e. a floor bounce that ends the rally. Hold the module's events while
+        # a toss may still resolve (`--toss-hold` s into the segment), then drop the toss's samples.
+        if not self.toss_done and not closing and now - seg_start < self.args.toss_hold:
+            return
+        if self.toss_cut is not None:
+            seg = {c: [x for x in ss if x[0] >= self.toss_cut] for c, ss in seg.items()}
+        events = self._run_module(seg, calib)
+        settle = now - self.args.settle
+        for ev in events:
+            if ev["type"] == "ball_dead" and (ev.get("payload") or {}).get("reason") == "lost" and not closing:
+                continue
+            if not closing and ev["t_game_s"] > settle:
+                continue
+            self._publish(ev)
+        if closing:
+            self.toss_cut = None
+        if closing:
+            jlog("segment closed", t0=round(seg_start, 2), t1=round(t_hi, 2))
+
+    def _run_module(self, seg: dict, calib: dict[str, CamCalib]) -> list[dict]:
+        from trophy_engine.sportmod.api import BallSample
+        from trophy_engine.sportmod.completion import fill_short_gaps
+
+        # one events() call over every camera of the game, so the module's multi-camera merge fuses the angles
+        obs: list[Any] = []
+        for c in calib.values():
+            obs.append(c.module_camera(self.args.fps))
+        n_filled = 0
+        for cam_id, ss in seg.items():
+            cam = [BallSample(cam_id, t, seq, None if u is None else (u, v), conf) for t, seq, u, v, conf in ss]
+            if self.fill_gaps_s > 0:  # D-39: complete short dropouts (PCHIP), estimates only, counted
+                cam, n = fill_short_gaps(cam, max_gap_s=self.fill_gaps_s)
+                n_filled += n
+            obs += cam
+        self.n_filled = n_filled
+        trusted = all(c.trusted for c in calib.values())
+        try:
+            return list(self.mod.events(obs, self.mod.state(self.game_id, calib_trusted=trusted)))
+        except Exception as e:  # a module bug must not stop the tracker
+            jlog("module error", error=f"{type(e).__name__}: {e}")
+            return []
+
+    def _serve_toss(self, calib: dict[str, CamCalib], seg_start: float, final: bool) -> None:
+        # the camera with a pose that saw the most of the toss; the palm phase sits just before the segment start
+        best = None
+        for cam_id, c in calib.items():
+            if c.pose is None:
+                continue
+            with self.lock:
+                ss = [s for s in self.series(cam_id, seg_start - 2.0, seg_start + 3.0) if s[2] is not None]
+            if len(ss) > (len(best[1]) if best else 0):
+                best = (c, ss)
+        if best is None:
+            return
+        c, ss = best
+        pay = estimate_toss([(t, u, v) for t, _q, u, v, _c in ss], c.pose, TossParams(), calib_trusted=c.trusted)
+        if pay is None or (pay.get("contact") is None and not final):
+            return
+        self.toss_done = True
+        if pay.get("contact") is not None:
+            self.toss_cut = float(pay["contact"]["t0_s"])  # the module sees the ball from the strike on
+        debug = pay.pop("_debug", {})
+        t_ev = (pay.get("contact") or pay["apex"])["t_s"]
+        ev = {
+            "schema": "trophy.event.v1",
+            "id": _ulid(),
+            "game_id": self.game_id,
+            "t_game_s": round(t_ev, 4),
+            "sport": SPORT,
+            "type": "serve_toss",
+            "source": "flight",
+            "cams": [c.cam_id],
+            "conf": 0.9 if "release" not in pay["evidence_missing"] else 0.6,
+            "side": pay["server_side"],
+            "payload": pay,
+        }
+        jlog(
+            "serve_toss",
+            height_cm=round(pay["height_m"] * 100, 1),
+            sigma_cm=round(pay["sigma_height_m"] * 100, 1),
+            angle_deg=round(math.degrees(pay["angle_from_vertical_rad"]), 1),
+            missing=pay["evidence_missing"],
+            **debug,
+        )
+        self._publish(ev)
+
+    def _publish(self, ev: dict) -> None:
+        if ev["id"] in self.sent:
+            return
+        t = float(ev["t_game_s"])
+        if ev["type"] != "serve_toss" and any(k == ev["type"] and abs(t - tt) < 0.1 for k, tt in self.sent_tt):
+            return  # the same event, refined by more samples into a new deterministic id
+        self.sent.add(ev["id"])
+        self.sent_tt = [x for x in self.sent_tt if t - x[1] < 30] + [(ev["type"], t)]
+        try:
+            e = parse_event(ev)
+        except Exception as err:
+            jlog("event rejected by contract", type=ev.get("type"), error=str(err)[:300])
+            return
+        data = e.model_dump_json(exclude_none=True)
+        self.r.xadd(EV_FLIGHT, {"json": data}, maxlen=EVENT_STREAM_MAXLEN, approximate=True)
+        if self.obs is not None:
+            self.obs.post(json.loads(data))
+        self.n_events += 1
+        lat = None
+        if self.t0_ms is not None:
+            lat = time.time() * 1000 - (self.t0_ms + t * 1000)
+            self.latency_ms.append(lat)
+            self.latency_ms = self.latency_ms[-500:]
+        jlog("event", type=ev["type"], t=round(t, 3), side=ev.get("side"), latency_ms=round(lat) if lat else None)
+
+
+def _ulid() -> str:
+    from trophy.ids import new_ulid
+
+    return new_ulid()
+
+
+# ---------------------------------------------------------------- main
+
+
+def cameras(r: redis.Redis, game_id: str) -> list[str]:
+    out = []
+    for k in r.scan_iter("cam:*"):
+        h = r.hgetall(k)
+        if h.get(b"game_id", b"").decode() == game_id and "cam" in h.get(b"role", b"").decode().split(","):
+            out.append(k.decode().split(":", 1)[1])
+    return sorted(out)
+
+
+def newest_game(r: redis.Redis) -> tuple[float, str]:
+    """(created_at_ms, game_id) of the newest game in Redis, or (0, "")."""
+    return max(
+        (
+            (float(r.hget(k, "created_at_ms") or r.hget(k, "t0_ms") or 0), k.decode().split(":", 1)[1])
+            for k in r.scan_iter("game:*")
+        ),
+        default=(0.0, ""),
     )
-    live = Live(r, bb, a.stride, a.max_lag, world)
-    stop = False
 
-    def _stop(*_):
-        nonlocal stop
-        stop = True
 
-    signal.signal(signal.SIGTERM, _stop)
-    signal.signal(signal.SIGINT, _stop)
-    while not stop:
-        live.scan()
-        if not live.pump():
-            time.sleep(0.005)
-        live.report()
-    if world is not None:
-        world.flush()
-    return 0
+def wait_for_game(r: redis.Redis, after_ms: float) -> str:
+    while True:
+        t, gid = newest_game(r)
+        if t > after_ms:
+            return gid
+        time.sleep(0.5)
+
+
+def heartbeat(r: redis.Redis, game_id: str, cam_id: str, w: CamWorker) -> None:
+    ev = {
+        "schema": "trophy.event.v1",
+        "id": _ulid(),
+        "game_id": game_id,
+        "t_game_s": round(w.t_last, 3),
+        "sport": SPORT,
+        "type": "heartbeat",
+        "source": "flight",
+        "cams": [cam_id],
+        "conf": 1.0,
+        "payload": {
+            "service": "flight",
+            "fps": round(w.stats["fps"], 1),
+            "lag_ms": round(w.stats["lag_ms"], 1),
+            "model": w.detector_info.get("model", "?"),
+            "device": w.detector_info.get("device", "?"),
+            "ep": w.detector_info.get("ep", "?"),
+        },
+    }
+    try:
+        r.xadd(
+            EV_FLIGHT,
+            {"json": parse_event(ev).model_dump_json(exclude_none=True)},
+            maxlen=EVENT_STREAM_MAXLEN,
+            approximate=True,
+        )
+    except Exception as e:
+        jlog("heartbeat rejected", error=str(e)[:200])
+
+
+def parse_args(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument(
+        "--game",
+        required=True,
+        help='a game id; "next" for the next game created; "follow" for the newest game, switching to each new one',
+    )
+    ap.add_argument("--detector", choices=["blurball", "classical"], default="blurball")
+    ap.add_argument("--ball", default="white", help="classical colour model: white | orange")
+    ap.add_argument("--device", default="auto", help="blurball: auto | mps | cpu")
+    ap.add_argument("--threshold", type=float, default=0.5)
+    ap.add_argument("--stride", type=int, default=3)
+    ap.add_argument("--photometric", choices=["rgb", "maxgray"], default="rgb")
+    ap.add_argument("--module", type=Path, default=REPO / "sports" / SPORT)
+    ap.add_argument("--corners", action="append", default=[], help="cam_id=x,y,... (A_left, A_right, B_right, B_left)")
+    ap.add_argument("--every", type=float, default=0.1, help="seconds between module runs")
+    ap.add_argument("--settle", type=float, default=0.2, help="publish events once they are this old (game s)")
+    ap.add_argument("--toss-hold", type=float, default=1.5, help="hold module events this long for a serve toss")
+    ap.add_argument(
+        "--fill-gaps", type=float, default=0.25, help="fill dropouts up to this long before the module (D-39); 0: off"
+    )
+    ap.add_argument("--fps", type=float, default=30.0)
+    ap.add_argument("--no-spacetime", action="store_true", help="Redis only (tests, or without a vision token)")
+    return ap.parse_args(argv)
+
+
+def main(argv=None) -> None:
+    a = parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    env = _env()
+    r = redis.Redis.from_url(env.get("REDIS_URL", "redis://127.0.0.1:6379/0"))
+    obs = trk = None
+    if not a.no_spacetime:
+        token = env.get("SPACETIME_VISION_TOKEN", "")
+        if not token:
+            jlog("no SPACETIME_VISION_TOKEN: Redis only")
+        else:
+            client = SpacetimeClient(uri=env.get("SPACETIME_URI"), module=env.get("SPACETIME_MODULE"), token=token)
+            obs, trk = ObservationWriter(client), TrackSampleWriter(client)
+    try:
+        if a.game == "follow":
+            game = newest_game(r)[1] or wait_for_game(r, 0.0)
+            while True:
+                jlog("attached", game_id=game, mode="follow")
+                created = float(r.hget(game_key(game), "created_at_ms") or r.hget(game_key(game), "t0_ms") or 0)
+                newer = {"t": 0.0, "id": game}
+
+                def switch(created=created, newer=newer, game=game) -> bool:
+                    if time.monotonic() - newer["t"] < 2.0:
+                        return False
+                    newer["t"] = time.monotonic()
+                    t, gid = newest_game(r)
+                    newer["id"] = gid
+                    return t > created and gid != game
+
+                run_game(r, a, game, obs, trk, switch)
+                game = newer["id"]
+        else:
+            if a.game == "next":
+                a.game = wait_for_game(r, time.time() * 1000)
+                jlog("attached", game_id=a.game)
+            if not r.exists(game_key(a.game)):
+                raise SystemExit(f"no game {a.game} in Redis")
+            run_game(r, a, a.game, obs, trk, lambda: False)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if obs is not None:
+            obs.close()
+        if trk is not None:
+            trk.close()
+
+
+def run_game(r: redis.Redis, a, game_id: str, obs, trk, until) -> None:
+    """Serve one game until `until()` says to stop (follow mode) or Ctrl-C."""
+    an = Analyzer(r, game_id, obs, a)
+    stop = threading.Event()
+    fixed = {}
+    for spec in a.corners:
+        cam, _, xs = spec.partition("=")
+        fixed[cam] = calib_from_corners(cam, [float(v) for v in xs.split(",")])
+        an.set_calib(fixed[cam])
+    workers: dict[str, CamWorker] = {}
+
+    def load_calib(cam_id: str) -> None:
+        if cam_id in fixed:
+            return
+        raw = r.get(calib_key(cam_id))
+        if raw:
+            try:
+                an.set_calib(calib_from_json(cam_id, json.loads(raw)))
+            except (KeyError, ValueError, np.linalg.LinAlgError) as e:
+                jlog("bad calibration", cam_id=cam_id, error=str(e))
+
+    def calib_listener() -> None:
+        ps = r.pubsub()
+        ps.subscribe(CTL_CALIB)
+        while not stop.is_set():
+            m = ps.get_message(timeout=1.0)
+            if m and m.get("type") == "message":
+                cam = m["data"].decode() if isinstance(m["data"], bytes) else str(m["data"])
+                if cam in workers:
+                    load_calib(cam)
+        ps.close()
+
+    threading.Thread(target=calib_listener, daemon=True).start()
+    last_beat = 0.0
+    try:
+        while not until():
+            for cam in cameras(r, game_id) + [c for c in fixed if c not in workers]:
+                if cam not in workers:
+                    load_calib(cam)
+                    w = CamWorker(r, game_id, cam, an, trk, a)
+                    w.start()
+                    workers[cam] = w
+                    jlog("camera", cam_id=cam, fps_in=(r.hget(cam_key(cam), "fps_in") or b"").decode() or None)
+            an.step()
+            now = time.monotonic()
+            if now - last_beat >= 5:
+                last_beat = now
+                lat = sorted(an.latency_ms)
+                for cam, w in workers.items():
+                    heartbeat(r, game_id, cam, w)
+                    jlog(
+                        "stats",
+                        cam_id=cam,
+                        **{k: round(v, 1) for k, v in w.stats.items()},
+                        events=an.n_events,
+                        latency_p50_ms=round(lat[len(lat) // 2]) if lat else None,
+                        latency_p95_ms=round(lat[int(len(lat) * 0.95)]) if lat else None,
+                    )
+            time.sleep(a.every)
+    finally:
+        stop.set()
+        for w in workers.values():
+            w.stop.set()
+        for w in workers.values():
+            w.join(timeout=2.0)
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
