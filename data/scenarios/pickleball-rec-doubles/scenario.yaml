@@ -1,0 +1,17 @@
+id: pickleball-rec-doubles
+title: Pickleball · rec doubles
+sport: pickleball
+teams:
+  - {team_id: A, name: Near team}
+  - {team_id: B, name: Far team}
+source: cc_by_online
+credit: "\"Pickleball Doubles Challenge Court in Melbourne, FL 06/09/2023 Game 1\" by BT Pickleball, CC BY (Creative Commons Attribution), youtube.com/watch?v=QhLECLlXU3c; segment 0:14-1:14, trimmed and re-encoded to 720p"
+source_url: https://www.youtube.com/watch?v=QhLECLlXU3c
+source_segment_s: [14.0, 74.0]
+annotated: true
+events: evals/fixtures/annotated/pickleball/rec-doubles.events.jsonl   # t_game_s = seconds from the segment start
+labels: evals/fixtures/annotated/pickleball/rec-doubles.labels.json
+events_angle: Corner
+first_server: B
+angles:
+  - {label: Corner, file: data/local/scenarios/pickleball-rec-doubles/corner.mp4, start_s: 0, duration_s: 60.0, offset_s: 0}

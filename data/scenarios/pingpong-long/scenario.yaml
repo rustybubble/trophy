@@ -1,0 +1,38 @@
+# Secondary ping-pong scenario: a longer two-angle take with weaker ball detection (orange ball; BlurBall saw it in only
+# 3-10 % of frames in the integrator's test; the 259 s originals measured 22-29 %). Prefer pingpong-two-angle.
+# Media: the 720p preprocessed copies in the main checkout's data/local/tt-demo/ (side.mp4 from "Adobe Express -
+# IMG_4342.mp4", diagonal.mp4 from "IMG_2865 (1).mov"), copied to data/local/scenarios/pingpong-long/.
+id: pingpong-long
+title: Ping pong · long take
+sport: table_tennis
+teams:
+  - {team_id: A, name: Left end, note: "black hoodie; the left player in the Side angle, facing the Diagonal camera"}
+  - {team_id: B, name: Right end, note: "navy sweatshirt; the right player in the Side angle, back to the Diagonal camera"}
+source: team_recording
+credit: "Trophy team recording, 2026-10-24, two phones (team footage with consent)"
+annotated: false
+events: null
+sync:
+  method: >-
+    Audio cross-correlation (mono 8 kHz, 1 ms envelope): global peak at 0.038 s; the five windows with correlation
+    >= 0.5 agree on 0.035-0.040 s. footage-manifest.json in tt-demo independently found 0.039 s.
+  diagonal_minus_side_s: 0.038
+  uncertainty_s: 0.005
+angles:
+  - label: Side
+    file: data/local/scenarios/pingpong-long/side.mp4    # 1280x720 60 fps, 107.7 s
+    start_s: 14.0
+    duration_s: 90.0
+    offset_s: 0
+    # Marked by eye on the frame at 14.0 s; the projected net line lands on the visible net. The phone is handheld and
+    # drifts by up to about 10 % of the frame over the take, so a fixed calibration degrades later in the window.
+    corners_norm: [[0.1953, 0.7028], [0.7922, 0.7306], [0.7117, 0.6556], [0.2898, 0.6347]]
+  - label: Diagonal
+    file: data/local/scenarios/pingpong-long/diagonal.mp4  # 1280x720 60 fps, 113.0 s
+    start_s: 14.038
+    duration_s: 90.0
+    offset_s: 0
+    # The B-end corners and net/side-line points were marked by eye at 14.038 s; the A-end corners (behind the net) are
+    # projected by homography. The projected A_left matches the visible far table corner.
+    corners_norm: [[0.3756, 0.7359], [0.2328, 0.7944], [0.5523, 0.8778], [0.6676, 0.7382]]
+window_note: "14-35 s rallies, 36-72 s mostly serve attempts by the right player, 74-104 s rallies."

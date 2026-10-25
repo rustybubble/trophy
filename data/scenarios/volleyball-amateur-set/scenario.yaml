@@ -1,0 +1,16 @@
+id: volleyball-amateur-set
+title: Volleyball · amateur set
+sport: volleyball
+teams:
+  - {team_id: A, name: Handymen (HND)}
+  - {team_id: B, name: AZIAN Mixed (AZM)}
+source: cc_by_online
+credit: "\"Handymen vs AZIAN Mixed - Mixed Moscow Volleyball League (1st set)\" by Almost Volleyball, CC BY (Creative Commons Attribution), youtube.com/watch?v=kVpO4ypzPYU; segment 0:10-1:15, trimmed and re-encoded to 720p"
+source_url: https://www.youtube.com/watch?v=kVpO4ypzPYU
+source_segment_s: [10.0, 75.0]
+annotated: true
+events: evals/fixtures/annotated/volleyball/amateur-set.events.jsonl
+labels: evals/fixtures/annotated/volleyball/amateur-set.labels.json
+events_angle: Corner
+angles:
+  - {label: Corner, file: data/local/scenarios/volleyball-amateur-set/corner.mp4, start_s: 0, duration_s: 65.0, offset_s: 0}
