@@ -6,7 +6,7 @@
 set -euo pipefail
 
 need_nvidia() { command -v nvidia-smi >/dev/null && nvidia-smi -L; }
-echo "== GPU"; need_nvidia || { echo "no NVIDIA driver: pick Vultr's GPU image or install the driver first"; exit 1; }
+echo "== GPU"; need_nvidia || { echo "no NVIDIA driver: A16 is vGPU and needs Vultr's NVIDIA driver (use Vultr's GPU OS image; see Vultr Cloud GPU docs). Don't install stock nvidia-driver-*"; exit 1; }
 
 echo "== Docker"
 if ! command -v docker >/dev/null; then
