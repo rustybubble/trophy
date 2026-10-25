@@ -14,7 +14,7 @@ params:
   edge_band_m: 0.03
   serve_min_toss_m: 0.1524      # D-22: the toss must rise more than 6 in (STRETCH: needs serve_toss observations)
   serve_max_angle_rad: 0.5236   # D-22: within 30 degrees of vertical
-  net_let_on_serve: true        # a serve that clips the net and lands in is replayed (ITTF 2.9.1)
+  net_let_on_serve: true        # a serve that clips the net and lands in is replayed (ITTF 2.9.1.1); false = no lets
 variants:
   ittf_strict: {serve_min_toss_m: 0.16, serve_max_angle_rad: 0.0873}
 field:
@@ -86,6 +86,18 @@ rules:
     speech: "Out. Point, {team}."
     requires: [bounce]
     rule_ref: "ITTF 2.10.1.3"
+  - id: serve_net_let
+    name: Serve clips the net and lands in
+    tier: AUTO
+    kind: point
+    # the serve is otherwise good: the receiver-side bounce after a net touch; edge bounces go to edge_ball
+    when: "params.net_let_on_serve && ev.type == 'bounce' && ev.payload.surface == 'table' && rally.phase == 'serve' && rally.surface_bounces == 1 && rally.net_touches > 0 && ev.side == rally.receiver && !has(ev.payload.edge)"
+    check: code
+    outcome: let
+    text: "Let: serve clipped the net"
+    speech: "Let. Replay the point."
+    requires: [bounce, net]
+    rule_ref: "ITTF 2.9.1.1"
   - id: edge_ball
     name: Edge ball (top edge good, side face fault)
     tier: BETA

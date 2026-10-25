@@ -137,7 +137,7 @@ Pickup games are how strangers become regulars: a table in a dorm basement, a co
 - **Everyone hears the same call at the same moment.** The call is spoken aloud, not whispered to one player's screen.
 - **It says when it isn't sure.** BETA calls show their probability and can be challenged. When the cameras can't see a call, Trophy says PLAYERS DECIDE and hands it back to the people at the table instead of pretending.
 - **A challenge is a shared moment, not a fight:** the replay plays for everyone, and Claude gives a second opinion next to the geometry. The players (or the judge) decide.
-- **Every group keeps its own rules.** "First to 7, win by 1", or "a serve that clips the net and lands in is good": say it, and the Droid writes it into the rule pack, tests it and applies it once the group approves.
+- **Every group keeps its own rules.** "First to 7, win by 1", or "no lets: a serve that clips the net is played on": say it, and the Droid writes it into the rule pack, tests it and applies it once the group approves.
 - **Trophy Watch** turns the game into something to share afterwards: the recap, the moments, the ★ Play of the game.
 
 **What players said** _[OPEN-8: quotes from real players at Cal Hacks go here, with their permission. None yet; we won't invent any.]_

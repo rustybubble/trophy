@@ -19,6 +19,7 @@ class RallyState:
     last_hitter: str = ""
     contacts: int = 0
     nets: int = 0
+    net_touches: int = 0  # nets of kind touch: the ball clipped the net and went over
     event_ids: list[str] = field(default_factory=list)
     last_t_s: float = 0.0
 
@@ -45,6 +46,7 @@ class RallyState:
             "at_fault_side": self.at_fault_side,
             "contacts": self.contacts,
             "nets": self.nets,
+            "net_touches": self.net_touches,
             "shots": self.surface_bounces,
             "duration_s": max(0.0, self.last_t_s - self.t_start_s),
         }
@@ -70,3 +72,5 @@ class RallyState:
                 self.phase = "rally"
         elif t == "net":
             self.nets += 1
+            if p.get("kind") == "touch":
+                self.net_touches += 1

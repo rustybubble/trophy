@@ -14,7 +14,7 @@ jobs, each from a trigger we designed:
 
 | Trigger                                                                                                               | Job                                                                                                                                                    | What the Droid may edit                                              |
 | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| a `house_rule` row with `status = 'pending'` in Spacetime (the judge typed or said a rule)                            | **house_rule**: implement "first to 7, win by 1" or "a serve that clips the net is a let"                                                              | `rules.yaml` only                                                    |
+| a `house_rule` row with `status = 'pending'` in Spacetime (the judge typed or said a rule)                            | **house_rule**: implement "first to 7, win by 1" or "no lets: a serve that clips the net is played on"                                                 | `rules.yaml` only                                                    |
 | a session with no approved module for its sport, plus Agent 2's scene descriptor (`scene.schema.json`)                | **compile**: derive `sports/pickleball/` from the golden `sports/table_tennis/`                                                                        | all three files of the new module                                    |
 | a health metric crossing a threshold (ball lost > 40 % of frames, reprojection error rising)                          | **retune**: adjust thresholds, or the detector logic if a parameter can't fix it                                                                       | `config.yaml`, `events.py`                                           |
 | the judge finishes camera setup: corners, clap sync, a warm-up recording (`field.json` + labelled `track3d` fixtures) | **calibrate_checks**: specialise the golden check library to this calibration (sigma model, surface/floor bands, serve zone, dead-ball gap, edge band) | every `checks/<name>.py` of the copied library; never `library.json` |
@@ -149,7 +149,7 @@ The sandbox and its commit stay as the artifact.
 ```bash
 npm i -g @factory/cli@0.249.0                 # the droid CLI (or set DROID_EXEC_PATH)
 cd services/engine && uv sync                  # the gate's interpreter
-cd ../compiler && npm run cli -- house-rule --sport table_tennis --text "a serve that clips the net is a let"
+cd ../compiler && npm run cli -- house-rule --sport table_tennis --text "no lets: a serve that clips the net is played on"
 npm run cli -- compile --sport pickleball --from table_tennis    # scene + samples default to evals/fixtures/synthetic/pickleball
 npm run cli -- calibrate --sport table_tennis --session s_demo01 # field + samples default to evals/fixtures/synthetic/table_tennis_3d
 npm run cli -- watch                           # subscribe to pending house rules in Spacetime (needs SPACETIME_COMPILER_TOKEN)

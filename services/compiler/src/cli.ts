@@ -3,7 +3,7 @@
  * trophy-droid: the Factory Droid compiler from the command line.
  *
  *   trophy-droid compile    --sport pickleball --from table_tennis --scene <scene.json> --samples <dir>
- *   trophy-droid house-rule --sport table_tennis --text "a serve that clips the net is a let" --samples <dir> [--rule-version <ulid> --spacetime]
+ *   trophy-droid house-rule --sport table_tennis --text "no lets: a serve that clips the net is played on" --samples <dir> [--rule-version <ulid> --spacetime]
  *   trophy-droid retune     --sport table_tennis --reason "ball lost in 45% of frames" --scene <scene.json> --samples <dir>
  *   trophy-droid calibrate  --sport table_tennis --field <field.json> --samples <dir> [--checks <dir>] [--session <id>]
  *   trophy-droid new-check  --sport table_tennis --name ball_speed --question "how fast was that" --hint "..."

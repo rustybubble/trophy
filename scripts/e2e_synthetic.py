@@ -20,7 +20,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HOUSE_RULE = "a serve that clips the net and lands in is a let: replay the point"
+HOUSE_RULE = "no lets: a serve that clips the net is played on"
 
 
 def env() -> dict[str, str]:

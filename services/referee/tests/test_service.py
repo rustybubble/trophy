@@ -50,10 +50,10 @@ async def test_rules_question_is_grounded_in_the_pack_and_house_rules(settings, 
             "rules": [
                 {
                     "found": True,
-                    "answer": "Yes: a serve that clips the net and lands in is a let (house_rule_1).",
-                    "speech": "Yes. A serve that clips the net and lands in is replayed as a let.",
+                    "answer": "No: house rules say no lets, so a serve that clips the net is played on (house_rule_1).",
+                    "speech": "No. House rules: no lets, so play on.",
                     "citations": [
-                        {"rule_id": "house_rule_1", "quote": "A serve that clips the net and lands in is a let."},
+                        {"rule_id": "house_rule_1", "quote": "No lets: a serve that clips the net is played on."},
                         {"rule_id": "made_up", "quote": "nope"},
                     ],
                 }

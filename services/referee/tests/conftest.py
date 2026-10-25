@@ -152,7 +152,7 @@ CTX = {
             "rule_id": "off_table",
         }
     ],
-    "house_rules": [{"text": "A serve that clips the net and lands in is a let.", "status": "approved"}],
+    "house_rules": [{"text": "No lets: a serve that clips the net is played on.", "status": "approved"}],
 }
 
 

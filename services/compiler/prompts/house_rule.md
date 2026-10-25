@@ -12,6 +12,8 @@ make the edit, run `./replay_test`. Do not read the sample logs (`samples/*.l1.j
 
 - A scoring change ("first to 7", "win by 1") is a change to `scoring.params` (`points_to_win`, `win_by`,
   `serves_per_turn`, `deuce_serves_per_turn`, `games_to_win`).
+- Some built-in rules have a switch in `params` (`net_let_on_serve`: a serve that clips the net and lands in
+  is a let, ITTF 2.9.1.1). Turning one off or on is a param change, not a new rule.
 - A new rule is an entry in `rules:`, checked in order; the first scoring rule that fires ends the rally. Fields:
   `id` (snake_case), `name`, `tier` (`AUTO` for a geometric fact, `BETA` for anything close or judged), `kind`
   (`point` | `violation` | `edge_call` | `info`), `when` (CEL), `check: code`, `outcome`, optional `team` (CEL
@@ -21,9 +23,10 @@ make the edit, run `./replay_test`. Do not read the sample logs (`samples/*.l1.j
 - CEL vocabulary: `ev.type` (`bounce` | `contact` | `net` | `ball_dead` | `serve_toss`), `ev.side`,
   `ev.payload.*` (bounce: `surface` table|floor, `p_in`, `edge.top_edge/side_face/surface`; net: `kind`
   touch|into|over, `from_side`; ball_dead: `reason`), `rally.phase` (`serve` | `rally`), `rally.bounces`,
-  `rally.surface_bounces`, `rally.last_bounce_side`, `rally.at_fault_side`, `rally.server_side`, `rally.receiver`,
-  `game.points.A`, `params.*`; functions `opponent(side)`, `phi(x)`, `has(ev.payload.edge)`.
-- Put a rule that must win over an existing one **before** it in the list (e.g. a serve let before `net_into_own_side`).
+  `rally.surface_bounces`, `rally.net_touches`, `rally.last_bounce_side`, `rally.at_fault_side`, `rally.server_side`,
+  `rally.receiver`, `game.points.A`, `params.*`; functions `opponent(side)`, `phi(x)`, `has(ev.payload.edge)`.
+- Put a rule that must win over an existing one **before** it in the list (e.g. `serve_net_let` comes before
+  `edge_ball`).
 - If the rule needs a measurement no event carries, say so in your result instead of inventing one.
 
 ## Allowlist (the runner refuses anything else)

@@ -26,10 +26,7 @@ describe("parseIntent", () => {
     ["undo", { kind: "undo" }],
     ["What's the score?", { kind: "score" }],
     ["House rule: first to 7, win by 1.", { kind: "house_rule", text: "first to 7, win by 1." }],
-    [
-      "add a rule a serve that clips the net is a let",
-      { kind: "house_rule", text: "a serve that clips the net is a let" },
-    ],
+    ["add a rule no lets", { kind: "house_rule", text: "no lets" }],
     ["Trophy, what's the rule on edge balls?", { kind: "ask", question: "what's the rule on edge balls?" }],
     ["  ", { kind: "none" }],
   ])("%s", (text, want) => {
