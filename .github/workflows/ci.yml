@@ -52,6 +52,7 @@ jobs:
           uv run --frozen ruff format --check .
           uv run --frozen pytest -q
           uv run --frozen replay-test --module ../../sports/table_tennis --samples ../../evals/fixtures/synthetic/table_tennis --quiet
+          uv run --frozen check-test --checks ../../sports/table_tennis/checks --samples ../../evals/fixtures/synthetic/table_tennis_3d --quiet
       - name: referee lint + tests
         working-directory: services/referee
         run: |

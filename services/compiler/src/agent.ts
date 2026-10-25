@@ -18,6 +18,8 @@ export interface Agent {
 export interface AgentContext {
   sandboxDir: string;
   allowlist: readonly string[];
+  /** The job's gate script name (`replay_test` | `check_test`); the only command the handler lets through */
+  gate?: string;
   model: string;
   reasoningEffort?: string;
 }

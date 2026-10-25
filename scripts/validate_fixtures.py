@@ -95,13 +95,17 @@ def main() -> int:
     ev_v = table_validators["observation"]
     l1_v = validator(schemas["scene"], reg, "L1Record")
     l1_rows = {"camera": table_validators["camera"], "ball_sample": validator(schemas["tracks"], reg)}
+    track3d_v = validator(schemas["track3d"], reg)
     for f in sorted((ROOT / "evals/fixtures").rglob("*.jsonl")):
         is_l1 = f.name.endswith(".l1.jsonl")
+        is_3d = f.name.endswith(".track3d.jsonl")
         for n, line in enumerate(f.read_text("utf8").splitlines(), 1):
             if not line.strip():
                 continue
             rec = json.loads(line)
-            if is_l1:
+            if is_3d:
+                errors += [f"{f.relative_to(ROOT)}:{n}: {e.message}" for e in track3d_v.iter_errors(rec)]
+            elif is_l1:
                 errs = list(l1_v.iter_errors(rec))
                 if not errs:
                     errs = list(l1_rows[rec["table"]].iter_errors(rec["row"]))
@@ -111,9 +115,21 @@ def main() -> int:
             checked += 1
     labels_v = validator(schemas["scene"], reg, "SampleLabels")
     scene_v = validator(schemas["scene"], reg)
+    labels3d_v = validator(schemas["track3d"], reg, "Track3DLabels")
+    field_v = validator(schemas["track3d"], reg, "Field")
     for f in sorted((ROOT / "evals/fixtures").rglob("*.json")):
         obj = json.loads(f.read_text("utf8"))
-        v = scene_v if f.name == "scene.json" else labels_v if f.name.endswith(".labels.json") else None
+        v = (
+            scene_v
+            if f.name == "scene.json"
+            else field_v
+            if f.name == "field.json"
+            else labels_v
+            if f.name.endswith(".labels.json")
+            else labels3d_v
+            if f.name.endswith(".labels3d.json")
+            else None
+        )
         if v is None:
             continue
         errors += [f"{f.relative_to(ROOT)}: {e.message}" for e in v.iter_errors(obj)]

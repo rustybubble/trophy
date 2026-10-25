@@ -5,10 +5,15 @@
  *   trophy-droid compile    --sport pickleball --from table_tennis --scene <scene.json> --samples <dir>
  *   trophy-droid house-rule --sport table_tennis --text "a serve that clips the net is a let" --samples <dir> [--rule-version <ulid> --spacetime]
  *   trophy-droid retune     --sport table_tennis --reason "ball lost in 45% of frames" --scene <scene.json> --samples <dir>
+ *   trophy-droid calibrate  --sport table_tennis --field <field.json> --samples <dir> [--checks <dir>] [--session <id>]
+ *                                                        # D-31: specialise sports/<sport>/checks to this calibration
  *   trophy-droid watch      [--ws ws://127.0.0.1:3000]   # subscribe to pending house rules and compile each one
- *   trophy-droid approve    <run_id> [--by judge]         # promote a ready run to data/local/modules/<sport>/v<n>
+ *   trophy-droid approve    <run_id> [--by judge] [--session <id>]
+ *                           # module runs: promote to data/local/modules/<sport>/v<n>
+ *                           # calibrate runs: install the checks in data/local/sessions/<session|run_id>/checks
  *
- * Every run streams to stderr and to data/local/droid_runs/<run_id>/run.jsonl; the sandbox stays as the artifact.
+ * Every run streams to stderr and to data/local/droid_runs/<run_id>/run.jsonl (the job as job.json beside it); the
+ * sandbox stays as the artifact.
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,6 +21,7 @@ import { parseArgs } from "node:util";
 
 import type { DroidRun, HouseRule, SportModuleRow } from "@trophy/contracts";
 
+import { approveChecks } from "./approve.ts";
 import { ConfigError, loadConfig, REPO_ROOT } from "./config.ts";
 import { droidAgentFactory } from "./droidAgent.ts";
 import { runJob } from "./runner.ts";
@@ -39,6 +45,8 @@ async function runOne(job: Job, extra: RunSink[] = []): Promise<DroidRun> {
     agentFactory: droidAgentFactory({ apiKey: config.factoryApiKey, execPath: config.droidExecPath }),
     sink: new MultiSink([new ConsoleSink(), new LazyJsonl(config.runsDir), ...extra]),
   });
+  // approve needs what the run row does not carry (session id, field path); the job is small and has no secrets
+  writeFileSync(join(config.runsDir, run.run_id, "job.json"), JSON.stringify(job, null, 1) + "\n");
   process.stdout.write(
     JSON.stringify(
       {
@@ -89,6 +97,9 @@ async function main(argv: string[]): Promise<number> {
       spacetime: { type: "boolean", default: false },
       ws: { type: "string", default: "ws://127.0.0.1:3000" },
       by: { type: "string", default: "judge" },
+      field: { type: "string" },
+      checks: { type: "string" },
+      session: { type: "string" },
     },
   });
   const samplesFor = (sport: string) => values.samples ?? join(REPO_ROOT, "evals/fixtures/synthetic", sport);
@@ -139,6 +150,21 @@ async function main(argv: string[]): Promise<number> {
       });
       return run.status === "ready" ? 0 : 1;
     }
+    case "calibrate": {
+      if (!values.sport) usage();
+      const sport = values.sport;
+      const samplesDir = values.samples ?? join(REPO_ROOT, "evals/fixtures/synthetic", `${sport}_3d`);
+      const run = await runOne({
+        kind: "calibrate_checks",
+        sport,
+        fieldPath: values.field ?? join(samplesDir, "field.json"),
+        samplesDir,
+        checksDir: values.checks,
+        sessionId: values.session,
+        gameId: values["game-id"],
+      });
+      return run.status === "ready" ? 0 : 1;
+    }
     case "watch": {
       const config = loadConfig();
       const call = reducerCaller(config);
@@ -179,6 +205,17 @@ async function main(argv: string[]): Promise<number> {
       const lines = readFileSync(log, "utf8").trim().split("\n");
       const run = JSON.parse(lines[lines.length - 1]!) as DroidRun;
       if (run.status !== "ready") throw new Error(`run ${runId} is ${run.status}, not ready`);
+      if (run.kind === "calibrate_checks") {
+        const row = approveChecks(run, runId, values.session, values.by, join(config.runsDir, runId));
+        new JsonlSink(log).update({
+          ...run,
+          status: "approved",
+          module_version: row.version,
+          updated_at_ms: Date.now(),
+        });
+        process.stdout.write(JSON.stringify(row, null, 1) + "\n");
+        return 0;
+      }
       const modulesDir = join(REPO_ROOT, "data/local/modules", run.sport);
       mkdirSync(modulesDir, { recursive: true });
       const version = readdirSync(modulesDir).filter((d) => /^v\d+$/.test(d)).length + 1;

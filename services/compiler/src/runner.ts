@@ -1,5 +1,5 @@
 /**
- * The compile loop: sandbox -> draft -> replay_test -> repair (at most max_attempts) -> ready | failed.
+ * The compile loop: sandbox -> draft -> gate (replay_test | check_test) -> repair (at most max_attempts) -> ready | failed.
  *
  * The runner, not the agent, is the source of truth: it computes the diff from git, runs the gate itself, audits
  * every changed path against the allowlist after the turn, and enforces the wall-clock timeout. Each change to the
@@ -41,6 +41,14 @@ export function newRunId(now = Date.now()): string {
 }
 
 function triggerOf(job: Job): DroidRun["trigger"] {
+  if (job.kind === "calibrate_checks") {
+    // a calibration belongs to a session (D-31); the field and samples it was built from are the evidence
+    return {
+      source: "session",
+      text: job.text,
+      samples: [job.fieldPath ?? join(job.samplesDir, "field.json"), job.samplesDir],
+    };
+  }
   return {
     source: job.ruleVersion ? "house_rule" : "cli",
     rule_version: job.ruleVersion,
@@ -128,17 +136,19 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
     agent = await deps.agentFactory({
       sandboxDir: sb.dir,
       allowlist: sb.allowlist,
+      gate: sb.gate,
       model: deps.config.model,
       reasoningEffort: deps.config.reasoningEffort,
     });
     // The brief goes in the first prompt (it is also TASK.md in the sandbox) so the agent needs no exploratory turn.
-    let prompt = `${readFileSync(join(sb.dir, "TASK.md"), "utf8")}\n\nBegin now: plan in 3-5 lines, then edit, then run ./replay_test.`;
+    const gateCmd = `./${sb.gate}`;
+    let prompt = `${readFileSync(join(sb.dir, "TASK.md"), "utf8")}\n\nBegin now: plan in 3-5 lines, then edit, then run ${gateCmd}.`;
     let lastTable = "";
     for (let attempt = 1; attempt <= deps.config.maxAttempts; attempt++) {
       run.attempt = attempt;
       if (attempt > 1) {
         step({ kind: "repair", text: `attempt ${attempt}: repairing after failed checks` });
-        prompt = `./replay_test failed. Fix the module and run ./replay_test again. Only edit: ${sb.allowlist.join(", ")}.\n\n${lastTable}`;
+        prompt = `${gateCmd} failed. Fix the ${sb.gate === "check_test" ? "checks" : "module"} and run ${gateCmd} again. Only edit: ${sb.allowlist.join(", ")}.\n\n${lastTable}`;
       }
       await emit();
       let firstMessage = attempt === 1;
@@ -181,11 +191,11 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
         if (!result.success) break;
         continue;
       }
-      step({ kind: "test", text: `runner: ./replay_test (attempt ${attempt})` });
+      step({ kind: "test", text: `runner: ${gateCmd} (attempt ${attempt})` });
       await emit();
       let gate;
       try {
-        gate = await runGate(sb.dir);
+        gate = await runGate(sb.dir, sb.gate);
       } catch (e) {
         clearTimeout(timer);
         return finish("failed", `gate: ${(e as Error).message}`);
@@ -196,7 +206,8 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
       step({ kind: "test", text: `${gate.results.summary} (${gate.ms} ms)` });
       await emit();
       if (gate.results.passed) {
-        run.commit = commitSandbox(sb, `${job.kind} ${job.sport}: ${job.text ?? "derived module"} (run ${runId})`);
+        const what = job.text ?? (job.kind === "calibrate_checks" ? "calibrated checks" : "derived module");
+        run.commit = commitSandbox(sb, `${job.kind} ${job.sport}: ${what} (run ${runId})`);
         clearTimeout(timer);
         return finish("ready");
       }

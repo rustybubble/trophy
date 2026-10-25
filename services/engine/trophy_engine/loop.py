@@ -1,5 +1,9 @@
 """``trophy-engine run``: the live loop. Redis ``ev:*`` (consumer group ``engine``) and ``ctl:engine`` in, Spacetime
-out. Background AI votes run only when every voter's key is present (``--votes``); there is no stub voter.
+out. With ``--field`` the engine also consumes fused 3D ball samples (D-31): from the Redis stream ``trk:ball3d``, or
+``--track3d <file.track3d.jsonl>`` replayed on the clock; the session's check library (``--checks``, default the
+golden ``sports/<sport>/checks``) turns them into events through ``TrackEventer``. Events after a scored point are
+dropped until the next rally starts (the ball is dead whatever the track says). Background AI votes run only when
+every voter's key is present (``--votes``); there is no stub voter.
 """
 
 from __future__ import annotations
@@ -16,9 +20,13 @@ from typing import Any
 import redis
 from trophy.streams import CTL_ENGINE, EVENT_STREAMS, EventConsumer, parse_ctl
 
+from .ask import AskConfigError, Phraser, TrackStore, make_app, serve
+from .checks.events import TrackEventer
+from .checks.library import load_field, load_library
 from .decide import BackgroundDecider, BitdeerVoter, ClaudeVoter, GeminiVoter, VoterConfigError
 from .engine import Engine
 from .state import MemoryState, SpacetimeState, StateWriter
+from .track_source import RedisTrackSource, replay_file
 
 ROOT = Path(__file__).resolve().parents[3]
 log = logging.getLogger("trophy.engine")
@@ -49,6 +57,93 @@ def build_decider(env: dict[str, str], state: StateWriter, engine: Engine) -> Ba
     return BackgroundDecider(voters, state.post_ai_vote, on_result)
 
 
+class TrackFeeder:
+    """Fused samples -> checks -> events -> the engine, with the dead-ball rule after a scored point."""
+
+    def __init__(self, engine: Engine, eventer: TrackEventer, game_id: str, store: TrackStore | None = None) -> None:
+        self.engine = engine
+        self.eventer = eventer
+        self.game_id = game_id
+        self.store = store  # the ask service's memory of this game, when it runs
+        self.scored_rally: int | None = None
+        self.n_samples = 0
+        self.n_events = 0
+
+    def feed(self, row: dict[str, Any]) -> list[dict[str, Any]]:
+        self.n_samples += 1
+        if self.store is not None:
+            self.store.push(row)
+        calls = self._handle(self.eventer.push(row))
+        if self.store is not None:
+            if self.eventer.last_phases is not None:
+                self.store.set_segments(self.eventer.last_phases["segments"])
+            for c in calls:
+                self.store.add_call(c)
+            if calls:
+                g = self.engine.games.get(self.game_id)
+                if g is not None:
+                    sc = g.score()
+                    self.store.set_score(
+                        {"points": dict(sc.points), "server": sc.server, "display": sc.display(*g.sides)}
+                    )
+        return calls
+
+    def tick(self, now_s: float) -> list[dict[str, Any]]:
+        return self._handle(self.eventer.tick(now_s))
+
+    def _handle(self, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        calls: list[dict[str, Any]] = []
+        for ev in events:
+            rn = ev.pop("rally_no_hint", None)
+            if self.scored_rally is not None and rn == self.scored_rally:
+                continue  # the point was called; the rest of this rally's track is the ball being picked up
+            self.n_events += 1
+            out = self.engine.feed(ev)
+            calls += out
+            if any(c.get("points") or c.get("outcome") == "let" for c in out):
+                self.scored_rally = rn
+        return calls
+
+
+def make_feeder(
+    engine: Engine, game_id: str, sport: str, field_path: Path, checks_dir: Path | None, store: TrackStore | None = None
+) -> TrackFeeder:
+    fld = load_field(field_path)
+    lib = load_library(checks_dir or ROOT / "sports" / sport / "checks")
+    eventer = TrackEventer(lib, fld, game_id=game_id, sport=sport)
+    if store is not None:
+        store.library = lib
+        store.set_field(fld)
+    log.info(
+        json.dumps(
+            {
+                "svc": "engine",
+                "msg": "checks loaded",
+                "dir": str(lib.path),
+                "checks": lib.names(),
+                "calibrated": lib.calibrated,
+            }
+        )
+    )
+    return TrackFeeder(engine, eventer, game_id, store)
+
+
+def start_ask(env: dict[str, str], store: TrackStore, session_dir: Path) -> Any:
+    """Ask the ref over the live checks (D-31 §5). Needs ANTHROPIC_API_KEY: without it the service answers 503
+    not_configured, never a made-up answer."""
+    phraser = None
+    err = None
+    try:
+        phraser = Phraser.from_env(env)
+    except AskConfigError as e:
+        err = str(e)
+        log.warning(json.dumps({"svc": "engine", "msg": "ask: Claude not configured", "detail": err}))
+    app = make_app(store, phraser, session_dir=session_dir, config_error=err)
+    server = serve(app)
+    log.info(json.dumps({"svc": "engine", "msg": "ask service up", "port": getattr(server.config, "port", None)}))
+    return server
+
+
 def run(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="trophy-engine", description="Trophy rule engine: events + ctl in, calls out")
     ap.add_argument("--redis", default=None, help="REDIS_URL (default from env/.env)")
@@ -56,6 +151,22 @@ def run(argv: list[str] | None = None) -> int:
     ap.add_argument("--votes", action="store_true", help="run decide() voters (needs ANTHROPIC/GEMINI/BITDEER keys)")
     ap.add_argument("--modules", type=Path, default=ROOT / "sports")
     ap.add_argument("--log-json", action="store_true")
+    ap.add_argument(
+        "--field", type=Path, default=None, help="field.json: consume fused 3D samples through the checks (D-31)"
+    )
+    ap.add_argument(
+        "--checks", type=Path, default=None, help="the session's checks/ (default sports/<sport>/checks, uncalibrated)"
+    )
+    ap.add_argument(
+        "--track3d", type=Path, default=None, help="replay a *.track3d.jsonl instead of the trk:ball3d stream"
+    )
+    ap.add_argument("--speed", type=float, default=1.0, help="replay speed (0 = as fast as possible)")
+    ap.add_argument("--game-id", default="g_track3d1", help="game to create for --track3d replay (memory state)")
+    ap.add_argument("--sport", default="table_tennis")
+    ap.add_argument("--ask", action="store_true", help="serve POST /ask over the live checks (needs ANTHROPIC_API_KEY)")
+    ap.add_argument(
+        "--session-dir", type=Path, default=None, help="where pending checks are written (data/local/sessions/<id>)"
+    )
     a = ap.parse_args(argv)
     env = {**_dotenv(), **os.environ}
     logging.basicConfig(level=logging.INFO, format="%(message)s" if a.log_json else "%(asctime)s %(name)s %(message)s")
@@ -67,11 +178,104 @@ def run(argv: list[str] | None = None) -> int:
         except VoterConfigError as e:
             print(f"--votes needs every voter key: {e}", file=sys.stderr)
             return 3
+    if a.track3d is not None:
+        # replay a recorded 3D track through the checks and the engine, no Redis needed
+        if a.field is None:
+            a.field = a.track3d.parent / "field.json"
+        engine.create_game(a.game_id, a.sport, t0_ms=0, params={"replay": str(a.track3d)})
+        engine.start_game(a.game_id, "A")
+        store = (
+            TrackStore(load_library(a.checks or ROOT / "sports" / a.sport / "checks"), sport=a.sport) if a.ask else None
+        )
+        feeder = make_feeder(engine, a.game_id, a.sport, a.field, a.checks, store)
+        if store is not None:
+            start_ask(env, store, a.session_dir or ROOT / "data" / "local" / "sessions" / a.game_id)
+        t_last = 0.0
+        for row, now_s in replay_file(a.track3d, speed=a.speed):
+            t_last = now_s
+            for c in feeder.feed(row):
+                log.info(
+                    json.dumps(
+                        {
+                            "svc": "engine",
+                            "game_id": a.game_id,
+                            "msg": "call",
+                            "rule": c["rule_id"],
+                            "text": c["text"],
+                            "t_game_s": c["t_game_s"],
+                        }
+                    )
+                )
+        for c in feeder.tick(t_last + 5.0):
+            log.info(
+                json.dumps(
+                    {"svc": "engine", "game_id": a.game_id, "msg": "call", "rule": c["rule_id"], "text": c["text"]}
+                )
+            )
+        log.info(
+            json.dumps(
+                {
+                    "svc": "engine",
+                    "msg": "replay done",
+                    "samples": feeder.n_samples,
+                    "events": feeder.n_events,
+                    "calls": len(engine.games[a.game_id].calls),
+                }
+            )
+        )
+        if store is not None:
+            log.info(json.dumps({"svc": "engine", "msg": "ask service stays up for questions (ctrl-c to stop)"}))
+            try:
+                while True:
+                    time.sleep(1.0)
+            except KeyboardInterrupt:
+                pass
+        return 0
     r = redis.Redis.from_url(a.redis or env.get("REDIS_URL") or "redis://127.0.0.1:6379/0")
     consumer = EventConsumer(r, group="engine", consumer=f"engine-{os.getpid()}", streams=list(EVENT_STREAMS))
     ctl_last = _stream_tail(r, CTL_ENGINE)  # start after what is there; never re-arm at "$", which drops commands
-    log.info(json.dumps({"svc": "engine", "msg": "started", "state": a.state, "votes": a.votes}))
+    track_src = RedisTrackSource(r) if a.field is not None else None
+    feeders: dict[str, TrackFeeder] = {}  # game_id -> feeder, created when the game goes live
+    ask_store: TrackStore | None = None
+    if a.ask and a.field is not None:
+        ask_store = TrackStore(load_library(a.checks or ROOT / "sports" / a.sport / "checks"), sport=a.sport)
+        start_ask(env, ask_store, a.session_dir or ROOT / "data" / "local" / "sessions" / "live")
+    log.info(
+        json.dumps(
+            {"svc": "engine", "msg": "started", "state": a.state, "votes": a.votes, "track3d": a.field is not None}
+        )
+    )
     while True:
+        if track_src is not None:
+            for row, _now_s in track_src.poll(block_ms=10):
+                gid = str(
+                    row.get("game_id") or next((g for g, st in engine.games.items() if st.game["status"] == "live"), "")
+                )
+                g = engine.games.get(gid)
+                if g is None or g.game["status"] != "live":
+                    continue
+                f = feeders.get(gid)
+                if f is None:
+                    try:
+                        f = feeders[gid] = make_feeder(engine, gid, g.game["sport"], a.field, a.checks, ask_store)
+                    except Exception:  # noqa: BLE001 - a bad library must not stop the referee's other inputs
+                        log.exception("checks failed to load")
+                        continue
+                t0 = time.perf_counter()
+                for c in f.feed(row):
+                    log.info(
+                        json.dumps(
+                            {
+                                "svc": "engine",
+                                "game_id": gid,
+                                "msg": "call",
+                                "rule": c["rule_id"],
+                                "text": c["text"],
+                                "ms": round((time.perf_counter() - t0) * 1000, 1),
+                                "source": "track3d",
+                            }
+                        )
+                    )
         for stream, entry_id, ev in consumer.read(block_ms=50):
             t0 = time.perf_counter()
             try:

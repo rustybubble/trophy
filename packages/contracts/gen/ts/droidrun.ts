@@ -24,7 +24,7 @@ export interface DroidRun {
    * The reference module a compile derives from
    */
   base_sport?: string | null;
-  kind: "compile" | "house_rule" | "retune";
+  kind: "compile" | "house_rule" | "retune" | "calibrate_checks" | "new_check";
   trigger: DroidRunTrigger;
   status: DroidRunStatus;
   backend: "droid" | "claude-fallback";

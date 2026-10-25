@@ -2,8 +2,9 @@
  * The Factory Droid behind the runner's `Agent` interface (@factory/droid-sdk 0.10.0, Node entrypoint).
  *
  * Scoped access: the session runs with autonomy OFF, so every edit, create and shell command comes back to our
- * permission handler. It proceeds only for edits inside the job's allowlist and for `./replay_test`; everything else
- * is cancelled and recorded as a `blocked` step. Web, task, skill and automation tools are disabled outright.
+ * permission handler. It proceeds only for edits inside the job's allowlist and for the job's gate (`./replay_test`
+ * or `./check_test`); everything else is cancelled and recorded as a `blocked` step. Web, task, skill and automation
+ * tools are disabled outright.
  */
 import {
   AutonomyLevel,
@@ -37,12 +38,16 @@ export const DISABLED_TOOLS = [
   "StartMissionRun",
 ];
 
-export const SYSTEM_APPEND = [
-  "You are Trophy's sport-module compiler running inside a throwaway sandbox.",
-  "You may only edit the files listed under 'Allowlist' in TASK.md and may only run `./replay_test`.",
-  "Any other edit or command is refused by the runner; do not retry it, work within the allowlist.",
-  "Begin your first reply with a '## Plan' section (3-6 numbered steps), then do the work, then end with '## Result'.",
-].join(" ");
+export function systemAppend(gate = "replay_test"): string {
+  return [
+    "You are Trophy's sport-module compiler running inside a throwaway sandbox.",
+    `You may only edit the files listed under 'Allowlist' in TASK.md and may only run \`./${gate}\`.`,
+    "Any other edit or command is refused by the runner; do not retry it, work within the allowlist.",
+    "Begin your first reply with a '## Plan' section (3-6 numbered steps), then do the work, then end with '## Result'.",
+  ].join(" ");
+}
+
+export const SYSTEM_APPEND = systemAppend();
 
 interface Opts {
   apiKey: string;
@@ -76,7 +81,7 @@ export function decide(ctx: AgentContext, toolUses: ToolUse[], onBlocked: (what:
       }
       case ToolConfirmationType.Execute: {
         const cmd = d.fullCommand ?? d.command ?? "";
-        if (!isAllowedCommand(cmd, ctx.sandboxDir)) {
+        if (!isAllowedCommand(cmd, ctx.sandboxDir, ctx.gate ? [ctx.gate] : undefined)) {
           onBlocked(`command refused: ${cmd.slice(0, 160)}`);
           return false;
         }
@@ -119,7 +124,7 @@ export function droidAgentFactory(opts: Opts): AgentFactory {
       autonomyLevel: AutonomyLevel.Low,
       disableBuiltinSkills: true,
       disabledToolIds: DISABLED_TOOLS,
-      systemPrompt: { type: "preset", preset: "droid", append: SYSTEM_APPEND },
+      systemPrompt: { type: "preset", preset: "droid", append: systemAppend(ctx.gate) },
       env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", FACTORY_API_KEY: opts.apiKey },
       permissionHandler({ toolUses, options: offered }) {
         const ok = decide(ctx, toolUses as unknown as ToolUse[], (w) => blockedSink(w));
@@ -146,7 +151,7 @@ export function droidAgentFactory(opts: Opts): AgentFactory {
               const cmd = commandOf(msg.input);
               let kind: AgentEvent["kind"] = "tool";
               if (["Edit", "Create", "ApplyPatch", "Write", "MultiEdit"].includes(name)) kind = "edit";
-              if (name === "Execute" && cmd && /replay_test/.test(cmd)) kind = "test";
+              if (name === "Execute" && cmd && /replay_test|check_test/.test(cmd)) kind = "test";
               onEvent({
                 kind,
                 tool: name,

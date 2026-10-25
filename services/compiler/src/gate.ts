@@ -12,13 +12,14 @@ export interface GateOutcome {
   ms: number;
 }
 
-export function runGate(sandboxDir: string, timeoutMs = 60_000): Promise<GateOutcome> {
+/** `script` is the gate's file name in the sandbox (`replay_test` | `check_test`). */
+export function runGate(sandboxDir: string, script = "replay_test", timeoutMs = 60_000): Promise<GateOutcome> {
   const resultsPath = join(sandboxDir, ".trophy", "results.json");
   rmSync(resultsPath, { force: true });
   const t0 = Date.now();
   return new Promise((resolve, reject) => {
     execFile(
-      join(sandboxDir, "replay_test"),
+      join(sandboxDir, script),
       [],
       {
         cwd: sandboxDir,
@@ -36,7 +37,7 @@ export function runGate(sandboxDir: string, timeoutMs = 60_000): Promise<GateOut
               ? 2
               : 0;
         if (!existsSync(resultsPath)) {
-          reject(new Error(`replay_test produced no results (exit ${exitCode}): ${stderr || stdout}`.slice(0, 2000)));
+          reject(new Error(`${script} produced no results (exit ${exitCode}): ${stderr || stdout}`.slice(0, 2000)));
           return;
         }
         const results = JSON.parse(readFileSync(resultsPath, "utf8")) as DroidRunResults;
