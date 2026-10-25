@@ -1,0 +1,66 @@
+{
+  "synthetic": false,
+  "label": "HAND-ANNOTATED from CC BY footage by a Trophy agent (not synthetic, not perception output)",
+  "sport": "volleyball",
+  "labeller": "Claude (Trophy sports agent), 2026-10-25, from 720p frames at 2-15 fps",
+  "bounces": [
+    {
+      "t_game_s": 3.5,
+      "side": "B",
+      "surface": "court"
+    },
+    {
+      "t_game_s": 19.5,
+      "side": "B",
+      "surface": "court"
+    },
+    {
+      "t_game_s": 60.8,
+      "side": "B",
+      "surface": "court"
+    }
+  ],
+  "tol_count": 1,
+  "tol_t_s": 0.5,
+  "alternate_sides": false,
+  "min_recall": 0.75,
+  "initial_score": {
+    "A": 0,
+    "B": 0
+  },
+  "outcome_truth": "rally winners match the video's own score overlay (HND 1, 2, AZM 1, HND 3); causes are our reading",
+  "calls": [
+    {
+      "t_s": 3.5,
+      "outcome": "point",
+      "team_id": "A",
+      "at_fault": "B",
+      "rule_hint": "ball_in",
+      "conf": 0.7
+    },
+    {
+      "t_s": 19.5,
+      "outcome": "point",
+      "team_id": "A",
+      "at_fault": "B",
+      "rule_hint": "ball_grounded_after_touch",
+      "conf": 0.75
+    },
+    {
+      "t_s": 35.9,
+      "outcome": "point",
+      "team_id": "B",
+      "at_fault": "A",
+      "rule_hint": "ball_not_returned",
+      "conf": 0.5
+    },
+    {
+      "t_s": 60.8,
+      "outcome": "point",
+      "team_id": "A",
+      "at_fault": "B",
+      "rule_hint": "ball_in",
+      "conf": 0.6
+    }
+  ]
+}
