@@ -57,6 +57,7 @@ from trophy.timebase import ClockFit, now_ms
 
 from . import calib_stub
 from .config import Settings
+from .demo import demo_router
 from .replay import replay_router
 from .tokens import Claims, TokenError, mint, normalize_role, verify
 
@@ -792,4 +793,5 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         return JSONResponse(body, status_code=200 if redis_ok else 503)
 
     app.include_router(replay_router(st))
+    app.include_router(demo_router(st))
     return app

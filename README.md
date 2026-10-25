@@ -27,7 +27,7 @@ Point a phone at a ping-pong table and Trophy referees the game:
 | `docs/` | Plan, interfaces, decisions, progress, research; `docs/archive/` is superseded |
 
 ## Run it (macOS, M5 Pro)
-`make dev` starts everything natively. Phones connect to `https://$TROPHY_DOMAIN/cam/`. Copy `.env.example` to `.env` and fill in the keys; never commit `.env`. **The step-by-step demo (stack, a live synthetic game, a Droid house rule, the voice, the 3D map) is [`docs/demo.md`](docs/demo.md).**
+`make dev` starts everything natively. Phones connect to `https://$TROPHY_DOMAIN/cam/`. Copy `.env.example` to `.env` and fill in the keys; never commit `.env`. **The step-by-step demo is [`docs/demo.md`](docs/demo.md): `make dev`, open `http://127.0.0.1:5174/`, start a game and upload a clip; it is tracked, refereed by the live engine and shown on the dashboard and phones. Also: the synthetic live game, a Droid house rule, the voice, the 3D map.**
 
 ## Prize-track sections (filled in at submission)
 - **Factory Droid:** where Droid runs, its trigger, its sandbox and what it can touch, and what the dashboard shows.

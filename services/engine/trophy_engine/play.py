@@ -48,6 +48,27 @@ def _new_game_id() -> str:
     return "g_" + "".join(secrets.choice(alphabet) for _ in range(8))
 
 
+def cameras_in(samples_dir: Path) -> dict[str, dict]:
+    """cam_id -> the first `camera` row in the logs (its calibration goes to the engine and the world view)."""
+    out: dict[str, dict] = {}
+    for log_path in sorted(samples_dir.glob("*.l1.jsonl")):
+        for line in log_path.read_text("utf8").splitlines():
+            if '"camera"' not in line:
+                continue
+            rec = json.loads(line)
+            if rec.get("table") == "camera" and rec["cam_id"] not in out:
+                out[rec["cam_id"]] = rec["row"]
+    return out
+
+
+def apply_h(h: list[float], u: float, v: float) -> tuple[float, float] | None:
+    """Image px -> field metres through the camera's H_img_to_field (row-major 3x3)."""
+    w = h[6] * u + h[7] * v + h[8]
+    if abs(w) < 1e-9:
+        return None
+    return ((h[0] * u + h[1] * v + h[2]) / w, (h[3] * u + h[4] * v + h[5]) / w)
+
+
 def events_for(module_dir: Path, samples_dir: Path, game_id: str) -> list[tuple[str, str | None, list[dict]]]:
     """(sample name, labelled server, layer-2 events) per fixture, in order; events carry the live game id."""
     mod = load_module(module_dir)
@@ -76,6 +97,23 @@ def run(argv: list[str] | None = None) -> int:
         "--first-server", default=None, help="team that serves first (default: the fixture's label, else A)"
     )
     ap.add_argument("--no-start", action="store_true", help="with --new-game: create the game, leave it in the lobby")
+    ap.add_argument(
+        "--t0-ms",
+        type=float,
+        default=None,
+        help="the game's t0 (ms since the epoch) when re-creating it after an engine restart (default: now)",
+    )
+    ap.add_argument(
+        "--t-offset",
+        type=float,
+        default=0.0,
+        help="game time (s) at which the first event lands: the game clock keeps running between replays",
+    )
+    ap.add_argument(
+        "--no-world",
+        action="store_true",
+        help="don't mirror events and the ball track into Spacetime (observation / track_sample, vision token)",
+    )
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     env = {**_dotenv(), **os.environ}
@@ -87,34 +125,46 @@ def run(argv: list[str] | None = None) -> int:
     plan = events_for(module_dir, samples_dir, game_id)
     first_server = a.first_server or next((srv for _, srv, _ in plan if srv), None) or "A"
 
-    if a.new_game:
-        publish_ctl(
-            r,
-            make_ctl(
-                "create_game",
-                game_id,
-                {
-                    "sport": a.sport,
-                    "t0_ms": time.time() * 1000,
-                    "params": {"synthetic": True, "label": "SYNTHETIC: trophy-play replay of labelled fixtures"},
-                },
-            ),
-        )
-        log.info("create_game %s (%s)", game_id, a.sport)
-    for cam in ("c_syn001", "c_syn002"):
-        args = {"cam_id": cam, "label": f"SYNTHETIC {cam}", "role": "cam"}
+    # create_game is idempotent in the engine (ignored when it knows the game), so always send it: after an engine
+    # restart the game only exists in Spacetime and every later command would hit "unknown game".
+    params = {"synthetic": True, "label": "SYNTHETIC: trophy-play replay of labelled fixtures"} if a.new_game else {}
+    publish_ctl(
+        r,
+        make_ctl("create_game", game_id, {"sport": a.sport, "t0_ms": a.t0_ms or time.time() * 1000, "params": params}),
+    )
+    log.info("create_game %s (%s)%s", game_id, a.sport, "" if a.new_game else " (no-op when the engine knows it)")
+    cams = cameras_in(samples_dir)
+    for cam, row in cams.items():
+        args = {"cam_id": cam, "label": row.get("label") or cam, "role": "cam", "device": row.get("device") or {}}
         publish_ctl(r, make_ctl("register_camera", game_id, args))
+        calib = row.get("calibration")
+        if calib:  # the engine caps calls at BETA while a camera's calibration is untrusted
+            cal_args = {"cam_id": cam, "label": args["label"], "calibration": {**calib, "game_id": game_id}}
+            publish_ctl(r, make_ctl("set_calibration", game_id, cal_args))
+    trusted = {c: bool((row.get("calibration") or {}).get("trusted")) for c, row in cams.items()}
+    log.info("cameras: %s", ", ".join(f"{c} ({'trusted' if t else 'UNTRUSTED'})" for c, t in trusted.items()))
     if not a.no_start:
         publish_ctl(r, make_ctl("start_game", game_id, {"first_server": first_server}))
         log.info("start_game %s, first server %s", game_id, first_server)
 
-    time.sleep(
-        0.5
-    )  # let the engine take the ctl commands before the first event (it reads ev:* and ctl:engine in turn)
+    world = None
+    if not a.no_world:
+        if env.get("SPACETIME_VISION_TOKEN"):
+            from trophy.world import ObservationWriter, SpacetimeClient, TrackSampleWriter
+
+            client = SpacetimeClient(token=env["SPACETIME_VISION_TOKEN"])
+            world = (ObservationWriter(client), TrackSampleWriter(client))
+        else:
+            log.warning("no SPACETIME_VISION_TOKEN: events and the track are not mirrored into Spacetime")
+    tracks: dict[str, list] = {}  # per fixture: the raw ball samples, for the world view
+    if world is not None:
+        for s_ in load_samples(samples_dir):
+            tracks[s_.name] = [o for o in s_.observations if hasattr(o, "px")]
+    time.sleep(0.5)  # let the engine take the ctl commands before the first event (it reads ev:* then ctl:engine)
     total = sum(len(evs) for _, _, evs in plan)
     looping = ", looping" if a.loop else ""
     log.info("%d synthetic events from %d fixtures; speed x%.1f%s", total, len(plan), a.speed, looping)
-    offset = 0.0  # fixtures have their own t_game_s origin; play them back to back on the live game clock
+    offset = a.t_offset  # fixtures have their own t_game_s origin; play them back to back on the live game clock
     t_wall0 = time.monotonic()
     while True:
         for name, server, evs in plan:
@@ -124,17 +174,38 @@ def run(argv: list[str] | None = None) -> int:
                 publish_ctl(r, make_ctl("set_server", game_id, {"team_id": server}))
                 time.sleep(0.2)
             t_first = evs[0]["t_game_s"]
+            samples = iter(tracks.get(name, []))
+            pending = next(samples, None)
             for ev in evs:
                 due = offset + (ev["t_game_s"] - t_first)
-                while (time.monotonic() - t_wall0) * a.speed < due:
+                while (time.monotonic() - t_wall0) * a.speed < due - a.t_offset:
                     time.sleep(0.005)
                 live = {**ev, "game_id": game_id, "t_game_s": round(due, 4)}
-                publish_event(r, parse_event(live))
+                event = parse_event(live)
+                publish_event(r, event)
+                if world is not None:
+                    world[0].post(event)
+                    while pending is not None and pending.t_s <= ev["t_game_s"]:  # the track up to this event
+                        h = (cams.get(pending.cam_id, {}).get("calibration") or {}).get("H_img_to_field")
+                        pos = apply_h(h, *pending.px) if (h and pending.px) else None
+                        world[1].post(
+                            game_id,
+                            pending.cam_id,
+                            round(offset + (pending.t_s - t_first), 4),
+                            pos_m=[round(pos[0], 4), round(pos[1], 4)] if pos else None,
+                            px=[round(pending.px[0], 1), round(pending.px[1], 1)] if pending.px else None,
+                            conf=pending.conf,
+                        )
+                        pending = next(samples, None)
                 payload = json.dumps(ev.get("payload") or {})[:80]
                 log.info("%-9s %-10s t=%7.2fs conf=%.2f %s", name, ev["type"], due, ev.get("conf", 0.0), payload)
             offset += (evs[-1]["t_game_s"] - t_first) + a.gap
         if not a.loop:
             break
+    if world is not None:
+        for w_ in world:
+            w_.flush()
+        log.info("world: %d observations + %d track samples mirrored into Spacetime", world[0].sent, world[1].sent)
     log.info("done: %d events into game %s", total, game_id)
     return 0
 

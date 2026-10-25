@@ -493,8 +493,8 @@ class Engine:
             {
                 "cam_id": a["cam_id"],
                 "game_id": g.game["game_id"],
-                "label": "",
-                "role": "cam",
+                "label": a.get("label", ""),
+                "role": a.get("role", "cam"),
                 "calibration": calib,
                 "calib_trusted": bool(calib.get("trusted", False)),
                 "connected": True,

@@ -9,6 +9,7 @@ import time
 import httpx
 import httpx2
 import pytest
+
 from trophy_engine.decide import (
     BackgroundDecider,
     BitdeerVoter,

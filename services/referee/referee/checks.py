@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from trophy.contracts import CheckResult
+from trophy.contracts import CheckReply
 from trophy.ids import new_ulid
 from trophy.streams import CTL_ENGINE, CTL_STREAM_MAXLEN, make_ctl
 
@@ -25,7 +25,7 @@ class CheckTimeout(TimeoutError):
 
 @dataclass
 class CheckOutcome:
-    result: CheckResult | None
+    result: CheckReply | None
     latency_ms: float
     error: str | None = None
     reply_to: str = ""
@@ -52,7 +52,7 @@ def parse_reply(fields: dict[Any, Any]) -> dict[str, Any]:
 
 
 class RedisCheckBackend:
-    """XADD a ctl command with `reply_to`, then XREAD that stream (blocking) for the one CheckResult."""
+    """XADD a ctl command with `reply_to`, then XREAD that stream (blocking) for the one CheckReply."""
 
     def __init__(self, r: Any) -> None:
         self.r = r  # redis.asyncio.Redis (or fakeredis.FakeAsyncRedis)
@@ -102,7 +102,7 @@ class RedisCheckBackend:
                 await self.r.expire(reply_to, REPLY_TTL_S)
             ms = (time.perf_counter() - t0) * 1000
             try:
-                result = CheckResult.model_validate(data)
+                result = CheckReply.model_validate(data)
             except Exception as e:  # noqa: BLE001 - a malformed reply is reported, not raised through the call
                 return CheckOutcome(None, ms, f"bad_reply:{type(e).__name__}", reply_to, data)
             return CheckOutcome(result, ms, result.error, reply_to, data)

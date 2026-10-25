@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from trophy_engine.check_test.checks import run_check_test
 from trophy_engine.checks.api import Field, Track
 from trophy_engine.checks.events import TrackEventer

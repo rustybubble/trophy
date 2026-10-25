@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from trophy.contracts import CheckResult
+from trophy.contracts import CheckReply
 
 from .catalog import CHECKS, CheckSpec
 from .llm import JSONCompleter, LLMError
@@ -59,7 +59,7 @@ def fmt_num(v: Any, nd: int = 1) -> str:
     return s[:-2] if s.endswith(".0") else s
 
 
-def facts_for(result: CheckResult, question: str) -> dict[str, Any]:
+def facts_for(result: CheckReply, question: str) -> dict[str, Any]:
     """The numbers Claude may say, already in spoken units."""
     ev = dict(result.evidence or {})
     facts: dict[str, Any] = {
@@ -107,7 +107,7 @@ def numbers_ok(speech: str, facts: dict[str, Any]) -> bool:
     return True
 
 
-def template_check(result: CheckResult, spec: CheckSpec | None) -> Phrased:
+def template_check(result: CheckReply, spec: CheckSpec | None) -> Phrased:
     """Deterministic rendering of the measurement (used when Claude fails or says a number it was not given)."""
     ev = result.evidence or {}
     v = (result.verdict or "").replace("_", " ")
@@ -156,7 +156,7 @@ def template_check(result: CheckResult, spec: CheckSpec | None) -> Phrased:
     return Phrased(speech, speech, "template")
 
 
-async def phrase_check(llm: JSONCompleter | None, question: str, result: CheckResult) -> Phrased:
+async def phrase_check(llm: JSONCompleter | None, question: str, result: CheckReply) -> Phrased:
     spec = CHECKS.get(result.check)
     if result.error or (result.verdict is None and result.check != "rally_summary"):
         return template_error(result)
@@ -178,7 +178,7 @@ async def phrase_check(llm: JSONCompleter | None, question: str, result: CheckRe
     return Phrased(speech, answer, "claude", ms)
 
 
-def template_error(result: CheckResult) -> Phrased:
+def template_error(result: CheckReply) -> Phrased:
     err = result.error or "no_data"
     if err == "no_such_check":
         s = "I don't have a check for that yet."

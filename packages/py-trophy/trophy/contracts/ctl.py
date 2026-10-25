@@ -145,9 +145,9 @@ class HouseRuleVersionArgs(BaseModel):
     rule_version: str
 
 
-class CheckResult(BaseModel):
+class CheckReply(BaseModel):
     """
-    What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-36 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.
+    The referee reply (was CheckResult; renamed at the demo merge because track3d.schema.json owns CheckResult, the check function's own return). What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-36 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.
     """
 
     model_config = ConfigDict(
@@ -173,7 +173,7 @@ class CheckResult(BaseModel):
 
 class RunCheckArgs(BaseModel):
     """
-    Referee -> engine: run one session check and XADD a CheckResult to the Redis stream `reply_to` (D-36 §5).
+    Referee -> engine: run one session check and XADD a CheckReply to the Redis stream `reply_to` (D-36 §5).
     """
 
     model_config = ConfigDict(
@@ -185,13 +185,13 @@ class RunCheckArgs(BaseModel):
         ...,
         description="t_game_s (absolute, field clock) when known, else ref: last | last_rally | call:<call_id>; plus check-specific args",
     )
-    reply_to: str = Field(..., description="Redis stream key reply:<req_id>; the engine XADDs {json: CheckResult} once")
+    reply_to: str = Field(..., description="Redis stream key reply:<req_id>; the engine XADDs {json: CheckReply} once")
     question: str | None = Field(None, description="The spoken question, for the engine's transcript")
 
 
 class RequestCheckArgs(BaseModel):
     """
-    Referee -> engine: no session check answers this question. The engine opens a droid_run of kind new_check (the Droid writes and gates it in 30-90 s), runs it, and replies on `reply_to` with a CheckResult, or one with `error` when the run failed.
+    Referee -> engine: no session check answers this question. The engine opens a droid_run of kind new_check (the Droid writes and gates it in 30-90 s), runs it, and replies on `reply_to` with a CheckReply, or one with `error` when the run failed.
     """
 
     model_config = ConfigDict(

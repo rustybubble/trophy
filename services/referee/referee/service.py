@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from trophy.contracts import CheckResult
+from trophy.contracts import CheckReply
 from trophy.streams import CTL_ENGINE, CTL_STREAM_MAXLEN, make_ctl
 
 from .catalog import CHECKS
@@ -44,7 +44,7 @@ class AskRequest:
     context: dict[str, Any] = field(default_factory=dict)
 
 
-def evidence_quote(result: CheckResult) -> str:
+def evidence_quote(result: CheckReply) -> str:
     bits: list[str] = []
     for k, v in (result.evidence or {}).items():
         if isinstance(v, bool) or v is None:
@@ -166,13 +166,13 @@ class Referee:
             await self._pending(req, rt, out)  # the session lacks it: the Droid writes it
             return
         if oc.result is None:
-            res = CheckResult(check=rt.check, calibrated=False, error=oc.error or "timeout", latency_ms=oc.latency_ms)
+            res = CheckReply(check=rt.check, calibrated=False, error=oc.error or "timeout", latency_ms=oc.latency_ms)
             self._put(out, template_error(res))
             out["error"] = res.error
             return
         self._fill_check(out, oc.result, await phrase_check(self.llm, req.question, oc.result))
 
-    def _fill_check(self, out: dict[str, Any], result: CheckResult, ph: Phrased) -> None:
+    def _fill_check(self, out: dict[str, Any], result: CheckReply, ph: Phrased) -> None:
         self._put(out, ph)
         out.update(
             kind="check",

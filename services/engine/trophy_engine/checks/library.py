@@ -174,7 +174,7 @@ def _import(path: Path, name: str) -> Any:
 
 
 def load_library(path: str | Path, *, import_code: bool = True) -> CheckLibrary:
-    """Load ``<path>/*.py`` as checks (files starting with ``_`` are skipped). Raises LibraryError with every finding."""
+    """Load ``<path>/*.py`` as checks (files starting with ``_`` are skipped). Raises LibraryError with each finding."""
     p = Path(path)
     if not p.is_dir():
         raise LibraryError([f"{p}: not a directory"])

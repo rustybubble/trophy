@@ -172,12 +172,12 @@ export interface HouseRuleVersionArgs {
   rule_version: string;
 }
 /**
- * What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-36 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.
+ * The referee reply (was CheckResult; renamed at the demo merge because track3d.schema.json owns CheckResult, the check function's own return). What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-36 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.
  *
  * This interface was referenced by `CtlCommand`'s JSON-Schema
- * via the `definition` "CheckResult".
+ * via the `definition` "CheckReply".
  */
-export interface CheckResult {
+export interface CheckReply {
   /**
    * e.g. in_out
    */
@@ -213,7 +213,7 @@ export interface CheckResult {
   latency_ms: number;
 }
 /**
- * Referee -> engine: run one session check and XADD a CheckResult to the Redis stream `reply_to` (D-36 §5).
+ * Referee -> engine: run one session check and XADD a CheckReply to the Redis stream `reply_to` (D-36 §5).
  *
  * This interface was referenced by `CtlCommand`'s JSON-Schema
  * via the `definition` "RunCheckArgs".
@@ -225,7 +225,7 @@ export interface RunCheckArgs {
    */
   args: {};
   /**
-   * Redis stream key reply:<req_id>; the engine XADDs {json: CheckResult} once
+   * Redis stream key reply:<req_id>; the engine XADDs {json: CheckReply} once
    */
   reply_to: string;
   /**
@@ -234,7 +234,7 @@ export interface RunCheckArgs {
   question?: string;
 }
 /**
- * Referee -> engine: no session check answers this question. The engine opens a droid_run of kind new_check (the Droid writes and gates it in 30-90 s), runs it, and replies on `reply_to` with a CheckResult, or one with `error` when the run failed.
+ * Referee -> engine: no session check answers this question. The engine opens a droid_run of kind new_check (the Droid writes and gates it in 30-90 s), runs it, and replies on `reply_to` with a CheckReply, or one with `error` when the run failed.
  *
  * This interface was referenced by `CtlCommand`'s JSON-Schema
  * via the `definition` "RequestCheckArgs".

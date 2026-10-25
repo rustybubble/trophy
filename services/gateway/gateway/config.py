@@ -39,6 +39,10 @@ class Settings:
     voice_token_ttl_s: int = 600
     cam_token_ttl_s: int = 12 * 3600
     data_dir: Path = ROOT / "data" / "local"
+    flight_dir: Path = ROOT / "services" / "flight"
+    flight_python: Path = ROOT / "services" / "flight" / ".venv" / "bin" / "python"  # clip uploads (demo.py)
+    engine_dir: Path = ROOT / "services" / "engine"
+    engine_python: Path = ROOT / "services" / "engine" / ".venv" / "bin" / "python"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -63,4 +67,6 @@ class Settings:
             cartesia_voice_calls=env.get("CARTESIA_VOICE_CALLS", ""),
             cartesia_voice_ref=env.get("CARTESIA_VOICE_REF", ""),
             data_dir=Path(env["TROPHY_DATA_DIR"]) if env.get("TROPHY_DATA_DIR") else cls.data_dir,
+            flight_python=Path(env["FLIGHT_PYTHON"]) if env.get("FLIGHT_PYTHON") else cls.flight_python,
+            engine_python=Path(env["ENGINE_PYTHON"]) if env.get("ENGINE_PYTHON") else cls.engine_python,
         )

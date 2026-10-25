@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 import httpx2
+
 from trophy_engine.commentary import ClaudeCommentator, TemplateCommentator, commentary_rows, facts_for, grounded
 
 MOMENT = {

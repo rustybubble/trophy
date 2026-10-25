@@ -1,10 +1,10 @@
 # Trophy demo: everything that is built, running together
 
-*Branch `demo/integration` (2026-10-24): `main` + the three finished branches `mvp/tt-cloud` (flight: clips → fused 3D
-map), `a3/droid-checks` (rule engine, Factory Droid compiler, golden table-tennis module, synthetic fixtures) and
-`voice/referee` (the referee voice service). What is in progress and not here: the 3D check library and
-`calibrate_checks` runs (uncommitted on `a3/droid-checks`), the engine's `run_check` / `request_check` handlers, the
-dashboard, Trophy Watch, basketball, the Vultr/AWS GPU box (PR #16, needs the user's OK).*
+*Branch `demo/integration` (2026-10-24): `main` (incl. the judges' dashboard #17 and the CC BY clip `make e2e` #18) + the
+finished branches `mvp/tt-cloud` (flight: clips → fused 3D map), `a3/droid-checks` (rule engine, Factory Droid compiler,
+golden table-tennis module, the Droid-written 3D check library and `calibrate_checks` job, synthetic fixtures) and
+`voice/referee` (the referee voice service), plus the **upload-a-clip** path (§2). Not here: the engine's `run_check` /
+`request_check` handlers for the referee, a live Droid `calibrate_checks` run, Trophy Watch, basketball, the GPU box (PR #16).*
 
 **Everything shown is labelled SYNTHETIC unless it comes from a phone.** The rallies in this demo are the labelled
 synthetic fixtures (`evals/fixtures/synthetic/table_tennis`) run through the golden module's `events.py`, which is
@@ -33,7 +33,35 @@ make stdb-seed                                   # smoke test: 97 reducer calls 
 ```
 Restart the engine and compiler after provisioning (they read the tokens at start): `python3 scripts/dev.py engine compiler`.
 
-## 2. The live game (synthetic rallies through the real pipeline)
+## 2. Upload a clip and referee it (the demo site, localhost)
+Open **http://127.0.0.1:5174/** (the judges' dashboard), click **Start a game**, then in the **Upload a clip** panel:
+1. choose a clip (mp4 / mov / webm; one phone, side-on at the net line, white ball works best);
+2. the first frame appears: tap the four table corners in the order shown (A end right, B end right, B end left, A end left);
+3. pick the ball colour and the replay speed, click **Referee this clip**.
+
+What happens (`services/gateway/gateway/demo.py`): the clip is stored under `data/local/uploads/<game>/`, flight extracts
+the first frame; on run, `flight.clip2l1` tracks the ball (classical detector + gated tracker) and turns the corners into
+the image→table homography, writing a layer-1 log; `trophy-play --samples` runs the golden `sports/table_tennis/events.py`
+over it (bounces, contacts, dead ball), registers the camera with its **untrusted** calibration, and publishes the events
+on Redis `ev:flight` paced by the clip's clock while mirroring the track into Spacetime. The live `trophy-engine` consumes
+them like perception's events and posts calls, rallies and the score to Spacetime, so they appear in the **Calls** panel,
+the **World state** view (ball trail + bounces) and on every joined phone (spoken through Cartesia). The video plays in
+sync with the replay. Because the calibration is four tapped corners on one camera with no clock sync, the engine caps
+every call at **BETA**; nothing here is a measurement of accuracy.
+
+**Measured on this Mac (2026-10-24, single runs) with flight's rendered SYNTHETIC side clip** (`flight.cloud synth`,
+1280×720, 196 frames): upload + first frame < 1 s; tracking **0.68–0.73 s** for 177 samples (90 % of frames);
+11 events replayed at 2× in 5.0 s; 1 call (`off_table`, BETA) into Spacetime; 11 observations + 52 track samples mirrored;
+the dashboard showed the call, the score and the trail live. No real clip was available on this machine.
+Through the API: `POST /api/demo/uploads`, `POST /api/demo/runs`, `GET /api/demo/runs/<id>` (a judge/display token).
+
+A clip to try without filming: `data/local/clips/synthetic/side-SYNTHETIC.mp4` (flight's rendered synthetic rally;
+its true corners are in the `.corners.txt` next to it; regenerate both with `python -m flight.cloud synth`). It is
+labelled SYNTHETIC everywhere.
+
+Flight's two-camera 3D fusion (`services/flight`, §6) still needs two clips; a single upload goes through this 2D path.
+
+## 3. The live game (synthetic rallies through the real pipeline)
 ```bash
 curl -s -X POST http://127.0.0.1:8000/api/games -H 'content-type: application/json' \
   -d '{"sport":"table_tennis","params":{"synthetic":true,"label":"SYNTHETIC demo: trophy-play fixtures"}}'
@@ -55,7 +83,7 @@ through Spacetime 36–59 ms per call (engine log `ms`); the PWA scoreboard show
 BETA call list live through `ws://127.0.0.1:5173/stdb`. A bug found here and fixed: the engine's ctl reader re-armed at
 `$` on every read and dropped `create_game`/`start_game` that arrived while it was reading events (`test_loop_ctl.py`).
 
-## 3. A house rule, compiled by the Factory Droid, live
+## 4. A house rule, compiled by the Factory Droid, live
 ```bash
 uv run --directory services/engine --frozen trophy-ctl submit_house_rule <game_id> --by judge \
   --args '{"text": "a serve that clips the net and lands in is a let: replay the point"}'
@@ -74,14 +102,14 @@ The judge view of the PWA does the same from its House rules panel (typed or spo
 Note: the engine keeps game state in memory, so restart it *before* creating the game, not between the rule and the
 approval.
 
-## 3b. All of the above, headless
+## 4b. All of the above, headless
 ```bash
 make e2e-synthetic   # scripts/e2e_synthetic.py: game via the gateway -> trophy-play -> calls/score/rallies/moments vs labels -> house rule -> ready -> approve
 make e2e-synthetic PYTHON=python3   # (the default); add --no-droid through `python3 scripts/e2e_synthetic.py --no-droid` to skip the Factory run
 ```
 Last result on this Mac: `E2E PASS` (2 fixtures in 3.6 s at ×4; Droid ready after 28.3 s; approved in 0.8 s).
 
-## 4. The referee that talks (Cartesia; Claude needs its key)
+## 5. The referee that talks (Cartesia; Claude needs its key)
 ```bash
 uv run --directory services/referee --frozen referee speak "Edge ball. Good. Point, B." --voice calls --emotion excited --wav-dir /tmp/voice
 # measured 2026-10-24, this Mac, real key, single run: socket open 1512 ms, first audio 174 ms, done 561 ms, 2.72 s of audio
@@ -91,7 +119,7 @@ and last-call questions from the phone's context, rules questions grounded only 
 approved house rules, and geometry questions through `run_check` once the engine's check handlers land (until then they
 time out honestly after 1.5 s).
 
-## 5. The 3D map (flight, synthetic two-camera rally)
+## 6. The 3D map (flight, synthetic two-camera rally)
 ```bash
 cd services/flight
 uv run --frozen python -m flight.cloud synth --out /tmp/synth0                       # renders two 1280×720 clips + truth (SYNTHETIC)
@@ -102,14 +130,14 @@ open /tmp/synth0/out/viewer.html                                                
 This produces the Droid brief's `field.json` + `track3d.jsonl` (+ `events.json`). It is not yet wired to the live
 engine: that is the `track3d` adapter and check library in progress on `a3/droid-checks`.
 
-## 6. What a judge sees
+## 7. What a judge sees
 - **Scoreboard / Judge (PWA):** the synthetic label, the score, rally number, each call with its tier and p, Challenge
   (opens the replay + AI votes once voter keys exist), Hold to talk (needs the referee service), the menu with house rules.
 - **Spacetime SQL** (`spacetime sql -s local trophy "SELECT … FROM call WHERE game_id = '…'"`) shows the same rows every
   client subscribes to: `game`, `score`, `rally`, `call`, `moment`, `house_rule`, `ask`.
 
 ## Known gaps on this branch
-- No dashboard app yet (`apps/dashboard` is a README): the PWA's judge/scoreboard roles and Spacetime SQL stand in.
+- The engine keeps game state in memory: restart it before creating a game, not during one.
 - `services/gateway/tests/test_gateway.py::test_frames_ws_writes_bus_and_still` fails on this Mac on `main` too (3 rows instead of 4); untouched.
-- The Droid `calibrate_checks` job, the 3D check library and the engine's `run_check` handlers are being built on
-  `a3/droid-checks` (uncommitted there at merge time) and are not on this branch.
+- The engine's `run_check` / `request_check` handlers (what the referee service asks for) are not built; `trophy-engine
+  --field --ask` serves the 3D-check questions directly instead.
