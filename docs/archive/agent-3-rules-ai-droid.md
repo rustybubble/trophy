@@ -1,3 +1,5 @@
+> **Superseded 2026-10-24** by `docs/plan/prompts/agent-3-droid-realtime.md` (D-31). Kept for history.
+
 # Agent 3 prompt: rules, AI and Droid
 
 *Copy everything below the line into a fresh chat opened in the Trophy repository on the Apple M5 Pro Mac.*

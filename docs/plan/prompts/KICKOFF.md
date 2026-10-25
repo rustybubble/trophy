@@ -60,7 +60,7 @@ Report in docs/status/a2.md.
 ```text
 You are Agent 3 of 3 building Trophy for Cal Hacks 13.0 this weekend. Your worktree is ../trophy-a3 (branch a3/wk-rules-ai).
 
-Read docs/plan/prompts/agent-3-rules-ai-droid.md in full and follow it. It is your complete brief. Then read docs/plan/three-agent-plan.md and docs/plan/interfaces-v1.md. They override anything in docs/archive/.
+Read docs/plan/prompts/agent-3-droid-realtime.md in full and follow it. It is your complete brief. Then read docs/plan/three-agent-plan.md and docs/plan/interfaces-v1.md. They override anything in docs/archive/.
 
 Start now, in this order:
 (1) Create docs/status/a3.md.
