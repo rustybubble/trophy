@@ -128,7 +128,12 @@ async function main(argv: string[]): Promise<number> {
   // effort "low" like the measured house-rule runs: a first live compile_rules run at "medium" read its inputs for
   // 40 s and then produced nothing for 440 s until the 480 s cap (2026-10-24); the budgets are wall-clock caps
   const PACK_BUDGET = { timeoutS: 600, reasoningEffort: "low", maxAttempts: 4 };
-  const CORRECTION_BUDGET = { timeoutS: 600, reasoningEffort: "low", maxAttempts: 4 };
+  // DROID_CORRECTION_EFFORT: both live correction runs at "low" spent 210-545 s silent before their first edit
+  const CORRECTION_BUDGET = {
+    timeoutS: 600,
+    reasoningEffort: process.env.DROID_CORRECTION_EFFORT || "low",
+    maxAttempts: 4,
+  };
   switch (cmd) {
     case "compile": {
       if (!values.sport) usage();

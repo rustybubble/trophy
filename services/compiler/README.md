@@ -156,6 +156,7 @@ house rules the Spacetime `house_rule` row via `update_house_rule_progress`, whi
 | compile_rules: the whole table-tennis pack from `laws.md` (2026-10-24, effort low, 600 s cap) | 531 s | 1 | 34/34 in 0.8 s (synthetic + the judge-labelled recording); a first run at effort medium read its inputs for 40 s and then produced nothing until its 480 s cap |
 | correction: "9.2-48.1 s was ONE rally, won by B" on the live stream (2026-10-24, effort low, 300 s cap) | timed out | 1 | partial fix (`ev.side_p > 0.95` on double_bounce) after a 210 s silent gap; the cap is now 600 s and the label carries per-call evidence digests |
 | correction run #2 (600 s cap, labels with evidence digests) | timed out | 1 | 36 s of reading, 545 s silent, then two edits in the right direction (evidence params, `!rally.hit_since_last_bounce`), gate 41/46 at the cap |
+| compile_rules run #3, gated on 7 samples incl. 3 live-labelled rallies (600 s cap) | timed out | 1 | first edit at ~390 s; its pack failed `module:load` (multi-line `when:`) until the cap |
 
 ## Approval
 

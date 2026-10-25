@@ -63,6 +63,7 @@ class Clip:
     label: str
     corners_norm: list[tuple[float, float]] | None  # 0..1 of the displayed frame
     offset_s: float = 0.0
+    corners_source: str = "tapped"  # auto[:N] (table_detection, N frames agree) | tapped
 
 
 @dataclass
@@ -197,11 +198,13 @@ async def join_and_calibrate(http: httpx.AsyncClient, base_ws: str, game: str, k
             "sport": "table_tennis",
             "created_at_ms": now_ms(),
             "image_size": {"w": W, "h": H},
-            "method": "four table corners tapped on the clip's first frame",
+            "method": corner_method(next((c.corners_source for c in cam.clips if c.corners_norm), "tapped")),
             "H_img_to_field": H9,
             "reproj_err_px": err,
             "trusted": False,
-            "warnings": ["recorded clip streamed as a phone: tapped corners, no auto-check, so calls cap at BETA"],
+            "warnings": [
+                "recorded clip streamed as a phone: corners from the clip itself, no live check, so calls cap at BETA"
+            ],
             "solver": "stream_clips.homography",
         }
         r = await http.post(
@@ -237,6 +240,15 @@ async def stream(base_ws: str, cam: Camera, wall0_ms: float, speed: float) -> No
     say(event="done", label=cam.label, cam_id=cam.cam_id, **cam.stats)
 
 
+def corner_method(source: str) -> str:
+    """The calibration's `method` string: where the four corners came from (shown on the dashboard's camera panel)."""
+    if source.startswith("auto"):
+        n = source.split(":", 1)[1] if ":" in source else ""
+        agree = f", {n} frames agree" if n else ""
+        return f"four table corners detected automatically on the clip (table_detection{agree})"
+    return "four table corners tapped on the clip's first frame"
+
+
 def parse_clip(s: str) -> Clip:
     parts = s.split(":")
     path = Path(parts[0])
@@ -253,8 +265,10 @@ def parse_clip(s: str) -> Clip:
 async def amain(a: argparse.Namespace) -> int:
     clips = [parse_clip(c) for c in a.clip]
     offsets = dict(kv.split("=", 1) for kv in a.offset or [])
+    sources = dict(kv.split("=", 1) for kv in a.corners_source or [])
     for c in clips:
         c.offset_s = float(offsets.get(c.label, 0.0))
+        c.corners_source = sources.get(c.label, "tapped")
     if a.mode == "sequential":
         cams = [Camera(a.label or clips[0].label, clips)]
     else:
@@ -278,6 +292,11 @@ def main() -> int:
     ap.add_argument("--mode", choices=["simultaneous", "sequential"], default="simultaneous")
     ap.add_argument("--label", default=None, help="the camera's label in sequential mode")
     ap.add_argument("--offset", action="append", help="LABEL=seconds added to that camera's clock (simultaneous)")
+    ap.add_argument(
+        "--corners-source",
+        action="append",
+        help="LABEL=auto[:N] | tapped: where the corners came from (auto = Mu Du's table_detection, N frames agree)",
+    )
     ap.add_argument("--speed", type=float, default=1.0, help="1 = real time")
     ap.add_argument("--start-in", type=float, default=2.0, help="seconds before the first frame (all cameras)")
     ap.add_argument("--gateway", default="http://127.0.0.1:8000")

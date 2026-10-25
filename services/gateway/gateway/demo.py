@@ -334,6 +334,19 @@ def demo_router(st: Settings) -> APIRouter:
             off = m.get("auto_offset_s", 0.0) + m.get("offset_s", 0.0)
             if mode == "simultaneous" and off:
                 args += ["--offset", f"{label}={off}"]
+            # the corners are the detector's unless the judge retapped them (Mu Du's table_detection suggests them at
+            # upload time; the dashboard only asks for taps when the detector found nothing)
+            sugg = m.get("suggested_corners_norm") or []
+            auto = len(sugg) == 4 and all(
+                abs(float(a[k]) - float(b[k])) < 1e-4
+                for a, b in zip(m["corners_norm"], sugg, strict=True)
+                for k in (0, 1)
+            )
+            frames = (m.get("corner_suggestion") or {}).get("agreeing_frames")
+            args += [
+                "--corners-source",
+                f"{label}={'auto' + (f':{frames}' if auto and frames else '') if auto else 'tapped'}",
+            ]
         if mode == "sequential":
             args += ["--label", "camera (recorded takes)"]
         # the game goes live: the engine opens rallies as events arrive
