@@ -27,3 +27,43 @@ uv run python scripts/live_check.py      # acts like a phone against https://tro
 | `GET /replay/...` | | **not yet**: comes with the recorder (§12) |
 
 The gateway doesn't write to Spacetime (D-14); the engine turns its ctl commands into rows. Audio onsets are not mirrored into `observation` (they're high-rate and raw; the vision module references them as `onset_id`). `python -m gateway.tokens` prints a 30-day `service` token for internal callers (the replay frames API).
+
+## Recorder replay and Watch API
+
+Start `services/recorder` before the cameras. These routes read its local archive:
+
+| Route | Result |
+|---|---|
+| `GET /api/replay/{game}/clip?cam=&t0=&t1=` | H.264 MP4 with frame-boundary re-encoding, HTTP Range support |
+| `GET /api/replay/{game}/overlay?cam=&t0=&t1=&call_id=` | source ball/player samples, projected call bounce marks and one-sigma ellipses, calibration lines and explicit warnings |
+| `GET /api/replay/{game}/frames?cam=&t0=&t1=&n=4&crop=x,y,w,h` | 1–4 distinct original-frame JPEG crops with timestamps/seq; JPEG and base64 payload each <1 MB; **service role required** |
+| `GET /api/watch/{game}/manifest` | game, teams, available final score, camera HLS/sprite URLs and timing, track availability |
+| `GET /api/watch/{game}/hls/{cam}/index.m3u8` | playlist; segment/init/sprite files share the same route |
+| `GET /api/watch/{game}/tracks?cam=&kind=ball&t0=&t1=` | `replay.tracks.v1`: game-time frames, normalized boxes and optional court positions |
+
+Use a game-scoped camera/display/judge/viewer token, or an internal service token; cross-game access is
+rejected. Media URLs use expiring query tokens so video players can fetch segments. Do not log or share
+those URLs. These endpoints do not create public share links. Crops require the engine's gateway service
+HMAC token (`python -m gateway.tokens`), not a Spacetime identity token.
+
+Replay windows are explicit, finite, increasing and at most 30 seconds. Clips need finalized segment coverage;
+original-frame crops are available earlier. Media PTS zero maps to the camera's `t0_game_s`.
+Track gaps stay empty. Planar bounce ellipses use the inverse homography's Jacobian; nonplanar marks require
+an undistorted pinhole pose. Missing/untrusted calibration is reported, never silently replaced by guessed geometry.
+Final score comes from Spacetime when the game has ended; otherwise it stays null. Local manifest playback
+continues when Spacetime is offline. The archive is local; the manifest isn't a public listing.
+
+`bookmark`, `clip_that`, and judge-only `review_call` now validate through `/api/ctl` and the wire parser.
+A `correct` review requires a replacement outcome.
+
+Existing-footage smoke check (no download or filming):
+
+```bash
+uv run --frozen --project services/gateway python services/gateway/scripts/clip_as_phone.py \
+  "data/ttClips/Adobe Express - IMG_4342.mp4" --seconds 8 --check-replay \
+  --report data/local/recordings/integration.json
+```
+
+`--base`, `--stdb`, `--module`, `--redis-url`, `--env-file` support isolated local services. The script posts
+a visibly synthetic call on actual recorded video; it does not run the tracker or claim rule accuracy.
+An installed `ffprobe` supplies optional metadata for the existing HQ phone-upload route.

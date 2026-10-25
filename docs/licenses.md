@@ -17,3 +17,5 @@ This lists **candidates and adopted components**. When you adopt one, add its re
 | Rulebook text (ITTF, USA Pickleball, FIBA/NFHS, BWF, FIVB) | Each publisher's terms | Scraped only from public pages, quoted briefly with links and attribution | candidate |
 | CC BY clips (`docs/plan/clip-library.md`) | CC BY (credits in `data/clips/credits.json`) | Development, the backup demo and labels | candidate |
 | OpenTTGames | CC BY-NC | Evaluation only | optional |
+| Pillow 13.0.0 | HPND/PIL license (see installed Pillow distribution notices) | Local source-frame crops and storyboard sprites | adopted in py-trophy; no third-party source copied |
+| FFmpeg (locally installed executable; tested 7.1 via existing imageio-ffmpeg package) | Build-dependent LGPL/GPL; tested libx264 build is GPL | Recorder HLS and private replay clip encoding | executable is not vendored or redistributed; install an appropriately licensed build on each demo machine |

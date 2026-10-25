@@ -344,3 +344,23 @@ def test_clip_upload_list_and_ranged_get(env, tmp_path):
     _, display = new_game(client, role="display")
     dh = {"Authorization": f"Bearer {display['cam_token']}", "Content-Type": "video/mp4"}
     assert client.post("/api/clips?" + q.format(t, t + 6000), content=body, headers=dh).status_code == 403
+
+
+def test_watch_ctl_commands_are_validated_and_review_is_judge_only(env):
+    client, _, _ = env
+    _, joined = new_game(client, role="display")
+    auth = {"Authorization": f"Bearer {joined['cam_token']}"}
+    for cmd, args in [("bookmark", {"t_game_s": 1.0, "label": "A point"}), ("clip_that", {})]:
+        assert client.post("/api/ctl", json={"cmd": cmd, "args": args}, headers=auth).status_code == 202
+    review = {"cmd": "review_call", "args": {"call_id": "call1", "result": "confirm"}}
+    assert client.post("/api/ctl", json=review, headers=auth).status_code == 403
+    _, judge = new_game(client, role="judge")
+    auth = {"Authorization": f"Bearer {judge['cam_token']}"}
+    assert client.post("/api/ctl", json=review, headers=auth).status_code == 202
+    review["args"]["result"] = "correct"
+    assert client.post("/api/ctl", json=review, headers=auth).status_code == 422
+    review["args"]["replacement"] = {"outcome": "point_B", "team_id": "B"}
+    assert client.post("/api/ctl", json=review, headers=auth).status_code == 202
+    assert (
+        client.post("/api/ctl", json={"cmd": "bookmark", "args": {"path": "hidden"}}, headers=auth).status_code == 422
+    )
