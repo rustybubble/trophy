@@ -36,6 +36,7 @@ from PIL import Image
 from trophy.framebus import pack_header
 
 W, H, FPS = 1280, 720, 30.0
+SPORT = "table_tennis"  # --sport; the corners are always a table tennis table's
 LENGTH_M, WIDTH_M = 2.74, 1.525
 # brief order: A-right, B-right, B-left, A-left (counter-clockwise seen from above), table-top centre at the origin
 CORNERS_M = np.array(
@@ -194,7 +195,7 @@ async def join_and_calibrate(http: httpx.AsyncClient, base_ws: str, game: str, k
             "schema": "trophy.calibration.v1",
             "game_id": game,
             "cam_id": cam.cam_id,
-            "sport": "table_tennis",
+            "sport": SPORT,
             "created_at_ms": now_ms(),
             "image_size": {"w": W, "h": H},
             "method": "four table corners tapped on the clip's first frame",
@@ -251,6 +252,8 @@ def parse_clip(s: str) -> Clip:
 
 
 async def amain(a: argparse.Namespace) -> int:
+    global SPORT
+    SPORT = a.sport
     clips = [parse_clip(c) for c in a.clip]
     offsets = dict(kv.split("=", 1) for kv in a.offset or [])
     for c in clips:
@@ -281,6 +284,7 @@ def main() -> int:
     ap.add_argument("--speed", type=float, default=1.0, help="1 = real time")
     ap.add_argument("--start-in", type=float, default=2.0, help="seconds before the first frame (all cameras)")
     ap.add_argument("--gateway", default="http://127.0.0.1:8000")
+    ap.add_argument("--sport", default="table_tennis", help="the game's sport (calibration records it)")
     return asyncio.run(amain(ap.parse_args()))
 
 

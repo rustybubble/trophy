@@ -102,7 +102,9 @@ class Call(BaseModel):
     event_ids: list[str]
     evidence: list[EvidenceWindow]
     overlay: Overlay | None = None
-    status: Literal["final", "challenged", "upheld", "overturned", "voided"] = Field(..., title="CallStatus")
+    status: Literal["final", "challenged", "upheld", "overturned", "voided", "players_decide"] = Field(
+        ..., title="CallStatus"
+    )
     supersedes: str | None = None
     rule_ref: str | None = Field(None, description="Closest official clause (Moss), if any")
     why: str | None = Field(None, description="One short sentence from event facts")

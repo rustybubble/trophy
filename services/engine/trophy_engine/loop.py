@@ -52,6 +52,8 @@ def build_decider(env: dict[str, str], state: StateWriter, engine: Engine) -> Ba
     voters = [ClaudeVoter.from_env(env)]
 
     def on_result(req: dict[str, Any], res: dict[str, Any]) -> None:
+        if req.get("challenge_id"):  # a challenge re-check resolves itself (D-44), on the loop thread
+            engine.challenge_verdict(req, res)
         g = engine.games.get(req["game_id"])
         call = next((c for c in g.calls if c["id"] == req["call_id"]), None) if g else None
         if call is not None:
@@ -481,7 +483,8 @@ def step(engine: Engine, consumer: EventConsumer, r: redis.Redis, ctl_last: str,
             engine.handle_ctl(cmd.model_dump(by_alias=True, exclude_none=True, mode="json"))
         except Exception:  # noqa: BLE001
             log.exception("ctl failed")
-    return ctl_last, len(entries) + len(ctl_entries) + consumer.malformed - malformed0
+    drained = engine.drain()
+    return ctl_last, len(entries) + len(ctl_entries) + drained + consumer.malformed - malformed0
 
 
 def _stream_tail(r: redis.Redis, stream: str) -> str:

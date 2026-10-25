@@ -42,6 +42,7 @@ class CompiledRule:
     when: celpy.Runner
     p: celpy.Runner | None
     team: celpy.Runner | None
+    at_fault: celpy.Runner | None = None  # who committed the fault (D-44); default: the team opposite `team`
 
     @property
     def id(self) -> str:
@@ -75,6 +76,7 @@ def compile_rules(pack: dict[str, Any]) -> RuleSet:
                 when=_program(str(r["when"]), f"rule {rid} when"),
                 p=_program(str(r["p"]), f"rule {rid} p") if r.get("p") else None,
                 team=_program(str(r["team"]), f"rule {rid} team") if r.get("team") else None,
+                at_fault=_program(str(r["at_fault"]), f"rule {rid} at_fault") if r.get("at_fault") else None,
             )
         )
     return rs

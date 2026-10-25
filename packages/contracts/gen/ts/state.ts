@@ -145,9 +145,21 @@ export interface Challenge {
   call_id: string;
   by_cam_id: string;
   status: "open" | "resolved";
-  result?: "upheld" | "overturned" | null;
+  result?: "upheld" | "overturned" | "players_decide" | null;
   created_at_ms: number;
   resolved_at_ms?: number | null;
+  /**
+   * auto = geometry + Claude (uncalibrated) re-check (D-44); judge = a person
+   */
+  decided_by?: "auto" | "judge" | null;
+  /**
+   * Blended probability that the original call was right (uncalibrated)
+   */
+  p_original?: number | null;
+  /**
+   * The spoken verdict and reason
+   */
+  explanation?: string | null;
 }
 /**
  * This interface was referenced by `StateTables`'s JSON-Schema

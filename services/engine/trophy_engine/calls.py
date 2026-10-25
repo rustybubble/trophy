@@ -95,6 +95,8 @@ def build_call(
     emotion: str | None,
     now_ms: float,
     why: str | None = None,
+    at_fault: dict[str, str] | None = None,
+    source: str = "sensed",
 ) -> dict[str, Any]:
     tctx = {
         **ctx,
@@ -102,9 +104,12 @@ def build_call(
         "team_id": team_id or "",
         "p": round(p * 100),
         "outcome": outcome,
+        "at_fault": (at_fault or {}).get("name", ""),
     }
     text = render(str(rule.get("text") or f"{rule.get('name', rule['id'])}: {outcome}"), tctx)[:80]
     speech = render(str(rule.get("speech") or text), tctx)
+    if at_fault and "{at_fault}" not in str(rule.get("speech") or rule.get("text") or ""):
+        speech = f"{speech.rstrip()} {fault_phrase(at_fault['name'])}"  # every call says who is at fault (D-44)
     call: dict[str, Any] = {
         "schema": "trophy.call.v1",
         "id": new_ulid(),
@@ -140,4 +145,10 @@ def build_call(
         call["rule_ref"] = str(rule["rule_ref"])
     if why:
         call["why"] = why[:140]
+    call["at_fault"] = at_fault
+    call["source"] = source
     return call
+
+
+def fault_phrase(name: str) -> str:
+    return f"{name}'s fault." if not name.endswith("s") else f"{name}' fault."

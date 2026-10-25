@@ -256,13 +256,25 @@
           "enum": ["open", "resolved"]
         },
         "result": {
-          "enum": ["upheld", "overturned", null]
+          "enum": ["upheld", "overturned", "players_decide", null]
         },
         "created_at_ms": {
           "type": "number"
         },
         "resolved_at_ms": {
           "type": ["number", "null"]
+        },
+        "decided_by": {
+          "enum": ["auto", "judge", null],
+          "description": "auto = geometry + Claude (uncalibrated) re-check (D-44); judge = a person"
+        },
+        "p_original": {
+          "type": ["number", "null"],
+          "description": "Blended probability that the original call was right (uncalibrated)"
+        },
+        "explanation": {
+          "type": ["string", "null"],
+          "description": "The spoken verdict and reason"
         }
       }
     },

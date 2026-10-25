@@ -87,7 +87,7 @@
     "PSource": { "title": "PSource", "enum": ["geometry", "heuristic", "decide:ensemble", "manual"] },
     "Tier": { "title": "Tier", "enum": ["AUTO", "BETA", "PLAYERS"] },
     "Shown": { "title": "Shown", "enum": ["auto", "challengeable", "replay", "evidence"] },
-    "CallStatus": { "title": "CallStatus", "enum": ["final", "challenged", "upheld", "overturned", "voided"] },
+    "CallStatus": { "title": "CallStatus", "enum": ["final", "challenged", "upheld", "overturned", "voided", "players_decide"] },
     "Cue": {
       "title": "Cue",
       "type": "object",

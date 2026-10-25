@@ -59,6 +59,7 @@ from . import calib_stub
 from .config import Settings
 from .demo import demo_router
 from .replay import replay_router
+from .scenarios import scenario_router
 from .tokens import Claims, TokenError, mint, normalize_role, verify
 
 log = logging.getLogger("trophy.gateway")
@@ -794,4 +795,5 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
 
     app.include_router(replay_router(st))
     app.include_router(demo_router(st))
+    app.include_router(scenario_router(st))
     return app

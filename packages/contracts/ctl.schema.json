@@ -211,10 +211,13 @@
           "type": "string"
         },
         "result": {
-          "enum": ["upheld", "overturned"]
+          "enum": ["upheld", "overturned", "players_decide"]
         },
         "replacement": {
           "$ref": "#/$defs/Replacement"
+        },
+        "explanation": {
+          "type": "string"
         }
       }
     },

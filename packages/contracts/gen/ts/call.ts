@@ -32,7 +32,7 @@ export type Shown = "auto" | "challengeable" | "replay" | "evidence";
  * This interface was referenced by `Call`'s JSON-Schema
  * via the `definition` "CallStatus".
  */
-export type CallStatus = "final" | "challenged" | "upheld" | "overturned" | "voided";
+export type CallStatus = "final" | "challenged" | "upheld" | "overturned" | "voided" | "players_decide";
 
 /**
  * trophy.call.v1: a decision by the engine (interfaces-v1 §10). Stored in the Spacetime `call` table; clients receive it parsed.

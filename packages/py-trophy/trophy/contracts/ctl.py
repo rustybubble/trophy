@@ -100,8 +100,9 @@ class ResolveChallengeArgs(BaseModel):
         populate_by_name=True,
     )
     challenge_id: str
-    result: Literal["upheld", "overturned"]
+    result: Literal["upheld", "overturned", "players_decide"]
     replacement: Replacement | None = None
+    explanation: str | None = None
 
 
 class EmptyArgs(BaseModel):

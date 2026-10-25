@@ -139,8 +139,9 @@ export interface Replacement {
  */
 export interface ResolveChallengeArgs {
   challenge_id: string;
-  result: "upheld" | "overturned";
+  result: "upheld" | "overturned" | "players_decide";
   replacement?: Replacement;
+  explanation?: string;
 }
 /**
  * undo_last_call, end_period, end_game

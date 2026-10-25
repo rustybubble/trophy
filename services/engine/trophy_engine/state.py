@@ -30,6 +30,8 @@ class StateWriter(Protocol):
     def upsert_moment(self, moment: dict[str, Any]) -> None: ...
     def set_best_play(self, game_id: str, moment_id: str, reasons: list[str]) -> None: ...
     def post_commentary(self, row: dict[str, Any]) -> None: ...
+    def upsert_feed(self, feed: dict[str, Any]) -> None: ...
+    def upsert_viewer(self, viewer: dict[str, Any]) -> None: ...
 
 
 class MemoryState:
@@ -113,6 +115,12 @@ class MemoryState:
 
     def post_commentary(self, row: dict[str, Any]) -> None:
         self._put("commentary", f"{row['moment_id']}:{row['voice']}", row)
+
+    def upsert_feed(self, feed: dict[str, Any]) -> None:
+        self._put("feed", feed["cam_id"], feed)
+
+    def upsert_viewer(self, viewer: dict[str, Any]) -> None:
+        self._put("viewer", viewer["viewer_id"], viewer)
 
 
 def sql_column_names(schema: dict[str, Any]) -> list[str]:
@@ -212,3 +220,9 @@ class SpacetimeState:
 
     def post_commentary(self, row: dict[str, Any]) -> None:
         self._call("post_commentary", row)
+
+    def upsert_feed(self, feed: dict[str, Any]) -> None:
+        self._call("upsert_feed", feed)
+
+    def upsert_viewer(self, viewer: dict[str, Any]) -> None:
+        self._call("upsert_viewer", viewer)

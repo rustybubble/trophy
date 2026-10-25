@@ -5,6 +5,7 @@ house rules, asks and moments out. Scores are derived by replaying the call log,
 from __future__ import annotations
 
 import logging
+import queue
 import re
 import subprocess
 import time
@@ -32,6 +33,10 @@ SCORING_KINDS = frozenset({"point", "violation", "basket"})
 # ball rolling off must not open a rally of its own and score again (review blocker 4).
 DEAD_AFTER_POINT_S = 2.0
 ENSEMBLE_LO, ENSEMBLE_HI = 0.35, 0.75
+# A challenge re-check (D-44): the blended probability that the original call was right decides it.
+UPHOLD_AT, OVERTURN_AT = 0.6, 0.4
+# Kinds whose calls name a team at fault; a made basket or an info line has none.
+FAULT_KINDS = frozenset({"point", "violation", "line_call", "edge_call", "foul_flag"})
 
 
 class Decider:
@@ -58,6 +63,7 @@ class GameState:
     house_rules: dict[str, dict[str, Any]] = field(default_factory=dict)
     moments: dict[str, dict[str, Any]] = field(default_factory=dict)
     call_moment: dict[str, str] = field(default_factory=dict)
+    feeds: dict[str, dict[str, Any]] = field(default_factory=dict)  # cam_id -> Feed row (D-42)
     decided: set[str] = field(default_factory=set)
     last_t_s: float = 0.0
     calib_untrusted: bool = False
@@ -111,6 +117,8 @@ class Engine:
         self.now_ms = now_ms or (lambda: time.time() * 1000.0)
         self.labels_dir = labels_dir or ROOT / "evals" / "labels"
         self.games: dict[str, GameState] = {}
+        # Commands produced off the loop thread (the background challenge verdict): handled by drain() on the loop.
+        self.inbox: queue.SimpleQueue[dict[str, Any]] = queue.SimpleQueue()
         # Crops for the voters: (game_id, evidence windows) -> <= 4 base64 JPEGs. Set once the gateway serves
         # GET /api/replay/{game_id}/frames (interfaces §13); until then votes run on observations and facts only.
         self.crops: Any = None
@@ -269,6 +277,7 @@ class Engine:
             else None
         )
         team = g.team(team_id)
+        at_fault = self._at_fault(g, cr, activation, team_id, outcome)
         call = build_call(
             game_id=g.game["game_id"],
             ev=ev,
@@ -289,8 +298,28 @@ class Engine:
             emotion=emotion,
             now_ms=self.now_ms(),
             why=self._why(ev),
+            at_fault=at_fault,
+            source="annotated" if ev.get("source") == "annotated" else "sensed",
         )
         return call
+
+    def _at_fault(
+        self, g: GameState, cr, activation: dict[str, Any], team_id: str | None, outcome: str
+    ) -> dict[str, str] | None:
+        """The team that committed the fault: the rule's `at_fault` CEL expression, else the team the call does not
+        favour for a point/violation/line call. None for a let, a made basket or an info line."""
+        at: str | None = None
+        if cr.at_fault is not None:
+            try:
+                at = str(evaluate(cr.at_fault, activation)) or None
+            except CelError:
+                at = None
+        elif team_id and outcome != "let" and str(cr.rule.get("kind")) in FAULT_KINDS:
+            a, b = g.sides
+            at = b if team_id == a else a if team_id == b else None
+        if not at:
+            return None
+        return {"team_id": at, "name": str(g.team(at).get("name") or at)}
 
     @staticmethod
     def _why(ev: dict[str, Any]) -> str | None:
@@ -317,11 +346,13 @@ class Engine:
         if rule is not None and rule.rule.get("check") == "ensemble" and ENSEMBLE_LO < call["p"] < ENSEMBLE_HI:
             self._spawn_decide(g, call, rule.rule)
 
-    def _spawn_decide(self, g: GameState, call: dict[str, Any], rule: dict[str, Any]) -> None:
+    def _spawn_decide(
+        self, g: GameState, call: dict[str, Any], rule: dict[str, Any], challenge_id: str | None = None
+    ) -> None:
         if self.decider is None or call["id"] in g.decided:
             return
         ens = rule.get("ensemble") or {}
-        options = list(ens.get("options") or [call["outcome"], "other"])
+        options = list(ens.get("options") or [call["outcome"], f"not_{call['outcome']}"])
         ev = next((e for e in [self._event_for(g, call)] if e), None)
         p_geo = {
             o: (call["p"] if o == call["outcome"] or o == options[0] else (1.0 - call["p"]) / max(1, len(options) - 1))
@@ -340,6 +371,10 @@ class Engine:
             "p_geometry": p_geo,
             "timeout_s": 4,
         }
+        if challenge_id:
+            req["challenge_id"] = challenge_id
+            # the option that means "the call was right": the outcome itself, else the first option (geometry's pick)
+            req["original_option"] = call["outcome"] if call["outcome"] in options else options[0]
         g.decided.add(call["id"])
         self.decider.submit(req)
 
@@ -495,6 +530,9 @@ class Engine:
                     game_id, args["sport"], t0_ms=args.get("t0_ms"), teams=args.get("teams"), params=args.get("params")
                 )
             return
+        if name == "feed_schedule":
+            self._feed_schedule(game_id, args)
+            return
         g = self.games.get(game_id)
         if g is None:
             log.warning("ctl %s for unknown game %s", name, game_id)
@@ -558,19 +596,61 @@ class Engine:
     def _ctl_start_game(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         self.start_game(g.game["game_id"], a.get("first_server"))
 
-    def _ctl_set_server(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
-        want = str(a["team_id"])
-        if g.score().server != want:
-            g.first_server = g.sides[1] if g.first_server == g.sides[0] else g.sides[0]
-        if g.rally is not None and g.rally.bounces == 0:
-            g.rally.server_side = want
-        self._recompute(g)
-        self._info(g, f"Server: {g.team(want).get('name', want)}")
+    # ------------------------------------------------------------ replayed feeds (D-42)
+
+    def _feed_schedule(self, game_id: str, a: dict[str, Any]) -> None:
+        """A scenario goes live: reset the game to its sport and teams (reset), then write one feed row per angle."""
+        g = self.games.get(game_id)
+        if a.get("reset") or g is None:
+            t0 = g.game["t0_ms"] if g is not None else a.get("t0_ms")
+            sport = str(a.get("sport") or (g.game["sport"] if g else "table_tennis"))
+            teams = [dict(t) for t in a.get("teams") or []] or None
+            g = self.create_game(game_id, sport, t0_ms=t0, teams=teams, params=dict(a.get("params") or {}))
+            self.start_game(game_id)
+        now = self.now_ms()
+        for f in a.get("feeds") or []:
+            row = {**f, "game_id": game_id, "updated_at_ms": now}
+            g.feeds[row["cam_id"]] = row
+            self.state.upsert_feed(row)
+
+    def _ctl_viewer_status(self, g: GameState, a: dict[str, Any], by: str | None) -> None:
+        if not by:
+            return
+        self.state.upsert_viewer(
+            {
+                "viewer_id": by,
+                "game_id": g.game["game_id"],
+                "cam_id": str(a.get("cam_id") or ""),
+                "name": str(a.get("name") or "")[:40],
+                "connected": bool(a.get("connected", True)),
+                "playing": bool(a.get("playing", False)),
+                "drift_ms": round(float(a.get("drift_ms") or 0.0), 1),
+                "last_seen_ms": self.now_ms(),
+            }
+        )
+
+    # ------------------------------------------------------------ challenges (D-44)
+
+    def drain(self) -> int:
+        """Handle commands queued from other threads (the background verdict). Called by the live loop."""
+        n = 0
+        while True:
+            try:
+                cmd = self.inbox.get_nowait()
+            except queue.Empty:
+                return n
+            n += 1
+            try:
+                self.handle_ctl(cmd)
+            except Exception:  # noqa: BLE001 - a bad internal command must not stop the referee
+                log.exception("internal ctl failed")
 
     def _ctl_challenge(self, g: GameState, a: dict[str, Any], by: str | None) -> None:
         call = next((c for c in g.calls if c["id"] == a["call_id"]), None)
-        if call is None or call["status"] not in ("final",):
+        if call is None or call["status"] not in ("final", "upheld") or call.get("kind") == "info":
             log.warning("challenge: call %s not challengeable", a.get("call_id"))
+            return
+        if any(ch["call_id"] == call["id"] and ch["status"] == "open" for ch in g.challenges.values()):
             return
         ch = {
             "challenge_id": new_ulid(),
@@ -585,10 +665,62 @@ class Engine:
         g.challenges[ch["challenge_id"]] = ch
         call["status"] = "challenged"
         self.state.open_challenge(ch)
+        self._info(g, f"Challenge: {call['text']}", speech="Challenge. Let's look at the replay.", rule_id="challenge")
         rule = g.rules.by_id(call["rule_id"])
-        if rule is not None and rule.rule.get("check") == "ensemble":
-            self._spawn_decide(g, call, rule.rule)
-        self._info(g, f"Challenge: {call['text']}", speech="Challenge. Reviewing.")
+        if self.decider is not None:
+            g.decided.discard(call["id"])  # a challenge always gets a fresh re-check
+            self._spawn_decide(g, call, rule.rule if rule else {}, challenge_id=ch["challenge_id"])
+        else:  # no model voter configured: the geometry alone decides, at once
+            self.inbox.put(self._verdict_cmd(g, ch, call, {call["outcome"]: call["p"]}, []))
+
+    def _verdict_cmd(
+        self, g: GameState, ch: dict[str, Any], call: dict[str, Any], probs: dict[str, float], votes: list[dict]
+    ) -> dict[str, Any]:
+        """The automatic resolution of a challenge from the blended probabilities (uncalibrated) and the votes."""
+        p_orig = float(probs.get(call["outcome"], call["p"]))
+        if p_orig >= UPHOLD_AT:
+            result = "upheld"
+        elif p_orig <= OVERTURN_AT:
+            result = "overturned"
+        else:
+            result = "players_decide"
+        claude = next((v for v in votes if v.get("backend") == "claude" and v.get("rationale")), None)
+        what = call["text"].rstrip(".")
+        head = {
+            "upheld": f"The call stands: {what}.",
+            "overturned": f"Overturned: {what} is reversed. Replay the point.",
+            "players_decide": f"Too close to call: {what}. Players decide.",
+        }[result]
+        facts = [f"Replay shows {call['why']}." if call.get("why") else ""]
+        if call.get("source") == "annotated":
+            facts.append("From the marked events on the recording.")
+        if claude:
+            facts.append(f"Claude: {str(claude['rationale']).rstrip('.')}.")
+        facts.append(f"Confidence {round(p_orig * 100)}% (uncalibrated).")
+        explanation = " ".join(f for f in [head, *facts] if f)[:240]
+        return {
+            "cmd": "resolve_challenge",
+            "game_id": g.game["game_id"],
+            "by_cam_id": None,
+            "args": {
+                "challenge_id": ch["challenge_id"],
+                "result": result,
+                "explanation": explanation,
+                "auto": True,
+                "p_original": round(p_orig, 3),
+            },
+        }
+
+    def challenge_verdict(self, req: dict[str, Any], res: dict[str, Any]) -> None:
+        """From the decider's thread: queue the verdict for the loop (the engine is single-threaded)."""
+        g = self.games.get(req["game_id"])
+        ch = g.challenges.get(req.get("challenge_id", "")) if g else None
+        call = next((c for c in g.calls if c["id"] == req["call_id"]), None) if g else None
+        if g is None or ch is None or call is None or ch["status"] != "open":
+            return
+        p_final = dict(res.get("p_final") or {})
+        probs = {call["outcome"]: float(p_final.get(req.get("original_option") or call["outcome"], call["p"]))}
+        self.inbox.put(self._verdict_cmd(g, ch, call, probs, list(res.get("votes") or [])))
 
     def _ctl_resolve_challenge(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         ch = g.challenges.get(a["challenge_id"])
@@ -596,26 +728,42 @@ class Engine:
             return
         result = a["result"]
         call = next(c for c in g.calls if c["id"] == ch["call_id"])
-        call["status"] = "upheld" if result == "upheld" else "overturned"
-        ch.update({"status": "resolved", "result": result, "resolved_at_ms": self.now_ms()})
+        call["status"] = {"upheld": "upheld", "overturned": "overturned"}.get(result, "players_decide")
+        explanation = str(a.get("explanation") or "")[:240] or None
+        ch.update(
+            {
+                "status": "resolved",
+                "result": result,
+                "resolved_at_ms": self.now_ms(),
+                "decided_by": "auto" if a.get("auto") else "judge",
+                "p_original": a.get("p_original"),
+                "explanation": explanation,
+            }
+        )
         self.state.resolve_challenge(ch)
-        self.state.update_call_status(call["id"], call["status"])
+        if explanation:
+            call["explanation"] = explanation
+        self.state.post_call(call)  # status + explanation on the challenged call itself
         if result == "overturned":
             rep = a.get("replacement") or {}
             new = dict(call)
+            outcome = rep.get("outcome") or "let"
             new.update(
                 {
                     "id": new_ulid(),
-                    "outcome": rep.get("outcome", "overturned"),
+                    "outcome": outcome,
                     "p": 1.0,
-                    "p_source": "manual",
+                    "p_source": "manual" if not a.get("auto") else "ensemble",
                     "tier": "AUTO",
                     "shown": "auto",
                     "status": "final",
                     "supersedes": call["id"],
                     "created_at_ms": self.now_ms(),
-                    "text": f"Overturned: {rep.get('outcome', 'no call')}"[:80],
-                    "speech": f"Overturned. {rep.get('outcome', 'no call').replace('_', ' ')}.",
+                    "text": f"Overturned: {outcome.replace('_', ' ')}"[:80],
+                    "speech": explanation or f"Overturned. {outcome.replace('_', ' ')}.",
+                    "explanation": explanation,
+                    "at_fault": None,
+                    "cue": {"beep": "double", "flash": "none"},
                 }
             )
             if rep.get("team_id"):
@@ -627,13 +775,28 @@ class Engine:
             g.calls.append(new)
             self.state.post_call(new)
         else:
-            self._info(g, f"Upheld: {call['text']}", speech="Call stands.")
+            label = "Upheld" if result == "upheld" else "Players decide"
+            self._info(
+                g,
+                f"{label}: {call['text']}",
+                speech=explanation or ("Call stands." if result == "upheld" else "Too close. Players decide."),
+                rule_id="challenge_verdict",
+            )
         mid = g.call_moment.get(call["id"])
-        if mid:
+        if mid and result in ("upheld", "overturned"):
             m = rescore_for_challenge(g.moments[mid], result)
             g.moments[mid] = m
             self._post_game(self.state.upsert_moment, m)
         self._recompute(g)
+
+    def _ctl_set_server(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
+        want = str(a["team_id"])
+        if g.score().server != want:
+            g.first_server = g.sides[1] if g.first_server == g.sides[0] else g.sides[0]
+        if g.rally is not None and g.rally.bounces == 0:
+            g.rally.server_side = want
+        self._recompute(g)
+        self._info(g, f"Server: {g.team(want).get('name', want)}")
 
     def _ctl_undo_last_call(self, g: GameState, _a: dict[str, Any], _by: str | None) -> None:
         for c in reversed(g.calls):

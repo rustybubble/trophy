@@ -110,9 +110,16 @@ class Challenge(BaseModel):
     call_id: str
     by_cam_id: str
     status: Literal["open", "resolved"]
-    result: Literal["upheld", "overturned"] | None = None
+    result: Literal["upheld", "overturned", "players_decide"] | None = None
     created_at_ms: float
     resolved_at_ms: float | None = None
+    decided_by: Literal["auto", "judge"] | None = Field(
+        None, description="auto = geometry + Claude (uncalibrated) re-check (D-44); judge = a person"
+    )
+    p_original: float | None = Field(
+        None, description="Blended probability that the original call was right (uncalibrated)"
+    )
+    explanation: str | None = Field(None, description="The spoken verdict and reason")
 
 
 class HouseRuleStep(BaseModel):
