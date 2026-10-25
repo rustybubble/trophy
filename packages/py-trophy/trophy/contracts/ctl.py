@@ -300,6 +300,26 @@ class ReviewCallArgs(BaseModel):
     replacement: Replacement | None = None
 
 
+class FeedScheduleArgs(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    feeds: list[dict[str, Any]]
+
+
+class ViewerStatusArgs(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    cam_id: str
+    name: str | None = None
+    playing: bool | None = None
+    drift_ms: float | None = None
+    connected: bool | None = None
+
+
 class CtlCommand(BaseModel):
     """
     trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 §9). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (§13).
@@ -333,6 +353,9 @@ class CtlCommand(BaseModel):
         "review_call",
         "run_check",
         "request_check",
+        "feed_schedule",
+        "viewer_status",
+        "revert_house_rule",
     ] = Field(..., title="CtlCmd")
     game_id: str
     t_srv_ms: float

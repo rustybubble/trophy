@@ -58,6 +58,21 @@
     "supersedes": { "type": "string" },
     "rule_ref": { "type": "string", "description": "Closest official clause (Moss), if any" },
     "why": { "type": "string", "description": "One short sentence from event facts" },
+    "at_fault": {
+      "type": ["object", "null"],
+      "description": "Who committed the fault / lost the point (spoken with the call)",
+      "required": ["team_id", "name"],
+      "properties": { "team_id": { "type": "string" }, "name": { "type": "string" } },
+      "additionalProperties": false
+    },
+    "explanation": {
+      "type": ["string", "null"],
+      "description": "Plain-language reason, e.g. a challenge verdict (240 chars at most)"
+    },
+    "source": {
+      "enum": ["sensed", "annotated", "manual"],
+      "description": "Where the evidence came from; annotated = hand-marked events on recorded footage"
+    },
     "suggested": {
       "type": "string",
       "description": "decide() suggested verdict after AI votes; advisory only, the judge decides"

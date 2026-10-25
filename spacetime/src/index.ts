@@ -233,6 +233,31 @@ const sport_module = table(
     json: t.string(),
   },
 );
+// Replayed angles and the phones showing them (D-42): Spacetime is the sync authority for every device.
+const feed = table(
+  { name: "feed", public: true },
+  {
+    cam_id: t.string().primaryKey(),
+    game_id: t.string().index(),
+    label: t.string(),
+    status: t.string(),
+    wall0_ms: t.f64(),
+    updated_at_ms: t.f64(),
+    json: t.string(),
+  },
+);
+const viewer = table(
+  { name: "viewer", public: true },
+  {
+    viewer_id: t.string().primaryKey(),
+    game_id: t.string().index(),
+    cam_id: t.string(),
+    connected: t.bool(),
+    drift_ms: t.f64(),
+    last_seen_ms: t.f64(),
+    json: t.string(),
+  },
+);
 
 const spacetimedb = schema({
   owner,
@@ -252,6 +277,8 @@ const spacetimedb = schema({
   commentary,
   droid_run,
   sport_module,
+  feed,
+  viewer,
 });
 export default spacetimedb;
 
@@ -590,7 +617,7 @@ export const insert_house_rule = spacetimedb.reducer({ json: t.string() }, (ctx,
   writeHouseRule(ctx, h);
 });
 
-const ENGINE_HR_STATUS = ["pending", "approved", "rejected", "failed"];
+const ENGINE_HR_STATUS = ["pending", "approved", "rejected", "failed", "applied", "reverted"];
 const COMPILER_HR_STATUS = ["compiling", "ready", "failed"];
 const HR_FIELDS = ["plan_md", "steps", "diff", "results", "pack_path", "error", "backend"];
 
@@ -603,7 +630,7 @@ export const set_house_rule_status = spacetimedb.reducer({ json: t.string() }, (
   const existing = ctx.db.house_rule.rule_version.find(str(o, "rule_version"));
   if (!existing) throw new SenderError("no such house rule");
   const patch: Obj = { status, updated_at_ms: Number(ctx.timestamp.toMillis()) };
-  for (const k of ["error", "pack_path"]) if (k in o) patch[k] = o[k];
+  for (const k of ["error", "pack_path", "decision", "results"]) if (k in o) patch[k] = o[k];
   writeHouseRule(ctx, { ...obj(existing.json), ...patch });
 });
 
@@ -616,7 +643,7 @@ export const update_house_rule_progress = spacetimedb.reducer({ json: t.string()
   const o = parseObj(json);
   const existing = ctx.db.house_rule.rule_version.find(str(o, "rule_version"));
   if (!existing) throw new SenderError("no such house rule");
-  if (existing.status === "approved" || existing.status === "rejected") {
+  if (["approved", "rejected", "applied", "reverted"].includes(existing.status)) {
     throw new SenderError(`house rule is already ${existing.status}`);
   }
   const cur = obj(existing.json);
@@ -855,7 +882,7 @@ function writeDroidRun(ctx: Ctx, o: Obj): void {
     run_id: str(o, "run_id"),
     game_id: str(o, "game_id", false),
     sport: str(o, "sport"),
-    kind: oneOf(o, "kind", ["compile", "house_rule", "retune"]),
+    kind: oneOf(o, "kind", ["compile", "house_rule", "retune", "calibrate_checks", "new_check", "interpreter"]),
     status: oneOf(o, "status", ["queued", "running", "ready", "failed", "approved", "rejected"]),
     updated_at_ms: num(o, "updated_at_ms"),
     json: JSON.stringify(o),
@@ -936,4 +963,44 @@ export const upsert_sport_module = spacetimedb.reducer({ json: t.string() }, (ct
   if (old && version <= old.version && old.json !== row.json) throw new SenderError("module version must increase");
   if (old) ctx.db.sport_module.module_key.update(row);
   else ctx.db.sport_module.insert(row);
+});
+
+// ---------------------------------------------------------------- engine: replayed feeds and viewers (D-42)
+/** Engine. A full Feed (state.schema.json): one angle replayed as if live, scheduled on the server clock. */
+export const upsert_feed = spacetimedb.reducer({ json: t.string() }, (ctx, { json }) => {
+  requireRole(ctx, "engine");
+  const f = parseObj(json);
+  oneOf(f, "status", ["scheduled", "playing", "ended", "failed"]);
+  str(f, "video_url");
+  num(f, "offset_s");
+  num(f, "duration_s");
+  num(f, "t_game0_s");
+  const row = {
+    cam_id: str(f, "cam_id"),
+    game_id: str(f, "game_id"),
+    label: str(f, "label"),
+    status: str(f, "status"),
+    wall0_ms: num(f, "wall0_ms"),
+    updated_at_ms: num(f, "updated_at_ms"),
+    json: JSON.stringify(f),
+  };
+  if (ctx.db.feed.cam_id.find(row.cam_id)) ctx.db.feed.cam_id.update(row);
+  else ctx.db.feed.insert(row);
+});
+
+/** Engine. A full Viewer (state.schema.json): which angle a phone shows and how far its playback drifts. */
+export const upsert_viewer = spacetimedb.reducer({ json: t.string() }, (ctx, { json }) => {
+  requireRole(ctx, "engine");
+  const v = parseObj(json);
+  const row = {
+    viewer_id: str(v, "viewer_id"),
+    game_id: str(v, "game_id"),
+    cam_id: str(v, "cam_id"),
+    connected: bool(v, "connected"),
+    drift_ms: num(v, "drift_ms", false),
+    last_seen_ms: num(v, "last_seen_ms"),
+    json: JSON.stringify(v),
+  };
+  if (ctx.db.viewer.viewer_id.find(row.viewer_id)) ctx.db.viewer.viewer_id.update(row);
+  else ctx.db.viewer.insert(row);
 });

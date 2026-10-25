@@ -129,12 +129,14 @@ class EventConsumer:
 
 
 # ---- control commands ----
-GATEWAY_ONLY = frozenset({"create_game", "register_camera", "camera_health", "set_calibration", "ask_logged"})
+GATEWAY_ONLY = frozenset(
+    {"create_game", "register_camera", "camera_health", "set_calibration", "ask_logged", "feed_schedule"}
+)
 # Which client roles may send each command through POST /api/ctl (§9). Roles are comma-combinable.
 CTL_CLIENT_ROLES: Mapping[str, frozenset[str]] = {
     "start_game": frozenset({"judge"}),
     "set_server": frozenset({"judge"}),
-    "challenge": frozenset({"cam", "display", "judge"}),
+    "challenge": frozenset({"cam", "display", "judge", "viewer"}),
     "resolve_challenge": frozenset({"judge"}),
     "undo_last_call": frozenset({"judge"}),
     "adjust_score": frozenset({"judge"}),
@@ -143,6 +145,8 @@ CTL_CLIENT_ROLES: Mapping[str, frozenset[str]] = {
     "submit_house_rule": frozenset({"judge"}),
     "approve_house_rule": frozenset({"judge"}),
     "reject_house_rule": frozenset({"judge"}),
+    "revert_house_rule": frozenset({"judge"}),
+    "viewer_status": frozenset({"cam", "display", "judge", "viewer"}),
     "bookmark": frozenset({"cam", "display", "judge"}),
     "clip_that": frozenset({"cam", "display", "judge"}),
     "review_call": frozenset({"judge"}),

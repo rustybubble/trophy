@@ -29,6 +29,8 @@ from .ctl import (
     BookmarkArgs,
     ClipThatArgs,
     ReviewCallArgs,
+    FeedScheduleArgs,
+    ViewerStatusArgs,
 )
 from .decide import Decide, DecideRequest, Vote, DecideResult
 from .droidrun import DroidRun, DroidRunTrigger, DroidRunStep, DroidRunTest, DroidRunCallChange, DroidRunResults
@@ -79,6 +81,9 @@ from .state import (
     Ask,
     Moment,
     Commentary,
+    Feed,
+    Viewer,
+    HouseRuleDecision,
 )
 from .track3d import Track3DSample, Track3DView, CheckResult, Track3DLabels
 from .tracks import BallTrackSample, PlayerBox, PlayersTrackSample
@@ -130,6 +135,8 @@ __all__ = [
     "Event",
     "EvidenceRef",
     "EvidenceWindow",
+    "Feed",
+    "FeedScheduleArgs",
     "FieldTemplate",
     "FrameMeta",
     "Game",
@@ -137,6 +144,7 @@ __all__ = [
     "HeartbeatPayload",
     "HiddenCamView",
     "HouseRule",
+    "HouseRuleDecision",
     "HouseRuleResults",
     "HouseRuleStep",
     "HouseRuleTest",
@@ -190,6 +198,8 @@ __all__ = [
     "Track3DSample",
     "Track3DView",
     "TrackSample",
+    "Viewer",
+    "ViewerStatusArgs",
     "Vote",
     "WsClientMessage",
     "WsServerMessage",

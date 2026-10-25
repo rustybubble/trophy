@@ -54,7 +54,10 @@
         "clip_that",
         "review_call",
         "run_check",
-        "request_check"
+        "request_check",
+        "feed_schedule",
+        "viewer_status",
+        "revert_house_rule"
       ]
     },
     "TeamSpec": {
@@ -557,6 +560,42 @@
         }
       },
       "additionalProperties": false
+    },
+    "FeedScheduleArgs": {
+      "title": "FeedScheduleArgs",
+      "type": "object",
+      "required": ["feeds"],
+      "properties": {
+        "feeds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "trophy state Feed without game_id/updated_at_ms"
+          }
+        }
+      }
+    },
+    "ViewerStatusArgs": {
+      "title": "ViewerStatusArgs",
+      "type": "object",
+      "required": ["cam_id"],
+      "properties": {
+        "cam_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "playing": {
+          "type": "boolean"
+        },
+        "drift_ms": {
+          "type": "number"
+        },
+        "connected": {
+          "type": "boolean"
+        }
+      }
     }
   }
 }

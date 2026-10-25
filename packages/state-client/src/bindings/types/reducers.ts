@@ -28,9 +28,11 @@ import UpdateCallStatusReducer from "../update_call_status_reducer";
 import UpdateDroidRunReducer from "../update_droid_run_reducer";
 import UpdateHouseRuleProgressReducer from "../update_house_rule_progress_reducer";
 import UpsertCameraReducer from "../upsert_camera_reducer";
+import UpsertFeedReducer from "../upsert_feed_reducer";
 import UpsertGameReducer from "../upsert_game_reducer";
 import UpsertMomentReducer from "../upsert_moment_reducer";
 import UpsertSportModuleReducer from "../upsert_sport_module_reducer";
+import UpsertViewerReducer from "../upsert_viewer_reducer";
 
 export type CloseRallyParams = __Infer<typeof CloseRallyReducer>;
 export type InsertHouseRuleParams = __Infer<typeof InsertHouseRuleReducer>;
@@ -54,7 +56,9 @@ export type UpdateCallStatusParams = __Infer<typeof UpdateCallStatusReducer>;
 export type UpdateDroidRunParams = __Infer<typeof UpdateDroidRunReducer>;
 export type UpdateHouseRuleProgressParams = __Infer<typeof UpdateHouseRuleProgressReducer>;
 export type UpsertCameraParams = __Infer<typeof UpsertCameraReducer>;
+export type UpsertFeedParams = __Infer<typeof UpsertFeedReducer>;
 export type UpsertGameParams = __Infer<typeof UpsertGameReducer>;
 export type UpsertMomentParams = __Infer<typeof UpsertMomentReducer>;
 export type UpsertSportModuleParams = __Infer<typeof UpsertSportModuleReducer>;
+export type UpsertViewerParams = __Infer<typeof UpsertViewerReducer>;
 

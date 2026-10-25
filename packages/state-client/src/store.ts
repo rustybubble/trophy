@@ -5,6 +5,8 @@ import type {
   Camera,
   Challenge,
   Commentary,
+  DroidRun,
+  Feed,
   Game,
   HouseRule,
   Moment,
@@ -16,6 +18,7 @@ import type {
   TableRows,
   TrackSample,
   Unsubscribe,
+  Viewer,
 } from "./types.ts";
 
 export const ROW_KEY: { [T in TableName]: (r: TableRows[T]) => string } = {
@@ -32,6 +35,9 @@ export const ROW_KEY: { [T in TableName]: (r: TableRows[T]) => string } = {
   track_sample: (r) => `${r.cam_id}/${r.t_game_s}`,
   moment: (r) => r.moment_id,
   commentary: (r) => `${r.moment_id}/${r.voice}`,
+  feed: (r) => r.cam_id,
+  viewer: (r) => r.viewer_id,
+  droid_run: (r) => r.run_id,
 };
 
 type Listener = (row: never, change: RowChange) => void;
@@ -129,5 +135,14 @@ export abstract class StateStore {
   }
   onCommentary(cb: (c: Commentary) => void): Unsubscribe {
     return this.on("commentary", (c) => cb(c));
+  }
+  onFeeds(cb: (f: Feed[]) => void): Unsubscribe {
+    return this.onList("feed", cb);
+  }
+  onViewers(cb: (v: Viewer[]) => void): Unsubscribe {
+    return this.onList("viewer", cb);
+  }
+  onDroidRun(cb: (r: DroidRun) => void): Unsubscribe {
+    return this.on("droid_run", (r) => cb(r));
   }
 }

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://trophy.local/contracts/state.schema.json",
   "title": "StateTables",
-  "description": "Spacetime game-state rows as clients see them through @trophy/state-client (interfaces-v1 \u00a711). The module stores *_json columns as strings; the state client parses them, so these types use the parsed field names (e.g. teams, not teams_json). `call` rows are Call (call.schema.json) and `observation` rows are Event (event.schema.json).",
+  "description": "Spacetime game-state rows as clients see them through @trophy/state-client (interfaces-v1 §11). The module stores *_json columns as strings; the state client parses them, so these types use the parsed field names (e.g. teams, not teams_json). `call` rows are Call (call.schema.json) and `observation` rows are Event (event.schema.json).",
   "type": "object",
   "properties": {
     "game": {
@@ -268,7 +268,7 @@
     },
     "HouseRuleStatus": {
       "title": "HouseRuleStatus",
-      "enum": ["pending", "compiling", "ready", "approved", "rejected", "failed"]
+      "enum": ["pending", "compiling", "ready", "approved", "rejected", "failed", "applied", "reverted"]
     },
     "HouseRuleStep": {
       "title": "HouseRuleStep",
@@ -417,6 +417,16 @@
         },
         "updated_at_ms": {
           "type": "number"
+        },
+        "decision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HouseRuleDecision"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     },
@@ -467,7 +477,7 @@
     },
     "TrackSample": {
       "title": "TrackSample",
-      "description": "Ball track down-sampled to 10 Hz, rolling 120 s (\u00a78). Key (cam_id, t_game_s).",
+      "description": "Ball track down-sampled to 10 Hz, rolling 120 s (§8). Key (cam_id, t_game_s).",
       "type": "object",
       "required": ["cam_id", "t_game_s", "game_id", "object", "conf"],
       "properties": {
@@ -595,7 +605,7 @@
     },
     "Moment": {
       "title": "Moment",
-      "description": "Written live by the engine as calls happen (interfaces-v1 \u00a719). highlight_score and reasons come from event features only (no crowd audio).",
+      "description": "Written live by the engine as calls happen (interfaces-v1 §19). highlight_score and reasons come from event features only (no crowd audio).",
       "type": "object",
       "required": [
         "moment_id",
@@ -704,6 +714,143 @@
           "enum": ["claude", "template"]
         },
         "created_at_ms": {
+          "type": "number"
+        }
+      }
+    },
+    "Feed": {
+      "title": "Feed",
+      "description": "One camera angle replayed from a recording as if live (D-42). The Mac streams the clip into frames:{cam_id} for the referee; phones hosting the angle play the same clip locally, in sync with wall0_ms on the server clock.",
+      "type": "object",
+      "required": [
+        "cam_id",
+        "game_id",
+        "label",
+        "status",
+        "scenario_id",
+        "video_url",
+        "offset_s",
+        "duration_s",
+        "wall0_ms",
+        "t_game0_s",
+        "source",
+        "updated_at_ms"
+      ],
+      "properties": {
+        "cam_id": {
+          "type": "string",
+          "description": "The camera the referee sees: frames:{cam_id}"
+        },
+        "game_id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string",
+          "description": "e.g. Side, Diagonal, Baseline"
+        },
+        "status": {
+          "enum": ["scheduled", "playing", "ended", "failed"]
+        },
+        "scenario_id": {
+          "type": "string"
+        },
+        "video_url": {
+          "type": "string",
+          "description": "Gateway path of the phone-playable H.264 file (append ?token=)"
+        },
+        "offset_s": {
+          "type": "number",
+          "description": "Clip time shown at wall0_ms"
+        },
+        "duration_s": {
+          "type": "number",
+          "description": "Seconds streamed from offset_s"
+        },
+        "wall0_ms": {
+          "type": "number",
+          "description": "Server epoch ms at which clip time offset_s plays"
+        },
+        "t_game0_s": {
+          "type": "number",
+          "description": "Game time at wall0_ms (game time of clip time t = t_game0_s + (t - offset_s))"
+        },
+        "source": {
+          "enum": ["team_recording", "cc_by_online", "synthetic"]
+        },
+        "credit": {
+          "type": ["string", "null"],
+          "description": "Attribution line for CC BY footage"
+        },
+        "annotated": {
+          "type": "boolean",
+          "description": "True when this angle's events come from hand annotations, not perception"
+        },
+        "calibrated": {
+          "type": "boolean"
+        },
+        "updated_at_ms": {
+          "type": "number"
+        }
+      }
+    },
+    "Viewer": {
+      "title": "Viewer",
+      "description": "A phone showing one angle (D-42). Phones report their playback drift against the feed schedule; every device sees every other device through Spacetime.",
+      "type": "object",
+      "required": ["viewer_id", "game_id", "cam_id", "connected", "drift_ms", "last_seen_ms"],
+      "properties": {
+        "viewer_id": {
+          "type": "string",
+          "description": "The phone's own cam_id from its join token"
+        },
+        "game_id": {
+          "type": "string"
+        },
+        "cam_id": {
+          "type": "string",
+          "description": "The angle (Feed.cam_id) this phone shows"
+        },
+        "name": {
+          "type": "string",
+          "description": "Short device name, e.g. iPhone"
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "playing": {
+          "type": "boolean"
+        },
+        "drift_ms": {
+          "type": "number",
+          "description": "Local video time minus scheduled time, ms (positive = ahead)"
+        },
+        "last_seen_ms": {
+          "type": "number"
+        }
+      }
+    },
+    "HouseRuleDecision": {
+      "title": "HouseRuleDecision",
+      "description": "The Droid's decision on a new house rule (D-43): whether it applies, why, and what it re-judged.",
+      "type": "object",
+      "required": ["applies", "rationale", "decided_by"],
+      "properties": {
+        "applies": {
+          "type": "boolean"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "decided_by": {
+          "enum": ["droid", "judge"]
+        },
+        "rejudged_rallies": {
+          "type": "integer"
+        },
+        "calls_changed": {
+          "type": "integer"
+        },
+        "decided_at_ms": {
           "type": "number"
         }
       }

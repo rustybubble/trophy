@@ -24,7 +24,7 @@ export type EventType =
  * This interface was referenced by `Event`'s JSON-Schema
  * via the `definition` "EventSource".
  */
-export type EventSource = "flight" | "players" | "possession" | "audio" | "manual" | "synthetic" | "file";
+export type EventSource = "flight" | "players" | "possession" | "audio" | "manual" | "synthetic" | "file" | "annotated";
 /**
  * This interface was referenced by `Event`'s JSON-Schema
  * via the `definition` "Side".

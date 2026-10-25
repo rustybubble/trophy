@@ -103,7 +103,7 @@ class DroidRun(BaseModel):
     game_id: str | None = None
     sport: str = Field(..., description="The module being produced or edited")
     base_sport: str | None = Field(None, description="The reference module a compile derives from")
-    kind: Literal["compile", "house_rule", "retune", "calibrate_checks", "new_check"]
+    kind: Literal["compile", "house_rule", "retune", "calibrate_checks", "new_check", "interpreter"]
     trigger: DroidRunTrigger
     status: Literal["queued", "running", "ready", "failed", "approved", "rejected"] = Field(..., title="DroidRunStatus")
     backend: Literal["droid", "claude-fallback"]

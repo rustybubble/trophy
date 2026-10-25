@@ -89,6 +89,21 @@ export interface Call {
    */
   why?: string;
   /**
+   * Who committed the fault / lost the point (spoken with the call)
+   */
+  at_fault?: {
+    team_id: string;
+    name: string;
+  } | null;
+  /**
+   * Plain-language reason, e.g. a challenge verdict (240 chars at most)
+   */
+  explanation?: string | null;
+  /**
+   * Where the evidence came from; annotated = hand-marked events on recorded footage
+   */
+  source?: "sensed" | "annotated" | "manual";
+  /**
    * decide() suggested verdict after AI votes; advisory only, the judge decides
    */
   suggested?: string;

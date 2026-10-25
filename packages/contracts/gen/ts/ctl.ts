@@ -25,7 +25,10 @@ export type CtlCmd =
   | "clip_that"
   | "review_call"
   | "run_check"
-  | "request_check";
+  | "request_check"
+  | "feed_schedule"
+  | "viewer_status"
+  | "revert_house_rule";
 
 /**
  * trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 §9). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (§13).
@@ -364,4 +367,22 @@ export interface ReviewCallArgs {
   call_id: string;
   result: "confirm" | "correct";
   replacement?: Replacement;
+}
+/**
+ * This interface was referenced by `CtlCommand`'s JSON-Schema
+ * via the `definition` "FeedScheduleArgs".
+ */
+export interface FeedScheduleArgs {
+  feeds: {}[];
+}
+/**
+ * This interface was referenced by `CtlCommand`'s JSON-Schema
+ * via the `definition` "ViewerStatusArgs".
+ */
+export interface ViewerStatusArgs {
+  cam_id: string;
+  name?: string;
+  playing?: boolean;
+  drift_ms?: number;
+  connected?: boolean;
 }

@@ -104,6 +104,17 @@ export const DroidRun = __t.object("DroidRun", {
 });
 export type DroidRun = __Infer<typeof DroidRun>;
 
+export const Feed = __t.object("Feed", {
+  camId: __t.string(),
+  gameId: __t.string(),
+  label: __t.string(),
+  status: __t.string(),
+  wall0Ms: __t.f64(),
+  updatedAtMs: __t.f64(),
+  json: __t.string(),
+});
+export type Feed = __Infer<typeof Feed>;
+
 export const Game = __t.object("Game", {
   gameId: __t.string(),
   sport: __t.string(),
@@ -211,4 +222,15 @@ export const TrackSample = __t.object("TrackSample", {
   json: __t.string(),
 });
 export type TrackSample = __Infer<typeof TrackSample>;
+
+export const Viewer = __t.object("Viewer", {
+  viewerId: __t.string(),
+  gameId: __t.string(),
+  camId: __t.string(),
+  connected: __t.bool(),
+  driftMs: __t.f64(),
+  lastSeenMs: __t.f64(),
+  json: __t.string(),
+});
+export type Viewer = __Infer<typeof Viewer>;
 

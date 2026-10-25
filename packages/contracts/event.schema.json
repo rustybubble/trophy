@@ -111,7 +111,7 @@
     },
     "EventSource": {
       "title": "EventSource",
-      "enum": ["flight", "players", "possession", "audio", "manual", "synthetic", "file"]
+      "enum": ["flight", "players", "possession", "audio", "manual", "synthetic", "file", "annotated"]
     },
     "Side": {
       "title": "Side",
