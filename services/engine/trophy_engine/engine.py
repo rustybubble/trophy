@@ -99,6 +99,10 @@ class Engine:
         # the first racket hit of a rally names the server (a serve is a hit, ITTF 2.6.3); when that hit was not
         # seen, the side of the first bounce does (a legal serve lands there first), so no serve fault is unseen.
         self.dead_after_point_s = dead_after_point_s
+        # set by the live loop: run a session check (game_id, check, t, window, args) -> CheckResult fields, and
+        # XADD a reply to the referee's stream (interfaces-v1 section 20)
+        self.check_runner = None
+        self.reply = None
         self.server_from_first_hit = server_from_first_hit
         self.modules_dir = modules_dir or ROOT / "sports"
         self.decider = decider
@@ -791,8 +795,63 @@ class Engine:
                 "moss_ms": a.get("moss_ms"),
                 "latency_ms": float(a.get("latency_ms", 0)),
                 "created_at_ms": self.now_ms(),
+                # the referee's fields (interfaces-v1 section 20; the ask table has these columns since #27)
+                **{k: a[k] for k in ("speech", "kind", "check", "p", "calibrated") if a.get(k) is not None},
+                **({"by_cam_id": a.get("by_cam_id") or _by} if (a.get("by_cam_id") or _by) else {}),
             }
         )
+
+    # ------------------------------------------------------------ the referee's checks (interfaces-v1 section 20)
+
+    def _check_time(self, g: GameState, args: dict[str, Any]) -> tuple[float | None, dict[str, Any] | None]:
+        """args.t_game_s, else ref: last (the newest call) | last_rally | call:<id>. Returns (t, rally window)."""
+        if args.get("t_game_s") is not None:
+            return float(args["t_game_s"]), None
+        ref = str(args.get("ref") or "last")
+        calls = [c for c in g.calls if c.get("kind") != "info" and c.get("status") not in ("voided", "overturned")]
+        if ref.startswith("call:"):
+            c = next((c for c in g.calls if c["id"] == ref[5:]), None)
+            return (float(c["t_game_s"]), None) if c else (None, None)
+        if ref == "last_rally":
+            return None, {"t0": args.get("t0_s"), "t1": args.get("t1_s"), "rally_no": args.get("rally_no")}
+        return (float(calls[-1]["t_game_s"]), None) if calls else (None, None)
+
+    def _ctl_run_check(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
+        t0 = time.perf_counter()
+        name = str(a["check"])
+        t, window = self._check_time(g, a.get("args") or {})
+        reply: dict[str, Any] = {"check": name, "calibrated": False}
+        if self.check_runner is None:
+            reply["error"] = "no_data"  # no fused 3D track in this session (the one-camera path has none)
+        elif t is None and window is None:
+            reply["error"] = "no_data"
+        else:
+            try:
+                reply = {**reply, **self.check_runner(g.game["game_id"], name, t, window, a.get("args") or {})}
+            except KeyError:
+                reply["error"] = "no_such_check"
+            except Exception as e:  # noqa: BLE001 - the referee gets an honest error, never a made-up answer
+                reply["error"] = f"failed:{type(e).__name__}"
+        reply["latency_ms"] = round((time.perf_counter() - t0) * 1000, 2)
+        self._reply(a.get("reply_to"), reply)
+
+    def _ctl_request_check(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
+        """No session check answers the question. Writing a new check (a Droid new_check job) is not built yet, so
+        say so at once: the referee tells the players to decide instead of waiting out its 95 s timeout."""
+        self._reply(
+            a.get("reply_to"),
+            {"check": str(a.get("check_hint") or "new"), "calibrated": False,
+             "error": "failed:new_check jobs are not built yet", "latency_ms": 0.0},
+        )  # fmt: skip
+
+    def _reply(self, stream: Any, payload: dict[str, Any]) -> None:
+        if not stream or self.reply is None:
+            log.warning("check reply dropped (no reply_to or no Redis): %s", payload.get("check"))
+            return
+        try:
+            self.reply(str(stream), payload)
+        except Exception:  # noqa: BLE001
+            log.exception("check reply to %s failed", stream)
 
     def _ctl_bookmark(self, g: GameState, a: dict[str, Any], _by: str | None) -> None:
         t = float(a.get("t_game_s", g.last_t_s))

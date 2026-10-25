@@ -144,6 +144,53 @@ def start_ask(env: dict[str, str], store: TrackStore, session_dir: Path) -> Any:
     return server
 
 
+CHECK_ALIASES = {"bounce_side": "in_out", "edge_hit": "in_out", "double_bounce": "bounces"}  # the referee's catalog
+
+
+def make_check_runner(store: TrackStore):
+    """run_check over the session's fused 3D track (interfaces-v1 section 20): the referee's check names, a moment or
+    a rally window -> the check's own CheckResult fields plus the inputs it ran with. KeyError = no such check."""
+
+    def run_check(game_id: str, name: str, t: float | None, window: dict[str, Any] | None, args: dict[str, Any]):
+        lib = CHECK_ALIASES.get(name, name)
+        if lib not in store.library.checks:
+            raise KeyError(name)
+        snap = store.snapshot()
+        track, fld = snap["track"], store.field
+        if fld is None or not len(track.samples):
+            return {"error": "no_data"}
+        seg = store.rally(int(window["rally_no"])) if window and window.get("rally_no") else store.last_rally()
+        if window and window.get("t0") is not None:
+            t0, t1 = float(window["t0"]), float(window.get("t1") or track.t1)
+        elif t is not None and seg is None:
+            t0, t1 = t - 1.5, t + 1.5
+        elif seg is not None:
+            t0 = float(seg["t_start_s"])
+            t1 = float(seg["t_end_s"]) if seg.get("t_end_s") is not None else track.t1
+        else:
+            t0, t1 = track.t0, track.t1
+        if lib == "in_out":
+            q = {"t_s": t if t is not None else t1}
+        elif lib == "serve_toss":
+            q = {"t_start": t0}
+        else:
+            q = {"t0": t0, "t1": t1}
+        res = store.library.run(lib, track, fld, None, **q)
+        return {
+            "check": name,
+            "verdict": res.get("verdict") if isinstance(res.get("verdict"), str) else None,
+            "p": res.get("p"),
+            "evidence": {
+                **(res.get("evidence") or {}),
+                **({"result": res["verdict"]} if not isinstance(res.get("verdict"), str) else {}),
+            },
+            "inputs": {"check": lib, **q, "game_id": game_id},
+            "calibrated": bool(res.get("calibrated", False)),
+        }
+
+    return run_check
+
+
 def run(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="trophy-engine", description="Trophy rule engine: events + ctl in, calls out")
     ap.add_argument("--redis", default=None, help="REDIS_URL (default from env/.env)")
@@ -256,9 +303,17 @@ def run(argv: list[str] | None = None) -> int:
     track_src = RedisTrackSource(r) if a.field is not None else None
     feeders: dict[str, TrackFeeder] = {}  # game_id -> feeder, created when the game goes live
     ask_store: TrackStore | None = None
-    if a.ask and a.field is not None:
+    if a.field is not None:  # the session's 3D track: the referee's run_check and (with --ask) POST /ask read it
         ask_store = TrackStore(load_library(a.checks or ROOT / "sports" / a.sport / "checks"), sport=a.sport)
-        start_ask(env, ask_store, a.session_dir or ROOT / "data" / "local" / "sessions" / "live")
+        engine.check_runner = make_check_runner(ask_store)
+        if a.ask:
+            start_ask(env, ask_store, a.session_dir or ROOT / "data" / "local" / "sessions" / "live")
+
+    def reply(stream: str, payload: dict[str, Any]) -> None:
+        r.xadd(stream, {"json": json.dumps(payload)}, maxlen=10, approximate=True)
+        r.expire(stream, 300)
+
+    engine.reply = reply
     log.info(
         json.dumps(
             {"svc": "engine", "msg": "started", "state": a.state, "votes": a.votes, "track3d": a.field is not None}
