@@ -4,7 +4,7 @@
 
 Point a phone at a ping-pong table and Trophy referees the game:
 - It **keeps score**.
-- It **calls the edge rule and illegal serves**. Under the official ITTF law, the toss must rise at least 16 cm off the open palm, go up within 30° of vertical and be struck on the way down. Hidden serves and net-touch lets are called too.
+- It **calls the edge rule**. Illegal serves follow the official ITTF law: the toss must rise at least 16 cm off the open palm, go up within 30° of vertical and be struck on the way down. Today that is **measured on recorded serves only**: the serve, hidden-serve and net-let rules are in the rule pack, but they don't fire live yet, because the live 2D pipeline doesn't emit serve-toss or net-touch events.
 - It **speaks every call** in a referee voice.
 - Every call shows how sure it is: **AUTO** at p ≥ 0.90, **BETA** with its probability and open to challenge, or **PLAYERS DECIDE** when the cameras can't judge it.
 - A **challenge** brings up an **instant replay** with a second opinion from Claude next to the geometry. The vote runs in the background and never holds up a call.
