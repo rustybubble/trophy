@@ -458,18 +458,22 @@ def cameras(r: redis.Redis, game_id: str) -> list[str]:
     return sorted(out)
 
 
-def wait_for_game(r: redis.Redis) -> str:
-    started = time.time() * 1000
+def newest_game(r: redis.Redis) -> tuple[float, str]:
+    """(created_at_ms, game_id) of the newest game in Redis, or (0, "")."""
+    return max(
+        (
+            (float(r.hget(k, "created_at_ms") or r.hget(k, "t0_ms") or 0), k.decode().split(":", 1)[1])
+            for k in r.scan_iter("game:*")
+        ),
+        default=(0.0, ""),
+    )
+
+
+def wait_for_game(r: redis.Redis, after_ms: float) -> str:
     while True:
-        newest = max(
-            (
-                (float(r.hget(k, "created_at_ms") or r.hget(k, "t0_ms") or 0), k.decode().split(":", 1)[1])
-                for k in r.scan_iter("game:*")
-            ),
-            default=(0.0, ""),
-        )
-        if newest[0] > started:
-            return newest[1]
+        t, gid = newest_game(r)
+        if t > after_ms:
+            return gid
         time.sleep(0.5)
 
 
@@ -506,7 +510,11 @@ def heartbeat(r: redis.Redis, game_id: str, cam_id: str, w: CamWorker) -> None:
 
 def parse_args(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--game", required=True, help='a game id, or "next" for the next game created')
+    ap.add_argument(
+        "--game",
+        required=True,
+        help='a game id; "next" for the next game created; "follow" for the newest game, switching to each new one',
+    )
     ap.add_argument("--detector", choices=["blurball", "classical"], default="blurball")
     ap.add_argument("--ball", default="white", help="classical colour model: white | orange")
     ap.add_argument("--device", default="auto", help="blurball: auto | mps | cpu")
@@ -528,11 +536,6 @@ def main(argv=None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     env = _env()
     r = redis.Redis.from_url(env.get("REDIS_URL", "redis://127.0.0.1:6379/0"))
-    if a.game == "next":
-        a.game = wait_for_game(r)
-        jlog("attached", game_id=a.game)
-    if not r.exists(game_key(a.game)):
-        raise SystemExit(f"no game {a.game} in Redis")
     obs = trk = None
     if not a.no_spacetime:
         token = env.get("SPACETIME_VISION_TOKEN", "")
@@ -541,12 +544,50 @@ def main(argv=None) -> None:
         else:
             client = SpacetimeClient(uri=env.get("SPACETIME_URI"), module=env.get("SPACETIME_MODULE"), token=token)
             obs, trk = ObservationWriter(client), TrackSampleWriter(client)
-    an = Analyzer(r, a.game, obs, a)
+    try:
+        if a.game == "follow":
+            game = newest_game(r)[1] or wait_for_game(r, 0.0)
+            while True:
+                jlog("attached", game_id=game, mode="follow")
+                created = float(r.hget(game_key(game), "created_at_ms") or r.hget(game_key(game), "t0_ms") or 0)
+                newer = {"t": 0.0, "id": game}
+
+                def switch(created=created, newer=newer, game=game) -> bool:
+                    if time.monotonic() - newer["t"] < 2.0:
+                        return False
+                    newer["t"] = time.monotonic()
+                    t, gid = newest_game(r)
+                    newer["id"] = gid
+                    return t > created and gid != game
+
+                run_game(r, a, game, obs, trk, switch)
+                game = newer["id"]
+        else:
+            if a.game == "next":
+                a.game = wait_for_game(r, time.time() * 1000)
+                jlog("attached", game_id=a.game)
+            if not r.exists(game_key(a.game)):
+                raise SystemExit(f"no game {a.game} in Redis")
+            run_game(r, a, a.game, obs, trk, lambda: False)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if obs is not None:
+            obs.close()
+        if trk is not None:
+            trk.close()
+
+
+def run_game(r: redis.Redis, a, game_id: str, obs, trk, until) -> None:
+    """Serve one game until `until()` says to stop (follow mode) or Ctrl-C."""
+    an = Analyzer(r, game_id, obs, a)
+    stop = threading.Event()
     fixed = {}
     for spec in a.corners:
         cam, _, xs = spec.partition("=")
         fixed[cam] = calib_from_corners(cam, [float(v) for v in xs.split(",")])
         an.set_calib(fixed[cam])
+    workers: dict[str, CamWorker] = {}
 
     def load_calib(cam_id: str) -> None:
         if cam_id in fixed:
@@ -561,21 +602,22 @@ def main(argv=None) -> None:
     def calib_listener() -> None:
         ps = r.pubsub()
         ps.subscribe(CTL_CALIB)
-        for m in ps.listen():
-            if m.get("type") == "message":
+        while not stop.is_set():
+            m = ps.get_message(timeout=1.0)
+            if m and m.get("type") == "message":
                 cam = m["data"].decode() if isinstance(m["data"], bytes) else str(m["data"])
                 if cam in workers:
                     load_calib(cam)
+        ps.close()
 
-    workers: dict[str, CamWorker] = {}
     threading.Thread(target=calib_listener, daemon=True).start()
     last_beat = 0.0
     try:
-        while True:
-            for cam in cameras(r, a.game) + [c for c in fixed if c not in workers]:
+        while not until():
+            for cam in cameras(r, game_id) + [c for c in fixed if c not in workers]:
                 if cam not in workers:
                     load_calib(cam)
-                    w = CamWorker(r, a.game, cam, an, trk, a)
+                    w = CamWorker(r, game_id, cam, an, trk, a)
                     w.start()
                     workers[cam] = w
                     jlog("camera", cam_id=cam, fps_in=(r.hget(cam_key(cam), "fps_in") or b"").decode() or None)
@@ -585,7 +627,7 @@ def main(argv=None) -> None:
                 last_beat = now
                 lat = sorted(an.latency_ms)
                 for cam, w in workers.items():
-                    heartbeat(r, a.game, cam, w)
+                    heartbeat(r, game_id, cam, w)
                     jlog(
                         "stats",
                         cam_id=cam,
@@ -595,15 +637,12 @@ def main(argv=None) -> None:
                         latency_p95_ms=round(lat[int(len(lat) * 0.95)]) if lat else None,
                     )
             time.sleep(a.every)
-    except KeyboardInterrupt:
-        pass
     finally:
+        stop.set()
         for w in workers.values():
             w.stop.set()
-        if obs is not None:
-            obs.close()
-        if trk is not None:
-            trk.close()
+        for w in workers.values():
+            w.join(timeout=2.0)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
-# Flight: ball track → field-frame 3D map (table tennis MVP)
+# Flight: live ball tracking and the field-frame 3D map (table tennis)
 
-**py3.11, numpy 1.26.4, opencv-python-headless 4.10.0.84. CPU only; no model is required.** Turns one or two
+**py3.11, numpy 1.26.4, opencv-python-headless 4.10.0.84; live BlurBall adds torch 2.5.1 on MPS (extra `blurball`).**
+Live: [`flight.live`](#live-one-or-more-phones-flightlive) reads the phones' frame bus and emits events (below). Offline: turns one or two
 fixed phone clips into the Droid brief's `field.json` + `track3d.jsonl`
 ([agent-3-droid-realtime.md](../../docs/plan/prompts/agent-3-droid-realtime.md)), plus `events.json` and a
 browser point-cloud viewer. Rationale: [sport-feasibility.md](../../docs/plan/sport-feasibility.md).
@@ -42,6 +43,40 @@ No real footage was available on this machine. Numbers below are from `flight.sy
 
 Throughput: both 1280×720 videos, 175 frames each, in 3.0 s wall on the CPU (about 60 fps per camera, classical).
 Tests: `uv run pytest` (13; calibration, detector, tracker, end-to-end synthetic).
+
+## Live (one or more phones): `flight.live`
+```bash
+cd services/flight && uv sync --extra blurball        # torch 2.5.1 (MPS); the weights stay in <repo>/weights/blurball_best
+uv run --extra blurball python -m flight.live --game follow         # what `make dev` runs (Procfile `flight:`)
+uv run --extra blurball python -m flight.live --game g_x --corners c_side=x,y,x,y,x,y,x,y --no-spacetime
+```
+- Reads every frame of each `role=cam` phone (`FrameReader`, crop-aware, D-29) → BlurBall on MPS (`flight/blurball.py`:
+  BGR→RGB, dedupe by `seq`, no silent CPU fallback, weights pinned by SHA-256) or `--detector classical` → #19's gated
+  tracker → `trk:ball:{cam}` every frame + 10 Hz `track_sample`.
+- **Seam (D-38):** the golden `sports/table_tennis/events.py` runs live on those layer-1 samples, over the open rally
+  segment, every 100 ms; events go to `ev:flight` + Spacetime `observation` once they are 0.2 s old, deduplicated by id.
+  `serve_toss` comes from `flight/serve.py` (one camera, the toss plane lift, launch-direction angle, the strike from
+  the horizontal-velocity impulse, σ and `evidence_missing`).
+- Calibration: `calib:{cam}` (the PWA's taps; reloaded on `ctl:calib`) or `--corners` in tap order
+  (A_left, A_right, B_right, B_left). The pose for the toss is solved from the homography's corners. Untrusted
+  calibration → `calib_untrusted` on every event. No calibration → tracked, but no events.
+- `--game follow` attaches to the newest game and switches to each new one; `next` waits for the next; or an id.
+- Tools: `python -m flight.bench` (detector + tracker fps and labelled recall on phone-path frames),
+  `python -m flight.feed` (plays a clip onto `frames:{cam}` as a phone, without the gateway; `--engine` also creates
+  and starts the game on `ctl:engine`).
+
+### Measured (M5 Pro, macOS 26.6.2, 2026-10-24)
+| What | Input | Result |
+|---|---|---|
+| Live loop throughput | the user's side + diagonal 720p clips played as two phones at once (`flight.feed`, 30 s each) | **30.0 fps per camera**, ~11 ms/frame, 0 frames skipped, bus lag 3 ms, BlurBall on `mps` |
+| BlurBall per frame (bench) | side clip 1–44 s, phone path | p50 2.3 ms / p95 28 ms per frame (one model run per 3 frames, 30 ms), 71 fps processing |
+| Detector + tracker vs hand labels (#9's `ttclips-side-*`, orange ball, handheld) | tuning split 1–44 s | BlurBall rgb 10/11 visible tracked, 3/27 empty frames with a ball; classical 0/11, 10/28 |
+| same | held-out 50–106.5 s (scored once, settings fixed on the tuning split) | BlurBall 19/34 tracked (3 wrong position), 14/35 empty frames with a ball; classical 1/34, 18/35 |
+| **SYNTHETIC** live end to end | `flight.synth` side render → `flight.feed` → `flight.live` → engine (`--state memory`) | BlurBall: 7/7 bounces, sides 7/7, timing error 5–15 ms, 0 spurious; toss 19.0 ± 2.5 cm vs 20.3 cm true (release unseen → `release`,`palm` missing); bounce → `ev:flight` latency p50 356 ms / p95 390 ms; one point call "Point Team B: no return" (right by the truth). Classical: 5/7, 5 spurious |
+| **SYNTHETIC** toss estimator | `tests/test_serve.py` (side-on camera at the net, 1 px noise) | legal / < 16 cm / 40° tosses recovered within 3σ; struck-on-descent and contact time right |
+
+Nothing above is call accuracy on real play: that needs the fixed-mount, white-ball labelled session
+(`docs/demo-setup.md`). The live contacts are weak (the module found 2/7 synthetic racket hits).
 
 ## Known limits
 - The classical detector cannot see a ball at rest, so the serve release needs a learned detector (BlurBall) or

@@ -6,7 +6,8 @@ This lists **candidates and adopted components**. When you adopt one, add its re
 |---|---|---|---|
 | subatomic-hamster/replay @ `2db92c0` | MIT ("Copyright (c) 2026 Replay") | Player and auth code to adapt; **never** `docs/media/` or `samples/real/` (private game footage) | candidate |
 | courtcam @ `b2f5ff5` | MIT (core). The `[yolo]` extra pulls in AGPL ultralytics, so **don't install it** | Calibration (`calibrate`, `camera_calibration`), basketball make/miss; **don't redistribute its `docs/demo.gif`** | candidate |
-| BlurBall (cogsys-tuebingen) @ `2f0f549` | MIT code; **weights license unstated** (issue #2) | Ping-pong ball tracker; the user decides about public-demo use; no redistribution | candidate |
+| BlurBall (cogsys-tuebingen) @ `2f0f549` | MIT code (© 2023 NTT Communications; `LICENSE.md` kept); **weights license unstated** (issue #2) | Live ping-pong ball detector (`services/flight/flight/blurball.py`). The network source is vendored unmodified at `services/flight/vendor/blurball`. The weights stay in the ignored `weights/blurball_best` (or `$TROPHY_BLURBALL_WEIGHTS`), pinned by SHA-256 `3545206c…`, never committed, never redistributed; the user accepted using them for the demo (D-30) | adopted (code); weights local only |
+| PyTorch 2.5.1 | BSD-3 | BlurBall inference on MPS (`services/flight` extra `blurball`) | adopted |
 | RF-DETR (Nano–Large) | Apache-2.0 (XL/2XL/Atto–Pico are PML) | People and ball detection (SHOULD) | candidate |
 | roboflow/trackers, supervision 0.30.9 | Apache-2.0 / MIT | Tracking | candidate |
 | rtmlib 0.0.16 | Apache-2.0 | Pose with feet (SHOULD) | candidate |
