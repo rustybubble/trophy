@@ -121,6 +121,9 @@ class CtlBody(BaseModel):
 class AskBody(BaseModel):
     question: str = Field(min_length=1, max_length=300)
     sport: str | None = None
+    # The phone's view of the game (scores, teams, the newest calls, rally, server, house rules): the referee resolves
+    # "that" to the newest call and answers the score from it, without a Spacetime read (interfaces-v1 §20).
+    context: dict[str, Any] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------- per-camera runtime state
@@ -582,14 +585,15 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         except (httpx.HTTPError, KeyError, ValueError) as e:
             jlog("voice token failed", cam_id=c.cam_id, error=type(e).__name__)
             raise HTTPException(502, "could not mint a voice token") from None
-        default_voice = "a0e99841-438c-4a64-b679-ae501e7d6091"
+        # Cartesia library voices, the same defaults as services/referee: Daniel (calls), Gemma (ref)
+        default_calls, default_ref = "47c38ca4-5f35-497b-b1a3-415245fb35e1", "62ae83ad-4f6a-430b-af41-a9bede9286ca"
         return {
             "access_token": token,
             "expires_at_ms": now_ms() + st.voice_token_ttl_s * 1000,
             "cartesia_version": st.cartesia_version,
             "voices": {
-                "calls": st.cartesia_voice_calls or default_voice,
-                "ref": st.cartesia_voice_ref or default_voice,
+                "calls": st.cartesia_voice_calls or default_calls,
+                "ref": st.cartesia_voice_ref or default_ref,
             },
         }
 
@@ -599,13 +603,26 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         sport = body.sport or g["sport"]
         t = time.perf_counter()
         try:
-            resp = await app.state.http.post(f"{st.rules_url}/ask", json={"question": body.question, "sport": sport})
+            resp = await app.state.http.post(
+                f"{st.rules_url}/ask",
+                json={
+                    "question": body.question,
+                    "sport": sport,
+                    "game_id": c.game_id,
+                    "by_cam_id": c.cam_id,
+                    "context": body.context,
+                },
+                timeout=30.0,
+            )
             resp.raise_for_status()
             out = resp.json()
         except (httpx.HTTPError, ValueError) as e:
             jlog("ask failed", game_id=c.game_id, error=type(e).__name__)
-            raise HTTPException(503, "the rules service is unavailable") from None
+            raise HTTPException(503, "the referee service is unavailable") from None
         out.setdefault("latency_ms", round((time.perf_counter() - t) * 1000, 1))
+        if out.get("kind") == "pending":
+            # the referee answers later (a Droid writes the check) and logs the ask itself (§20)
+            return out
         args = {
             "question": body.question,
             "answer": str(out.get("answer", "")),
@@ -614,10 +631,13 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
         }
         if isinstance(out.get("moss_ms"), int | float):
             args["moss_ms"] = float(out["moss_ms"])
+        for k in ("speech", "kind", "check", "p", "calibrated"):
+            if out.get(k) is not None:
+                args[k] = out[k]
         try:
             await publish(make_ctl("ask_logged", c.game_id, args, by_cam_id=c.cam_id))
         except ValidationError:
-            jlog("ask_logged skipped: rules response doesn't match the contract", game_id=c.game_id)
+            jlog("ask_logged skipped: referee response doesn't match the contract", game_id=c.game_id)
         return out
 
     # ------------------------------------------------------------ challenge clips (phone-side high-quality recording)

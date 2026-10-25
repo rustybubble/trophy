@@ -10,6 +10,7 @@ fixtures:   ## rebuild the labelled-synthetic MockState scripts
 check:      ## what CI runs: lint, types, tests, fixture validation, codegen staleness
 	cd packages/py-trophy && uv run --frozen ruff check . && uv run --frozen ruff format --check . && uv run --frozen pytest -q
 	uv run --project packages/py-trophy --frozen ruff check scripts && uv run --project packages/py-trophy --frozen python scripts/validate_fixtures.py
+	cd services/referee && uv run --frozen ruff check . && uv run --frozen ruff format --check . && uv run --frozen pytest -q
 	npm run typecheck && npm run lint && npm test
 	$(MAKE) contracts fixtures && git diff --exit-code -- packages/contracts/gen packages/py-trophy/trophy/contracts packages/state-client/fixtures
 SPACETIME ?= spacetime

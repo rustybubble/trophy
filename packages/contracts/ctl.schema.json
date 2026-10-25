@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://trophy.local/contracts/ctl.schema.json",
   "title": "CtlCommand",
-  "description": "trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 \u00a79). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (\u00a713).",
+  "description": "trophy.ctl.v1: one ctl:engine entry (field `json`), gateway -> engine (interfaces-v1 §9). `args` matches the <Cmd>Args $def for `cmd`. The gateway enforces the role allowlist (see CTL_CLIENT_ROLES in trophy.streams). The Ws* $defs are the /api/ws/ctl messages (§13).",
   "type": "object",
   "required": ["schema", "req_id", "cmd", "game_id", "t_srv_ms", "args"],
   "properties": {
@@ -52,7 +52,9 @@
         "ask_logged",
         "bookmark",
         "clip_that",
-        "review_call"
+        "review_call",
+        "run_check",
+        "request_check"
       ]
     },
     "TeamSpec": {
@@ -257,6 +259,95 @@
         }
       }
     },
+    "CheckResult": {
+      "title": "CheckResult",
+      "description": "What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-31 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.",
+      "type": "object",
+      "required": ["check", "calibrated", "latency_ms"],
+      "properties": {
+        "check": {
+          "type": "string",
+          "description": "e.g. in_out"
+        },
+        "verdict": {
+          "type": "string",
+          "description": "e.g. in, out, edge, A, B, top_edge, side_face, legal, too_low, angled, yes, no"
+        },
+        "p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Probability of verdict, carrying the track sigma"
+        },
+        "evidence": {
+          "type": "object",
+          "description": "Check-specific numbers: margin_m, sigma_m, line, height_m, angle_deg, t_game_s, shots ..."
+        },
+        "inputs": {
+          "type": "object",
+          "description": "The resolved arguments the check ran with (t_game_s, rally_no ...)"
+        },
+        "calibrated": {
+          "type": "boolean",
+          "description": "false on the unedited golden library or when sigma was a default"
+        },
+        "tier": {
+          "enum": ["AUTO", "BETA", "PLAYERS"],
+          "description": "The tier ceiling the engine applied"
+        },
+        "error": {
+          "type": "string",
+          "description": "no_such_check | no_data | failed:<reason> | timeout"
+        },
+        "latency_ms": {
+          "type": "number"
+        }
+      }
+    },
+    "RunCheckArgs": {
+      "title": "RunCheckArgs",
+      "description": "Referee -> engine: run one session check and XADD a CheckResult to the Redis stream `reply_to` (D-31 §5).",
+      "type": "object",
+      "required": ["check", "args", "reply_to"],
+      "properties": {
+        "check": {
+          "type": "string"
+        },
+        "args": {
+          "type": "object",
+          "description": "t_game_s (absolute, field clock) when known, else ref: last | last_rally | call:<call_id>; plus check-specific args"
+        },
+        "reply_to": {
+          "type": "string",
+          "description": "Redis stream key reply:<req_id>; the engine XADDs {json: CheckResult} once"
+        },
+        "question": {
+          "type": "string",
+          "description": "The spoken question, for the engine's transcript"
+        }
+      }
+    },
+    "RequestCheckArgs": {
+      "title": "RequestCheckArgs",
+      "description": "Referee -> engine: no session check answers this question. The engine opens a droid_run of kind new_check (the Droid writes and gates it in 30-90 s), runs it, and replies on `reply_to` with a CheckResult, or one with `error` when the run failed.",
+      "type": "object",
+      "required": ["question", "reply_to"],
+      "properties": {
+        "question": {
+          "type": "string"
+        },
+        "check_hint": {
+          "type": "string",
+          "description": "The router's suggested signature, e.g. ball_speed(rally) -> max speed in m/s"
+        },
+        "args": {
+          "type": "object"
+        },
+        "reply_to": {
+          "type": "string"
+        }
+      }
+    },
     "AskCitation": {
       "title": "AskCitation",
       "type": "object",
@@ -299,6 +390,30 @@
         },
         "moss_ms": {
           "type": "number"
+        },
+        "speech": {
+          "type": "string",
+          "description": "Spoken form; phones speak it when the row arrives late (a pending answer)"
+        },
+        "kind": {
+          "enum": ["check", "rule", "score", "explain", "pending", "none"],
+          "description": "How the referee answered"
+        },
+        "check": {
+          "type": "string",
+          "description": "The session check that answered, when kind = check"
+        },
+        "p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "calibrated": {
+          "type": "boolean"
+        },
+        "by_cam_id": {
+          "type": "string",
+          "description": "Who asked; set by the referee on late answers"
         }
       }
     },

@@ -412,3 +412,19 @@ Everything is under `/api`. All routes except `POST /games`, `GET /games/{id}/pu
   - **ping pong:** points by side, serve vs. receive points, serve faults (low or angled), edge balls, longest rally, challenges, a bounce heatmap;
   - **basketball:** points by team and player track, 2PT/3PT makes, a shot chart.
 - **Reconstructed views** (PG-SHOULD) are drawn from `observation` + `tracks` only and always carry the badge "Reconstructed from tracking — not video".
+
+---
+
+## 20. The referee voice service (`services/referee`, :8100; D-32)
+
+*Added 2026-10-24 on branch `voice/referee`. Replaces §17's `rules` service on :8100 (D-31 dropped Moss and Apify): the gateway's `POST /api/ask` proxy is unchanged, the target is now the referee.*
+
+- **`POST /api/ask`** (gateway, cam token) body is `{question, sport?, context?}`. The gateway adds `game_id` and `by_cam_id` and forwards to **`POST :8100/ask`**. `context` is the phone's view of the game (`t_game_s`, `rally_no`, `server_team_id`, `teams`, `scores`, the three newest `last_calls` with `id, kind, outcome, text, why, p, tier, t_game_s, rally_no, status, rule_id`, approved `house_rules`), built by `apps/pwa/src/lib/askContext.ts`. The referee resolves "that" to the newest call's `t_game_s`, answers the score from it, and grounds rule answers in the approved house rules, with no Spacetime read of its own.
+- **Response:** `{kind, answer, speech, citations, latency_ms, …}` with `kind ∈ check | rule | score | explain | pending | none`. For `check`: `check, verdict, p, calibrated, tier, evidence, inputs, check_ms`; `citations` carries one row `{rule_id: "check:<name>", title: "<name>(args)", quote: "<margin, σ, p, uncalibrated>"}` so the dashboard's transcript shows the evidence in its existing columns. `phrased_by ∈ claude | template` says who wrote the line (a Claude line that says a number it was not given is replaced by the template). `route_source ∈ regex | claude`.
+- **Logging:** the gateway sends `ask_logged` (now also `speech, kind, check, p, calibrated`) for every answer except `kind: pending`. A pending answer is logged by the referee itself when the Droid's check comes back (`by_cam_id` set), and phones that asked speak it when the `ask` row arrives.
+- **Referee → engine (Redis `ctl:engine`, new commands in `ctl.schema.json`):**
+  - `run_check {check, args, reply_to, question?}` → the engine runs the session check over its `track3d` buffer and XADDs `{json: CheckResult}` to the stream `reply_to` once. `args.t_game_s` when known, else `args.ref ∈ last | last_rally | call:<call_id>` (+ `rally_no`, `t0_s`/`t1_s`). The referee waits 1.5 s.
+  - `request_check {question, check_hint?, args, reply_to}` → no check fits: the engine opens a `droid_run` of kind `new_check`, and when the gate passes runs it and replies with the `CheckResult` (or `error`). The referee waits 95 s, then says "Players decide."
+  - `CheckResult = {check, verdict?, p?, evidence?, inputs?, calibrated, tier?, error?, latency_ms}`: the check function's own `{verdict, p, evidence, calibrated}` plus provenance. `error ∈ no_such_check | no_data | failed:<reason> | timeout`.
+- **Check catalog v1** (brief §6): `in_out(t)`, `bounce_side(t)`, `edge_hit(t)`, `net_touch(window)`, `serve_toss(rally)`, `double_bounce(rally)`, `phases(window)`, `rally_summary(rally)`. The referee routes common judge phrases to these without a model; the fast Claude model routes the rest and may propose a `new` check with a signature hint.
+- **Server-side voice:** `POST :8100/speak {text, voice: ref|calls, emotion?}` speaks on the Mac (Cartesia Sonic; `REFEREE_SPEAKER=1` plays on the local output; `WS /ws/audio` relays PCM chunks to listeners). `POST /transcribe` runs Ink-2 on a WAV. Two library voices by default: Daniel (calls) and Gemma (ref), the same ids the gateway's `/voice/token` hands the phones.

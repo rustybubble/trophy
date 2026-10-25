@@ -145,6 +145,67 @@ class HouseRuleVersionArgs(BaseModel):
     rule_version: str
 
 
+class CheckResult(BaseModel):
+    """
+    What the engine XADDs (field `json`) to a run_check / request_check `reply_to` stream: one geometry check run over the session track (D-31 §5-6). verdict, p, evidence and calibrated are the check function's own return; `error` is set instead when the check is missing or failed.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    check: str = Field(..., description="e.g. in_out")
+    verdict: str | None = Field(
+        None, description="e.g. in, out, edge, A, B, top_edge, side_face, legal, too_low, angled, yes, no"
+    )
+    p: float | None = Field(None, description="Probability of verdict, carrying the track sigma", ge=0.0, le=1.0)
+    evidence: dict[str, Any] | None = Field(
+        None, description="Check-specific numbers: margin_m, sigma_m, line, height_m, angle_deg, t_game_s, shots ..."
+    )
+    inputs: dict[str, Any] | None = Field(
+        None, description="The resolved arguments the check ran with (t_game_s, rally_no ...)"
+    )
+    calibrated: bool = Field(..., description="false on the unedited golden library or when sigma was a default")
+    tier: Literal["AUTO", "BETA", "PLAYERS"] | None = Field(None, description="The tier ceiling the engine applied")
+    error: str | None = Field(None, description="no_such_check | no_data | failed:<reason> | timeout")
+    latency_ms: float
+
+
+class RunCheckArgs(BaseModel):
+    """
+    Referee -> engine: run one session check and XADD a CheckResult to the Redis stream `reply_to` (D-31 §5).
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    check: str
+    args: dict[str, Any] = Field(
+        ...,
+        description="t_game_s (absolute, field clock) when known, else ref: last | last_rally | call:<call_id>; plus check-specific args",
+    )
+    reply_to: str = Field(..., description="Redis stream key reply:<req_id>; the engine XADDs {json: CheckResult} once")
+    question: str | None = Field(None, description="The spoken question, for the engine's transcript")
+
+
+class RequestCheckArgs(BaseModel):
+    """
+    Referee -> engine: no session check answers this question. The engine opens a droid_run of kind new_check (the Droid writes and gates it in 30-90 s), runs it, and replies on `reply_to` with a CheckResult, or one with `error` when the run failed.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    question: str
+    check_hint: str | None = Field(
+        None, description="The router's suggested signature, e.g. ball_speed(rally) -> max speed in m/s"
+    )
+    args: dict[str, Any] | None = None
+    reply_to: str
+
+
 class AskCitation(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -166,6 +227,16 @@ class AskLoggedArgs(BaseModel):
     citations: list[AskCitation]
     latency_ms: float
     moss_ms: float | None = None
+    speech: str | None = Field(
+        None, description="Spoken form; phones speak it when the row arrives late (a pending answer)"
+    )
+    kind: Literal["check", "rule", "score", "explain", "pending", "none"] | None = Field(
+        None, description="How the referee answered"
+    )
+    check: str | None = Field(None, description="The session check that answered, when kind = check")
+    p: float | None = Field(None, ge=0.0, le=1.0)
+    calibrated: bool | None = None
+    by_cam_id: str | None = Field(None, description="Who asked; set by the referee on late answers")
 
 
 class ClockSample(BaseModel):
@@ -260,6 +331,8 @@ class CtlCommand(BaseModel):
         "bookmark",
         "clip_that",
         "review_call",
+        "run_check",
+        "request_check",
     ] = Field(..., title="CtlCmd")
     game_id: str
     t_srv_ms: float

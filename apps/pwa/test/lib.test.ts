@@ -132,3 +132,46 @@ describe("table crop", () => {
     ).toBeNull();
   });
 });
+
+describe("buildAskContext", () => {
+  it("sends the newest calls, scores, rally, server and approved house rules (interfaces-v1 §20)", async () => {
+    const { buildAskContext } = await import("../src/lib/askContext.ts");
+    const call = (id: string, t: number, status = "final") =>
+      ({
+        id,
+        kind: "point",
+        outcome: "out",
+        text: "Out",
+        p: 0.9,
+        tier: "AUTO",
+        t_game_s: t,
+        status,
+        created_at_ms: 1,
+      }) as never;
+    const ctx = buildAskContext(
+      {
+        game: {
+          t0_ms: 1000,
+          rally_no: 4,
+          server_team_id: "B",
+          teams: [{ team_id: "A", name: "Reds", color: "#f00" }],
+        } as never,
+        scores: [{ game_id: "g", team_id: "A", points: 7, display: "7", updated_at_ms: 0 }] as never,
+        calls: [call("c4", 40), call("c3", 30, "voided"), call("c2", 20), call("c1", 10), call("c0", 0)],
+        houseRules: [
+          { text: "first to 7", status: "approved" },
+          { text: "no lets", status: "pending" },
+        ] as never,
+      },
+      61_000,
+    );
+    expect(ctx.t_game_s).toBe(60);
+    expect(ctx.rally_no).toBe(4);
+    expect(ctx.server_team_id).toBe("B");
+    expect(ctx.teams).toEqual([{ team_id: "A", name: "Reds" }]);
+    expect(ctx.scores[0]).toEqual({ team_id: "A", points: 7, display: "7" });
+    expect(ctx.last_calls.map((c) => c.id)).toEqual(["c4", "c2", "c1"]);
+    expect(ctx.last_calls[0]).not.toHaveProperty("evidence");
+    expect(ctx.house_rules).toEqual([{ text: "first to 7", status: "approved" }]);
+  });
+});

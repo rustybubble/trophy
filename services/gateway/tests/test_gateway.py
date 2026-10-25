@@ -26,6 +26,7 @@ class Upstream:
     def __init__(self):
         self.adapter_up = False
         self.calls = []
+        self.ask_bodies = []
 
     def __call__(self, req: httpx.Request) -> httpx.Response:
         self.calls.append(req)
@@ -40,11 +41,20 @@ class Upstream:
             return httpx.Response(200, json={"schema": "trophy.calibration.v1", "solver": "adapter"})
         if url.endswith(":8100/ask"):
             body = json.loads(req.content)
+            self.ask_bodies.append(body)
+            if body["question"].startswith("pending"):
+                return httpx.Response(
+                    200, json={"kind": "pending", "answer": "", "speech": "Give me a moment.", "latency_ms": 5.0}
+                )
             return httpx.Response(
                 200,
                 json={
                     "answer": f"[test] {body['question']}",
                     "speech": "x",
+                    "kind": "check",
+                    "check": "in_out",
+                    "p": 0.97,
+                    "calibrated": True,
                     "citations": [{"rule_id": "T-1", "title": "t", "url": "https://example.invalid", "quote": "q"}],
                     "moss_ms": 12.0,
                     "latency_ms": 900.0,
@@ -284,16 +294,23 @@ def test_voice_token_never_leaks_the_key(env):
 
 
 def test_ask_proxies_and_logs(env):
-    client, r, _ = env
-    _, j = new_game(client)
-    out = client.post(
-        "/api/ask",
-        json={"question": "can the serve clip the net?"},
-        headers={"Authorization": f"Bearer {j['cam_token']}"},
-    )
-    assert out.status_code == 200 and out.json()["answer"].startswith("[test]")
+    client, r, up = env
+    g, j = new_game(client)
+    h = {"Authorization": f"Bearer {j['cam_token']}"}
+    ctx = {"t_game_s": 12.5, "scores": [{"team_id": "A", "points": 3}], "last_calls": [{"id": "c1", "t_game_s": 11.0}]}
+    out = client.post("/api/ask", json={"question": "was that out?", "context": ctx}, headers=h)
+    assert out.status_code == 200 and out.json()["answer"].startswith("[test]") and out.json()["check"] == "in_out"
+    sent = up.ask_bodies[-1]
+    assert sent["game_id"] == g["game_id"]  # the game id travels with the question
+    assert sent["by_cam_id"] == j["cam_id"] and sent["context"] == ctx and sent["sport"] == "table_tennis"
     logged = [c for c in ctl_cmds(client, r) if c["cmd"] == "ask_logged"][-1]
     assert logged["args"]["moss_ms"] == 12.0 and logged["args"]["citations"][0]["rule_id"] == "T-1"
+    assert logged["args"]["kind"] == "check" and logged["args"]["p"] == 0.97 and logged["args"]["speech"] == "x"
+    # a pending answer is not logged by the gateway: the referee logs it when the Droid's check comes back
+    n = len([c for c in ctl_cmds(client, r) if c["cmd"] == "ask_logged"])
+    pend = client.post("/api/ask", json={"question": "pending: how fast was that"}, headers=h)
+    assert pend.status_code == 200 and pend.json()["kind"] == "pending"
+    assert len([c for c in ctl_cmds(client, r) if c["cmd"] == "ask_logged"]) == n
 
 
 def test_healthz(env):
