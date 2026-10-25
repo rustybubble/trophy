@@ -74,3 +74,17 @@ def test_library_presets_are_validated_and_bad_ones_are_listed_with_an_error(tmp
     assert "error" not in out["good"] and out["good"]["cameras"][0]["label"] == "side"
     assert "nope.mp4 is missing" in out["missing"]["error"]
     assert load_presets(tmp_path / "absent") == []
+
+
+def test_the_stream_ends_the_game_once_every_camera_has_sent_its_last_frame():
+    from gateway.demo import apply_stream_event
+
+    live: dict = {"status": "starting", "cameras": {}}
+    assert apply_stream_event(live, {"event": "joined", "label": "side", "cam_id": "c_1", "clips": ["a.mp4"]}) is None
+    assert apply_stream_event(live, {"event": "start", "wall0_ms": 1.0}) is None
+    assert live["status"] == "streaming" and live["cameras"]["side"]["cam_id"] == "c_1"
+    assert apply_stream_event(live, {"event": "done", "label": "side", "frames": 30, "seconds": 1.0}) is None
+    assert live["cameras"]["side"]["frames"] == 30
+    assert apply_stream_event(live, {"event": "all_done", "cameras": {}}) == "end_game"
+    live["ended"] = True
+    assert apply_stream_event(live, {"event": "all_done", "cameras": {}}) is None  # never twice

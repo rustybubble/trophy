@@ -11,7 +11,7 @@ Point a phone at a ping-pong table and Trophy referees the game:
 - Players can **ask the ref** by voice. Judgement questions ("was that on the edge?") are answered by a geometry check on the ball track; rules questions are answered from the sport's rule pack and the group's approved house rules.
 - Players can **add their own house rule** in plain English, and a Factory Droid writes, tests and applies it.
 
-> **Status (2026-10-24):** the platform is on `main`: capture, the gateway, replay, voice, the Spacetime world state, the judges' dashboard and Trophy Watch. The referee itself (rule engine, vision, Droid compiler, referee voice) is in review on rustybubble/trophy#19, so on `main` a game streams, records and replays, but nothing calls a point yet. Every number below is measured, with the device and method next to it; anything not measured yet says so.
+> **Status (2026-10-25, demo day):** the whole referee runs natively on one Mac from `make dev` (branch `demo/integration`, rustybubble/trophy#19). Phones, or recorded clips played as phones from the dashboard's library, stream to the gateway; BlurBall tracks the ball on every camera; the golden table-tennis module turns the tracks into bounces, nets and dead balls; a rule pack **written by the Factory Droid from the ITTF laws** (D-42) calls the points; every call is spoken on the Mac's speaker and on the phones; a challenge opens the instant replay from the referee's own recording on the dashboard and on the phone; a house rule typed or spoken on a phone is compiled, gated and approved live ("first to 7, win by 1": ready in 18.7 s on this Mac today); Trophy Watch opens on the ended game. **Not available without `ANTHROPIC_API_KEY`** (empty on the demo Mac): Claude's background vote on challenged calls and ask-the-ref (the referee service refuses to start without it, by design). **No accuracy on real footage is claimed**: the calls on the preloaded clips are unlabelled. Every number below is measured, with the device and method next to it; anything not measured yet says so.
 
 ## Repo map
 | Path | What |
@@ -31,7 +31,7 @@ Point a phone at a ping-pong table and Trophy referees the game:
 ## Setup
 Everything runs natively on one Mac (we use an M5 Pro); there is no cloud backend (D-30). The phones and the Mac must be on the same Wi-Fi. Full walkthrough: [`docs/plan/prompts/mac-bringup.md`](docs/plan/prompts/mac-bringup.md).
 
-**1. Tools.** `git`, Python 3.11, [`uv`](https://docs.astral.sh/uv/), Node 22 + npm, `ffmpeg`, Redis 7 (`brew install redis`, or Docker), the SpacetimeDB **2.13** CLI (`curl -sSf https://install.spacetimedb.com | sh`), and Caddy built with the Porkbun DNS module, at `~/.trophy/bin/caddy` (`xcaddy build --with github.com/caddy-dns/porkbun`).
+**1. Tools.** `git`, Python 3.11, [`uv`](https://docs.astral.sh/uv/), Node 22 + npm, `ffmpeg`, Redis 7 (`brew install redis`, or Docker), the SpacetimeDB **2.13** CLI (`curl -sSf https://install.spacetimedb.com | sh`), and Caddy built with the Porkbun DNS module at `~/.trophy/bin/caddy`: download it from `https://caddyserver.com/api/download?os=darwin&arch=arm64&p=github.com%2Fcaddy-dns%2Fporkbun` (or `xcaddy build --with github.com/caddy-dns/porkbun`) and check `caddy list-modules | grep porkbun`.
 
 **2. Code and secrets.**
 ```bash
@@ -53,15 +53,15 @@ Then stop that `spacetime`: `make dev` starts its own.
 ```bash
 make dev
 ```
-This (re)starts Redis, SpacetimeDB, the gateway, the recorder, the PWA, the dashboard, Trophy Watch and Caddy from the `Procfile`; `python3 scripts/dev.py --stop` stops them all. Check `curl -s http://127.0.0.1:8000/api/healthz`.
+This (re)starts Redis, SpacetimeDB, the gateway, the recorder, the engine, BlurBall (`flight`), the sport module (`live`), the announcer, the Droid compiler, the PWA, the dashboard, Trophy Watch and Caddy from the `Procfile`; `python3 scripts/dev.py --stop` stops them all, and `python3 scripts/dev.py engine compiler` restarts just those. Check `curl -s http://127.0.0.1:8000/api/healthz`. The `referee` entry (ask the ref) exits until `ANTHROPIC_API_KEY` is in `.env`; the engine turns Claude's vote on by itself once it is.
 
-**5. Point the domain at the Mac.** `python3 infra/dns/porkbun_set_ip.py` sets the `trophy.photo` A record to the Mac's LAN IP. Caddy gets a Let's Encrypt certificate through Porkbun DNS-01, so nothing has to be reachable from the internet.
+**5. Point the domain at the Mac.** `python3 infra/dns/porkbun_set_ip.py` sets the `trophy.photo` A record to the Mac's LAN IP (rerun it whenever DHCP changes the address). Caddy gets a Let's Encrypt certificate through Porkbun DNS-01, so nothing has to be reachable from the internet. Porkbun secret keys start with `sk1_` (lowercase): a capitalised prefix is rejected as "secret key does not match".
 
 **6. Open it.**
 | Who | URL |
 |---|---|
 | **Players' phones** (the camera) | **`https://trophy.photo/cam/`**: create or join a game, mount the phone side-on at the net line, landscape |
-| Judges' dashboard | `https://trophy.photo/` (or `http://127.0.0.1:5174/?demo=table_tennis` for the labelled-synthetic demo) |
+| Judges' dashboard | `https://trophy.photo/` or `http://127.0.0.1:5174/` on the Mac: **Start a game**, then **Play** a preloaded two-camera game or join phones; `?demo=table_tennis` shows the labelled-synthetic script |
 | Trophy Watch (post-game) | `https://trophy.photo/watch/` |
 
 Phones need HTTPS for the camera and microphone, which is why the domain exists. On campus or guest Wi-Fi, check that phones can reach the Mac: client isolation or DNS-rebind filtering blocks it, and a travel router avoids both.

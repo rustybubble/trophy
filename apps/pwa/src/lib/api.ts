@@ -205,6 +205,12 @@ export class Api {
   clipSrc(c: ClipMeta): string {
     return `${c.url}?token=${encodeURIComponent(this.s.token)}`;
   }
+  /** The referee's own 720p recording of a window on one camera (the recorder's archive, cut by the gateway):
+   *  the replay when no phone uploaded a high-quality clip, e.g. recorded clips streamed as cameras. */
+  replayClipSrc(camId: string, t0: number, t1: number): string {
+    const q = new URLSearchParams({ cam: camId, t0: t0.toFixed(3), t1: t1.toFixed(3), token: this.s.token });
+    return `/api/replay/${this.s.gameId}/clip?${q}`;
+  }
   wsUrl(path: "frames" | "ctl"): string {
     const proto = location.protocol === "https:" ? "wss" : "ws";
     return `${proto}://${location.host}/api/ws/${path}?token=${encodeURIComponent(this.s.token)}`;

@@ -14,7 +14,9 @@ Going live starts the game (start_game) and runs `scripts/stream_clips.py`: ever
 phone, syncs its clock, saves its calibration (the four corners) and streams 1280x720 JPEG at 30 fps over the same
 /api/ws/frames socket a phone uses, paced by the wall clock. Downstream nothing knows these are files: the recorder
 archives the frames, flight's live worker runs BlurBall on each frame as it arrives, `trophy-live` runs the golden
-sport module over the ball tracks, the engine calls the points and the phones speak them.
+sport module over the ball tracks, the engine calls the points and the phones speak them. When the last frame has
+gone the gateway ends the game (end_game), so the engine posts the best play, the recorder finalizes the archive and
+Trophy Watch gets a final score.
 
 mode auto: clips whose recordings overlap in time (from the files' own creation timestamps) are angles of the same
 moment and stream together, aligned by those timestamps (plus offset_s); clips that don't overlap are takes from one
@@ -183,6 +185,28 @@ def plan(clips: list[dict[str, Any]], mode: str) -> tuple[str, list[dict[str, An
     return mode, clips, reason or f"chosen: {mode}"
 
 
+def apply_stream_event(live: dict[str, Any], ev: dict[str, Any]) -> str | None:
+    """Fold one JSON line from stream_clips.py into the live session's status. Returns "end_game" once every camera
+    has sent its last frame (`all_done`): the caller then ends the game as the judge would."""
+    kind = ev.get("event")
+    cams = live.setdefault("cameras", {})
+    if kind == "joined":
+        cams[ev["label"]] = {"cam_id": ev["cam_id"], "clips": ev["clips"], "frames": 0}
+    elif kind == "calibrated":
+        cams.setdefault(ev["label"], {})["reproj_px"] = ev.get("reproj_px")
+    elif kind == "start":
+        live["status"], live["wall0_ms"] = "streaming", ev["wall0_ms"]
+    elif kind == "streaming":
+        cam = cams.setdefault(ev["label"], {})
+        cam.setdefault("schedule", []).append({"clip": ev["clip"], "at_s": ev["at_s"]})
+        cam["now_playing"] = ev["clip"]
+    elif kind in ("progress", "done"):
+        cams.setdefault(ev["label"], {}).update({k: ev[k] for k in ("frames", "lag_max_ms", "seconds") if k in ev})
+    elif kind == "all_done" and not live.get("ended"):
+        return "end_game"
+    return None
+
+
 def demo_router(st: Settings) -> APIRouter:
     router = APIRouter(prefix="/api/demo")
     lives: dict[str, dict[str, Any]] = {}
@@ -317,7 +341,7 @@ def demo_router(st: Settings) -> APIRouter:
         mime = "image/jpeg" if name.endswith(".jpg") else "video/mp4"
         return FileResponse(path, media_type=mime, headers={"Cache-Control": "private, max-age=3600"})
 
-    async def stream(live: dict[str, Any], args: list[str]) -> None:
+    async def stream(live: dict[str, Any], args: list[str], r: Any) -> None:
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
             str(ROOT / "services" / "gateway" / "scripts" / "stream_clips.py"),
@@ -335,21 +359,14 @@ def demo_router(st: Settings) -> APIRouter:
                 live["log"].append(line[:300])
                 del live["log"][:-20]
                 continue
-            kind = ev.get("event")
-            if kind == "joined":
-                live["cameras"][ev["label"]] = {"cam_id": ev["cam_id"], "clips": ev["clips"], "frames": 0}
-            elif kind == "calibrated":
-                live["cameras"].setdefault(ev["label"], {})["reproj_px"] = ev.get("reproj_px")
-            elif kind == "start":
-                live["status"], live["wall0_ms"] = "streaming", ev["wall0_ms"]
-            elif kind == "streaming":
-                cam = live["cameras"].setdefault(ev["label"], {})
-                cam.setdefault("schedule", []).append({"clip": ev["clip"], "at_s": ev["at_s"]})
-                cam["now_playing"] = ev["clip"]
-            elif kind in ("progress", "done"):
-                live["cameras"].setdefault(ev["label"], {}).update(
-                    {k: ev[k] for k in ("frames", "lag_max_ms", "seconds") if k in ev}
+            if apply_stream_event(live, ev) == "end_game":
+                # the last frame has gone: end the game as the judge would, so the engine closes the rally, posts
+                # the best play, the recorder finalizes the HLS archive and Trophy Watch gets a final score
+                cmd = make_ctl("end_game", live["game_id"], {}, by_cam_id=live.get("by_cam_id"))
+                await r.xadd(
+                    CTL_ENGINE, {"json": cmd.model_dump_json(by_alias=True)}, maxlen=CTL_STREAM_MAXLEN, approximate=True
                 )
+                live["ended"] = True
         code = await proc.wait()
         live["status"] = "done" if code == 0 else "failed"
         if code:
@@ -411,10 +428,12 @@ def demo_router(st: Settings) -> APIRouter:
             "cameras": {},
             "log": [],
             "started_at_ms": time.time() * 1000,
+            "by_cam_id": c.cam_id,
+            "ended": False,
             **extra,
         }
         lives[live["live_id"]] = live
-        asyncio.get_running_loop().create_task(stream(live, args))
+        asyncio.get_running_loop().create_task(stream(live, args, r))
         return live
 
     @router.post("/live", status_code=202)

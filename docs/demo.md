@@ -34,7 +34,10 @@ make stdb-seed                                   # smoke test: 97 reducer calls 
 Restart the engine and compiler after provisioning (they read the tokens at start): `python3 scripts/dev.py engine compiler`.
 
 ## 2. Recorded clips as live cameras (the demo site, localhost; D-38)
-Open **http://127.0.0.1:5174/** (the judges' dashboard), click **Start a game**, then in **Recorded clips as live cameras**:
+Open **http://127.0.0.1:5174/** (the judges' dashboard), click **Start a game**, then in **Recorded clips as live cameras**
+either **Play** a preloaded game (D-43: `data/local/clips/library/<id>/preset.json`, built by
+`services/gateway/scripts/build_library.py`; TT3D game 00 and the 2015 Edmonton final are on this Mac, both local-only
+licences) or upload clips:
 1. choose one or more clips (mp4 / mov / webm, any resolution; iPhone 4K HEVC is fine). Each one is stored under
    `data/local/uploads/<game>/`, gets a preview, and its table corners are found automatically (Mu's tabletop detector);
    click a thumbnail to check them, or **retap** in the order shown (A near, B near, B far, A far);
@@ -52,8 +55,14 @@ stream_clips.py --(ws/frames, real time)--> gateway --> frames:{cam} --> flight.
    --> ev:flight --> trophy-engine --> Spacetime --> dashboard (calls, score, world state) + phones (spoken calls)
 ```
 The panel shows each camera's live frame (`/api/demo/cams/<cam>/live`) with BlurBall's detection for that frame. Calls are
-BETA at most (corners are not auto-checked, so calibration is untrusted). Measured numbers: `docs/progress.md`, "Recorded
-clips as live cameras". Headless: `services/gateway/scripts/stream_clips.py --game G --join-key K --clip PATH:LABEL:corners`.
+BETA at most (corners are not auto-checked, so calibration is untrusted). Every call is spoken on the Mac by the Procfile's
+`announcer` ("Point, double bounce. Team B. 2, 3.": the engine adds the side and the score to the pack's line) and on every
+joined phone. **Replay** on any call (dashboard) and **Challenge → Watch replay** (phone) play the window from the referee's
+own recording (`/api/replay/{game}/clip`, cut from the recorder's HLS archive; the phones' high-quality clips replace it when a
+real phone uploads them). When the last frame has gone, the gateway ends the game (or press **End game** in the header): the
+engine posts the ★ Play of the game, the recorder finalizes, and **Open Trophy Watch** appears. Measured numbers:
+`docs/progress.md`, "Recorded clips as live cameras". Headless: `services/gateway/scripts/stream_clips.py --game G --join-key K
+--clip PATH:LABEL:corners`.
 
 Setup once: `cd spikes/serve-analysis && bash scripts/bootstrap.sh` (Python 3.12 env + the checksum-verified BlurBall
 weights, 6.2 MB, license unstated: the user approved using them for this demo). The Procfile runs `flight` (BlurBall) and
@@ -134,8 +143,15 @@ engine: that is the `track3d` adapter and check library in progress on `a3/droid
 - **Spacetime SQL** (`spacetime sql -s local trophy "SELECT … FROM call WHERE game_id = '…'"`) shows the same rows every
   client subscribes to: `game`, `score`, `rally`, `call`, `moment`, `house_rule`, `ask`.
 
-## Known gaps on this branch
-- The engine keeps game state in memory: restart it before creating a game, not during one.
-- `services/gateway/tests/test_gateway.py::test_frames_ws_writes_bus_and_still` fails on this Mac on `main` too (3 rows instead of 4); untouched.
-- The engine's `run_check` / `request_check` handlers (what the referee service asks for) are not built; `trophy-engine
-  --field --ask` serves the 3D-check questions directly instead.
+## Known gaps on this branch (2026-10-25)
+- **`ANTHROPIC_API_KEY` is empty on the demo Mac:** no Claude vote on challenged calls (the geometry vote stands alone) and no
+  ask-the-ref (`referee serve` exits by design). Put the key in `.env` and run `python3 scripts/dev.py engine referee`: the
+  engine's `--votes-if-keyed` turns the vote on by itself.
+- **Phones need `https://trophy.photo` to resolve to this Mac:** `python3 infra/dns/porkbun_set_ip.py` (user-run; the record
+  still points at an older DHCP address). Caddy already holds the certificate (`~/.trophy/bin/caddy`, Porkbun keys in `.env`).
+- The engine keeps game state in memory: restart it before creating a game, not during one (a restart orphans the running
+  game's house-rule approvals and corrections).
+- Calls on the preloaded clips are unlabelled: no accuracy claim. A judge correction ("that was one rally, won by X") files a
+  Droid `correction` run that takes minutes (D-42); a plain house rule such as "first to 7, win by 1" is ready in ~20 s.
+- The 2D pipeline never emits `serve_toss` / `serve_position` / `serve_hidden`, so the pack's serve-fault rules cannot fire
+  live; they need the fused 3D track.

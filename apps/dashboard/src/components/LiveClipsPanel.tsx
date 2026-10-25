@@ -3,7 +3,7 @@
 // clip joins the game as a camera phone and streams in real time, BlurBall runs on each frame as it arrives, the golden
 // sport module turns the tracks into bounces and dead balls, and the engine calls the points into this game.
 import { useEffect, useRef, useState } from "react";
-import { ApiError, type Session } from "../lib/api.ts";
+import { ApiError, watchLink, type Session } from "../lib/api.ts";
 
 interface Upload {
   upload_id: string;
@@ -57,6 +57,7 @@ interface Preset {
 
 interface Live {
   live_id: string;
+  ended?: boolean;
   preset_id?: string;
   source?: string;
   license?: string;
@@ -447,9 +448,19 @@ export function LiveClipsPanel({ session }: { session: Session }) {
           </div>
           {live.error && <p className="bad">{live.error}</p>}
           <p className="muted small">
-            The corners are tapped, not auto-checked, so calibration is untrusted and every call is BETA at most.
-            BlurBall scores are uncalibrated. No accuracy is claimed on these clips: they are unlabelled.
+            The table corners come from the clip itself (detected, tapped or a preset) and are never checked live, so
+            calibration is untrusted and every call is BETA at most. BlurBall scores are uncalibrated. No accuracy is
+            claimed on these clips unless a judge labels them.
           </p>
+          {live.status === "done" && (
+            <p className="small">
+              The last frame has gone{live.ended ? " and the game has been ended" : ""}:{" "}
+              <a href={watchLink(session.gameId, session.joinKey)} target="_blank" rel="noreferrer">
+                open Trophy Watch ↗
+              </a>{" "}
+              for the recap, the ★ Play of the game and every call's replay.
+            </p>
+          )}
           {(live.status === "done" || live.status === "failed") && (
             <button className="ghost" onClick={() => setLive(undefined)}>
               Stream again

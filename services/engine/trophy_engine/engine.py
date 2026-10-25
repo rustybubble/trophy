@@ -252,6 +252,8 @@ class Engine:
         if scoring_call is not None:
             posted.append(scoring_call)
         for call in posted:
+            if call is scoring_call:
+                self._speak_score(g, call)
             self._post(g, call)
         g.rally.apply(evv)
         if scoring_call is not None:
@@ -308,6 +310,24 @@ class Engine:
             why=self._why(ev),
         )
         return call
+
+    def _speak_score(self, g: GameState, call: dict[str, Any]) -> None:
+        """A point's spoken line names the side that won it and the score after it, as an umpire does ("Point, double
+        bounce. Team B. 2, 3."), when the pack's line doesn't already name the side. Presentation only: the pack's
+        rule logic and its `text` stay as the Droid wrote them (D-42)."""
+        if not call.get("points") or not call.get("team_id") or call.get("outcome") == "let":
+            return
+        name = str(g.team(call["team_id"]).get("name") or call["team_id"])
+        speech = str(call.get("speech") or call.get("text") or "").strip()
+        if name.lower() not in speech.lower():
+            speech = f"{speech.rstrip('.!')}. {name}."
+        g.calls.append(call)  # the score after this point: the call log is the score
+        try:
+            after = g.score()
+        finally:
+            g.calls.pop()
+        a, b = g.sides
+        call["speech"] = f"{speech} {after.points.get(a, 0)}, {after.points.get(b, 0)}."
 
     @staticmethod
     def _why(ev: dict[str, Any]) -> str | None:

@@ -209,8 +209,12 @@ def create_app(settings: Settings | None = None, r: Any = None, http: httpx.Asyn
             "last_seen_ms": f"{cam.last_health_ms:.0f}",
         }
         await app.state.r.hset(cam_key(c.cam_id), mapping=fields)
+        # the engine upserts the whole camera row from this, so carry the label and role or they would blank
+        label, role = await app.state.r.hmget(cam_key(c.cam_id), "label", "role")
         args = {
             "cam_id": c.cam_id,
+            "label": _s(label) or c.cam_id,
+            "role": _s(role) or "cam",
             "connected": connected,
             "fps_in": cam.fps,
             "w": cam.w,

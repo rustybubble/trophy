@@ -404,11 +404,14 @@ def test_serve_toss_rules_from_d22() -> None:
     assert (
         low and low[-1]["outcome"] == "illegal_toss_height" and low[-1]["team_id"] == "B" and low[-1]["tier"] == "AUTO"
     )
-    assert low[-1]["speech"] == "Fault. Toss too low." and low[-1]["overlay"]["serve_toss_event_id"] == "s1.0"
+    # the spoken line adds the side that won the point and the score after it (the pack's line names neither)
+    assert low[-1]["speech"] == "Fault. Toss too low. Team B. 0, 1."
+    assert low[-1]["overlay"]["serve_toss_event_id"] == "s1.0"
     near = eng.feed(toss(5.0, 0.148, 0.1))  # 4 mm under the limit with σ 1 cm -> BETA
     assert near[-1]["outcome"] == "illegal_toss_height" and near[-1]["tier"] == "BETA" and 0.5 < near[-1]["p"] < 0.9
     angled = eng.feed(toss(9.0, 0.25, 0.7))
-    assert angled[-1]["outcome"] == "illegal_toss_angle" and angled[-1]["speech"] == "Fault. Toss not vertical."
+    assert angled[-1]["outcome"] == "illegal_toss_angle"
+    assert angled[-1]["speech"] == "Fault. Toss not vertical. Team A. 1, 2."  # A served (2 serves each), B led 0-2
     legal = eng.feed(toss(13.0, 0.25, 0.1))
     assert legal == []
 

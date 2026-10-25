@@ -1,19 +1,26 @@
 import { useState } from "react";
-import type { Call, Challenge } from "@trophy/state-client";
+import type { AiVote, Call, Camera, Challenge } from "@trophy/state-client";
 import { ctl, type Session } from "../lib/api.ts";
+import { ReplayModal } from "./ReplayModal.tsx";
 
 const TIER_TEXT = { AUTO: "AUTO", BETA: "BETA", PLAYERS: "PLAYERS DECIDE" } as const;
 
 export function CallFeed({
   calls,
   challenges,
+  cameras,
+  votes,
   session,
 }: {
   calls: Call[];
   challenges: Challenge[];
+  cameras: Camera[];
+  votes: AiVote[];
   session?: Session;
 }) {
   const [err, setErr] = useState<string>();
+  const [replay, setReplay] = useState<string>(); // call id being replayed
+  const replayCall = replay ? calls.find((c) => c.id === replay) : undefined;
   const resolve = async (c: Challenge, result: "upheld" | "overturned") => {
     if (!session) return;
     try {
@@ -68,10 +75,15 @@ export function CallFeed({
                   {c.rule_ref && <> · {c.rule_ref}</>}
                 </div>
                 {c.why && <div className="muted small">{c.why}</div>}
-                {open && (
-                  <div className="row">
-                    <span className="warn small">Challenged</span>
-                    {session && (
+                {(open || (session && c.kind !== "info")) && (
+                  <div className="row actions">
+                    {open && <span className="warn small">Challenged</span>}
+                    {session && c.kind !== "info" && (
+                      <button className="small" onClick={() => setReplay(c.id)}>
+                        Replay
+                      </button>
+                    )}
+                    {open && session && (
                       <>
                         <button onClick={() => void resolve(open, "upheld")}>Uphold</button>
                         <button onClick={() => void resolve(open, "overturned")}>Overturn</button>
@@ -84,6 +96,15 @@ export function CallFeed({
           );
         })}
       </ol>
+      {replayCall && session && (
+        <ReplayModal
+          call={replayCall}
+          cameras={cameras}
+          votes={votes}
+          session={session}
+          onClose={() => setReplay(undefined)}
+        />
+      )}
     </div>
   );
 }
