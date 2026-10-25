@@ -6,14 +6,15 @@
     "packages/contracts",
     "packages/state-client",
     "spacetime",
-    "apps/pwa"
+    "apps/pwa",
+    "services/compiler"
   ],
   "scripts": {
     "contracts": "node scripts/gen-contracts.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "eslint packages apps",
+    "lint": "eslint packages apps services/compiler",
     "test": "npm run test --workspaces --if-present",
-    "format": "prettier --write \"packages/**/*.{ts,tsx,json}\""
+    "format": "prettier --write \"packages/**/*.{ts,tsx,json}\" \"services/compiler/**/*.ts\""
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",

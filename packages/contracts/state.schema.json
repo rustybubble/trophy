@@ -2,245 +2,873 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://trophy.local/contracts/state.schema.json",
   "title": "StateTables",
-  "description": "Spacetime game-state rows as clients see them through @trophy/state-client (interfaces-v1 §11). The module stores *_json columns as strings; the state client parses them, so these types use the parsed field names (e.g. teams, not teams_json). `call` rows are Call (call.schema.json) and `observation` rows are Event (event.schema.json).",
+  "description": "Spacetime game-state rows as clients see them through @trophy/state-client (interfaces-v1 \u00a711). The module stores *_json columns as strings; the state client parses them, so these types use the parsed field names (e.g. teams, not teams_json). `call` rows are Call (call.schema.json) and `observation` rows are Event (event.schema.json).",
   "type": "object",
   "properties": {
-    "game": { "$ref": "#/$defs/Game" },
-    "camera": { "$ref": "#/$defs/Camera" },
-    "rally": { "$ref": "#/$defs/Rally" },
-    "score": { "$ref": "#/$defs/Score" },
-    "challenge": { "$ref": "#/$defs/Challenge" },
-    "house_rule": { "$ref": "#/$defs/HouseRule" },
-    "ai_vote": { "$ref": "#/$defs/AiVote" },
-    "track_sample": { "$ref": "#/$defs/TrackSample" },
-    "ask": { "$ref": "#/$defs/Ask" }
+    "game": {
+      "$ref": "#/$defs/Game"
+    },
+    "camera": {
+      "$ref": "#/$defs/Camera"
+    },
+    "rally": {
+      "$ref": "#/$defs/Rally"
+    },
+    "score": {
+      "$ref": "#/$defs/Score"
+    },
+    "challenge": {
+      "$ref": "#/$defs/Challenge"
+    },
+    "house_rule": {
+      "$ref": "#/$defs/HouseRule"
+    },
+    "ai_vote": {
+      "$ref": "#/$defs/AiVote"
+    },
+    "track_sample": {
+      "$ref": "#/$defs/TrackSample"
+    },
+    "ask": {
+      "$ref": "#/$defs/Ask"
+    },
+    "moment": {
+      "$ref": "#/$defs/Moment"
+    },
+    "commentary": {
+      "$ref": "#/$defs/Commentary"
+    }
   },
   "$defs": {
     "GameTeam": {
       "title": "GameTeam",
       "type": "object",
-      "required": ["team_id", "name"],
+      "required": [
+        "team_id",
+        "name"
+      ],
       "properties": {
-        "team_id": { "type": "string" },
-        "name": { "type": "string" },
-        "color": { "type": "string" }
+        "team_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        }
       }
     },
-    "GameStatus": { "title": "GameStatus", "enum": ["lobby", "live", "paused", "ended"] },
+    "GameStatus": {
+      "title": "GameStatus",
+      "enum": [
+        "lobby",
+        "live",
+        "paused",
+        "ended"
+      ]
+    },
     "Game": {
       "title": "Game",
       "type": "object",
-      "required": ["game_id", "sport", "pack_version", "status", "t0_ms", "period_no", "rally_no", "teams", "params", "created_at_ms"],
+      "required": [
+        "game_id",
+        "sport",
+        "pack_version",
+        "status",
+        "t0_ms",
+        "period_no",
+        "rally_no",
+        "teams",
+        "params",
+        "created_at_ms"
+      ],
       "properties": {
-        "game_id": { "type": "string" },
-        "sport": { "type": "string" },
-        "pack_version": { "type": "string" },
-        "status": { "$ref": "#/$defs/GameStatus" },
-        "t0_ms": { "type": "number" },
-        "period_no": { "type": "integer" },
-        "rally_no": { "type": "integer" },
-        "server_team_id": { "type": ["string", "null"] },
-        "teams": { "type": "array", "items": { "$ref": "#/$defs/GameTeam" } },
+        "game_id": {
+          "type": "string"
+        },
+        "sport": {
+          "type": "string"
+        },
+        "pack_version": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/GameStatus"
+        },
+        "t0_ms": {
+          "type": "number"
+        },
+        "period_no": {
+          "type": "integer"
+        },
+        "rally_no": {
+          "type": "integer"
+        },
+        "server_team_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GameTeam"
+          }
+        },
         "params": {
           "type": "object",
           "description": "Pack params for this game (e.g. points_to_win). Seeded/demo games set synthetic = true and a label the UI must show.",
           "properties": {
-            "synthetic": { "type": "boolean" },
-            "label": { "type": "string" }
+            "synthetic": {
+              "type": "boolean"
+            },
+            "label": {
+              "type": "string"
+            }
           },
           "additionalProperties": true
         },
-        "created_at_ms": { "type": "number" }
+        "created_at_ms": {
+          "type": "number"
+        }
       }
     },
     "Camera": {
       "title": "Camera",
       "type": "object",
-      "required": ["cam_id", "game_id", "label", "role", "calib_trusted", "connected", "fps_in", "sync_err_ms", "last_seen_ms"],
+      "required": [
+        "cam_id",
+        "game_id",
+        "label",
+        "role",
+        "calib_trusted",
+        "connected",
+        "fps_in",
+        "sync_err_ms",
+        "last_seen_ms"
+      ],
       "properties": {
-        "cam_id": { "type": "string" },
-        "game_id": { "type": "string" },
-        "label": { "type": "string" },
-        "role": { "type": "string", "description": "cam|display|judge, comma-combinable" },
-        "device": { "type": "object" },
-        "calibration": { "type": ["object", "null"], "description": "trophy.calibration.v1" },
-        "calib_trusted": { "type": "boolean" },
-        "connected": { "type": "boolean" },
-        "fps_in": { "type": "number" },
-        "sync_err_ms": { "type": "number" },
-        "last_seen_ms": { "type": "number" }
+        "cam_id": {
+          "type": "string"
+        },
+        "game_id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "description": "cam|display|judge, comma-combinable"
+        },
+        "device": {
+          "type": "object"
+        },
+        "calibration": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "trophy.calibration.v1"
+        },
+        "calib_trusted": {
+          "type": "boolean"
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "fps_in": {
+          "type": "number"
+        },
+        "sync_err_ms": {
+          "type": "number"
+        },
+        "last_seen_ms": {
+          "type": "number"
+        }
       }
     },
     "Rally": {
       "title": "Rally",
       "description": "Also used for basketball/football possessions",
       "type": "object",
-      "required": ["game_id", "rally_no", "status", "t_start_s"],
+      "required": [
+        "game_id",
+        "rally_no",
+        "status",
+        "t_start_s"
+      ],
       "properties": {
-        "game_id": { "type": "string" },
-        "rally_no": { "type": "integer", "minimum": 1 },
-        "status": { "enum": ["open", "closed", "voided"] },
-        "t_start_s": { "type": "number" },
-        "t_end_s": { "type": ["number", "null"] },
-        "winner_team_id": { "type": ["string", "null"] },
-        "summary": { "type": ["object", "null"] }
+        "game_id": {
+          "type": "string"
+        },
+        "rally_no": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "status": {
+          "enum": [
+            "open",
+            "closed",
+            "voided"
+          ]
+        },
+        "t_start_s": {
+          "type": "number"
+        },
+        "t_end_s": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "winner_team_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "summary": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
       }
     },
     "Score": {
       "title": "Score",
       "type": "object",
-      "required": ["game_id", "team_id", "points", "display", "updated_at_ms"],
+      "required": [
+        "game_id",
+        "team_id",
+        "points",
+        "display",
+        "updated_at_ms"
+      ],
       "properties": {
-        "game_id": { "type": "string" },
-        "team_id": { "type": "string" },
-        "points": { "type": "integer" },
-        "games": { "type": ["integer", "null"] },
-        "sets": { "type": ["integer", "null"] },
-        "display": { "type": "string", "description": "Sport-formatted, e.g. 10-9" },
-        "updated_at_ms": { "type": "number" }
+        "game_id": {
+          "type": "string"
+        },
+        "team_id": {
+          "type": "string"
+        },
+        "points": {
+          "type": "integer"
+        },
+        "games": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sets": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "display": {
+          "type": "string",
+          "description": "Sport-formatted, e.g. 10-9"
+        },
+        "updated_at_ms": {
+          "type": "number"
+        }
       }
     },
     "Challenge": {
       "title": "Challenge",
       "type": "object",
-      "required": ["challenge_id", "game_id", "call_id", "by_cam_id", "status", "created_at_ms"],
+      "required": [
+        "challenge_id",
+        "game_id",
+        "call_id",
+        "by_cam_id",
+        "status",
+        "created_at_ms"
+      ],
       "properties": {
-        "challenge_id": { "type": "string" },
-        "game_id": { "type": "string" },
-        "call_id": { "type": "string" },
-        "by_cam_id": { "type": "string" },
-        "status": { "enum": ["open", "resolved"] },
-        "result": { "enum": ["upheld", "overturned", null] },
-        "created_at_ms": { "type": "number" },
-        "resolved_at_ms": { "type": ["number", "null"] }
+        "challenge_id": {
+          "type": "string"
+        },
+        "game_id": {
+          "type": "string"
+        },
+        "call_id": {
+          "type": "string"
+        },
+        "by_cam_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "open",
+            "resolved"
+          ]
+        },
+        "result": {
+          "enum": [
+            "upheld",
+            "overturned",
+            null
+          ]
+        },
+        "created_at_ms": {
+          "type": "number"
+        },
+        "resolved_at_ms": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
       }
     },
     "HouseRuleStatus": {
       "title": "HouseRuleStatus",
-      "enum": ["pending", "compiling", "ready", "approved", "rejected", "failed"]
+      "enum": [
+        "pending",
+        "compiling",
+        "ready",
+        "approved",
+        "rejected",
+        "failed"
+      ]
     },
     "HouseRuleStep": {
       "title": "HouseRuleStep",
       "type": "object",
-      "required": ["t_ms", "kind", "text"],
+      "required": [
+        "t_ms",
+        "kind",
+        "text"
+      ],
       "properties": {
-        "t_ms": { "type": "number" },
-        "kind": { "enum": ["plan", "edit", "test", "repair", "message", "error"] },
-        "text": { "type": "string" }
+        "t_ms": {
+          "type": "number"
+        },
+        "kind": {
+          "enum": [
+            "plan",
+            "edit",
+            "test",
+            "repair",
+            "message",
+            "error",
+            "tool",
+            "blocked"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
       }
     },
     "HouseRuleTest": {
       "title": "HouseRuleTest",
       "type": "object",
-      "required": ["name", "pass"],
+      "required": [
+        "name",
+        "pass"
+      ],
       "properties": {
-        "name": { "type": "string" },
-        "before": { "type": "string" },
-        "after": { "type": "string" },
-        "pass": { "type": "boolean" }
+        "name": {
+          "type": "string"
+        },
+        "before": {
+          "type": "string"
+        },
+        "after": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "boolean"
+        }
       }
     },
     "CallChange": {
       "title": "CallChange",
       "type": "object",
-      "required": ["rally_no", "before", "after"],
+      "required": [
+        "rally_no",
+        "before",
+        "after"
+      ],
       "properties": {
-        "rally_no": { "type": "integer" },
-        "call_id": { "type": "string" },
-        "before": { "type": "string" },
-        "after": { "type": "string" }
+        "rally_no": {
+          "type": "integer"
+        },
+        "call_id": {
+          "type": "string"
+        },
+        "before": {
+          "type": "string"
+        },
+        "after": {
+          "type": "string"
+        }
       }
     },
     "HouseRuleResults": {
       "title": "HouseRuleResults",
       "type": "object",
-      "required": ["tests", "calls_changed"],
+      "required": [
+        "tests",
+        "calls_changed"
+      ],
       "properties": {
-        "tests": { "type": "array", "items": { "$ref": "#/$defs/HouseRuleTest" } },
-        "calls_changed": { "type": "array", "items": { "$ref": "#/$defs/CallChange" } }
+        "tests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HouseRuleTest"
+          }
+        },
+        "calls_changed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CallChange"
+          }
+        }
       }
     },
     "HouseRule": {
       "title": "HouseRule",
       "type": "object",
-      "required": ["rule_version", "game_id", "sport", "text", "source", "status", "backend", "plan_md", "steps", "diff", "created_at_ms", "updated_at_ms"],
+      "required": [
+        "rule_version",
+        "game_id",
+        "sport",
+        "text",
+        "source",
+        "status",
+        "backend",
+        "plan_md",
+        "steps",
+        "diff",
+        "created_at_ms",
+        "updated_at_ms"
+      ],
       "properties": {
-        "rule_version": { "type": "string", "description": "ULID" },
-        "game_id": { "type": "string" },
-        "sport": { "type": "string" },
-        "text": { "type": "string" },
-        "source": { "enum": ["typed", "voice"] },
-        "status": { "$ref": "#/$defs/HouseRuleStatus" },
-        "backend": { "enum": ["droid", "claude-fallback"] },
-        "plan_md": { "type": "string" },
-        "steps": { "type": "array", "items": { "$ref": "#/$defs/HouseRuleStep" } },
-        "diff": { "type": "string", "description": "Unified diff of the pack YAML" },
-        "results": { "anyOf": [{ "$ref": "#/$defs/HouseRuleResults" }, { "type": "null" }] },
-        "pack_path": { "type": ["string", "null"] },
-        "error": { "type": ["string", "null"] },
-        "created_at_ms": { "type": "number" },
-        "updated_at_ms": { "type": "number" }
+        "rule_version": {
+          "type": "string",
+          "description": "ULID"
+        },
+        "game_id": {
+          "type": "string"
+        },
+        "sport": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "typed",
+            "voice"
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/HouseRuleStatus"
+        },
+        "backend": {
+          "enum": [
+            "droid",
+            "claude-fallback"
+          ]
+        },
+        "plan_md": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HouseRuleStep"
+          }
+        },
+        "diff": {
+          "type": "string",
+          "description": "Unified diff of the pack YAML"
+        },
+        "results": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HouseRuleResults"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pack_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at_ms": {
+          "type": "number"
+        },
+        "updated_at_ms": {
+          "type": "number"
+        }
       }
     },
     "AiVote": {
       "title": "AiVote",
       "description": "Keyed by (call_id, backend): votes start speculatively when a close call is posted, before any challenge exists (D-23); challenge_id is filled when one is opened. Probabilities are UNCALIBRATED.",
       "type": "object",
-      "required": ["call_id", "backend", "model", "probs", "latency_ms", "created_at_ms"],
+      "required": [
+        "call_id",
+        "backend",
+        "model",
+        "probs",
+        "latency_ms",
+        "created_at_ms"
+      ],
       "properties": {
-        "call_id": { "type": "string" },
-        "challenge_id": { "type": ["string", "null"] },
-        "game_id": { "type": "string" },
-        "backend": { "enum": ["claude", "gemini", "bitdeer", "geometry"] },
-        "model": { "type": "string" },
-        "choice": { "type": ["string", "null"] },
-        "probs": { "type": "object", "additionalProperties": { "type": "number" } },
-        "latency_ms": { "type": "number" },
-        "error": { "type": ["string", "null"] },
-        "rationale": { "type": "string", "maxLength": 140 },
-        "created_at_ms": { "type": "number" }
+        "call_id": {
+          "type": "string"
+        },
+        "challenge_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "game_id": {
+          "type": "string"
+        },
+        "backend": {
+          "enum": [
+            "claude",
+            "gemini",
+            "bitdeer",
+            "geometry"
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "choice": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "probs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "latency_ms": {
+          "type": "number"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "created_at_ms": {
+          "type": "number"
+        }
       }
     },
     "TrackSample": {
       "title": "TrackSample",
-      "description": "Ball track down-sampled to 10 Hz, rolling 120 s (§8). Key (cam_id, t_game_s).",
+      "description": "Ball track down-sampled to 10 Hz, rolling 120 s (\u00a78). Key (cam_id, t_game_s).",
       "type": "object",
-      "required": ["cam_id", "t_game_s", "game_id", "object", "conf"],
+      "required": [
+        "cam_id",
+        "t_game_s",
+        "game_id",
+        "object",
+        "conf"
+      ],
       "properties": {
-        "cam_id": { "type": "string" },
-        "t_game_s": { "type": "number" },
-        "game_id": { "type": "string" },
-        "object": { "type": "string", "description": "ball | player:<id>" },
-        "pos_m": { "type": ["array", "null"], "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
-        "px": { "type": ["array", "null"], "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-        "conf": { "type": "number", "minimum": 0, "maximum": 1 }
+        "cam_id": {
+          "type": "string"
+        },
+        "t_game_s": {
+          "type": "number"
+        },
+        "game_id": {
+          "type": "string"
+        },
+        "object": {
+          "type": "string",
+          "description": "ball | player:<id>"
+        },
+        "pos_m": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "px": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "conf": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
       }
     },
     "Citation": {
       "title": "Citation",
       "type": "object",
-      "required": ["rule_id", "title", "url", "quote"],
+      "required": [
+        "rule_id",
+        "title",
+        "url",
+        "quote"
+      ],
       "properties": {
-        "rule_id": { "type": "string" },
-        "title": { "type": "string" },
-        "url": { "type": "string" },
-        "quote": { "type": "string" }
+        "rule_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "quote": {
+          "type": "string"
+        }
       }
     },
     "Ask": {
       "title": "Ask",
       "type": "object",
-      "required": ["ask_id", "game_id", "sport", "question", "answer", "citations", "latency_ms", "created_at_ms"],
+      "required": [
+        "ask_id",
+        "game_id",
+        "sport",
+        "question",
+        "answer",
+        "citations",
+        "latency_ms",
+        "created_at_ms"
+      ],
       "properties": {
-        "ask_id": { "type": "string" },
-        "game_id": { "type": "string" },
-        "sport": { "type": "string" },
-        "question": { "type": "string" },
-        "answer": { "type": "string" },
-        "citations": { "type": "array", "items": { "$ref": "#/$defs/Citation" } },
-        "moss_ms": { "type": ["number", "null"] },
-        "latency_ms": { "type": "number" },
-        "created_at_ms": { "type": "number" }
+        "ask_id": {
+          "type": "string"
+        },
+        "game_id": {
+          "type": "string"
+        },
+        "sport": {
+          "type": "string"
+        },
+        "question": {
+          "type": "string"
+        },
+        "answer": {
+          "type": "string"
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Citation"
+          }
+        },
+        "moss_ms": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "latency_ms": {
+          "type": "number"
+        },
+        "created_at_ms": {
+          "type": "number"
+        }
+      }
+    },
+    "MomentKind": {
+      "title": "MomentKind",
+      "enum": [
+        "point",
+        "serve_fault",
+        "edge",
+        "challenge",
+        "basket",
+        "bookmark",
+        "house_rule",
+        "rally"
+      ]
+    },
+    "Moment": {
+      "title": "Moment",
+      "description": "Written live by the engine as calls happen (interfaces-v1 \u00a719). highlight_score and reasons come from event features only (no crowd audio).",
+      "type": "object",
+      "required": [
+        "moment_id",
+        "game_id",
+        "kind",
+        "t_game_s",
+        "t_start_s",
+        "t_end_s",
+        "label",
+        "score_after",
+        "tags",
+        "highlight_score",
+        "reasons",
+        "is_best_play",
+        "thumb_t_s"
+      ],
+      "properties": {
+        "moment_id": {
+          "type": "string",
+          "description": "ULID"
+        },
+        "game_id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/MomentKind"
+        },
+        "t_game_s": {
+          "type": "number"
+        },
+        "t_start_s": {
+          "type": "number"
+        },
+        "t_end_s": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "team_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "track_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "call_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rally_no": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "score_after": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "highlight_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "is_best_play": {
+          "type": "boolean"
+        },
+        "thumb_t_s": {
+          "type": "number"
+        }
+      }
+    },
+    "Commentary": {
+      "title": "Commentary",
+      "description": "A grounded broadcast line per moment (voices pbp and colour), validated against the moment's facts.",
+      "type": "object",
+      "required": [
+        "moment_id",
+        "game_id",
+        "voice",
+        "text",
+        "facts",
+        "validated",
+        "source",
+        "created_at_ms"
+      ],
+      "properties": {
+        "moment_id": {
+          "type": "string"
+        },
+        "game_id": {
+          "type": "string"
+        },
+        "voice": {
+          "enum": [
+            "pbp",
+            "colour"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "facts": {
+          "type": "object"
+        },
+        "validated": {
+          "type": "boolean"
+        },
+        "source": {
+          "enum": [
+            "claude",
+            "template"
+          ]
+        },
+        "created_at_ms": {
+          "type": "number"
+        }
       }
     }
   }

@@ -1,0 +1,33 @@
+# Sport module: table tennis (handwritten golden reference; the Droid derives other sports from it).
+# Validated by packages/contracts/sportmodule.schema.json. Metres, seconds, pixels.
+sport: table_tennis
+version: 1
+court:
+  template: table_tennis        # field frame: origin at the table-top centre, +x toward end B, z up (interfaces-v1 §3)
+  length_m: 2.74
+  width_m: 1.525
+  plane_z_m: 0.0                # the table top is the play plane
+  surface: table                # bounce.payload.surface for a bounce on the play plane (court sports: court)
+  net_x_m: 0.0
+  net_height_m: 0.1525
+  floor_z_m: -0.76              # the floor is 0.76 m below the table top
+ball:
+  diameter_m: 0.040
+  colour: white                 # D-10: white balls
+  hsv_lo: [0, 0, 180]
+  hsv_hi: [180, 40, 255]
+  radius_px: {min: 2, max: 14}
+capture:
+  fps: 30
+  min_conf: 0.3                 # drop weak detections before looking for bounces
+bounce:
+  min_track_len: 2              # samples required on each side of the apex
+  min_vy_px_s: 40               # |vertical px velocity| needed before (down) and after (up) the flip
+  plane_margin_m: 0.20          # a flip mapped inside table + margin is a table bounce, otherwise a floor bounce
+  edge_band_m: 0.03             # edge probabilities are reported within 3 cm of a line
+  sigma_m: 0.015                # 1-sigma bounce position from one trusted camera at this resolution
+  merge_window_s: 0.12          # two cameras seeing the same bounce within ±120 ms are merged
+net:
+  window_m: 0.15                # an x-reversal within 15 cm of the net plane with no bounce between = net
+dead:
+  gap_s: 0.8                    # no ball for 0.8 s after the last sample -> ball_dead
