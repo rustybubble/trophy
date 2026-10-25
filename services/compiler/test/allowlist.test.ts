@@ -11,7 +11,10 @@ describe("allowlist", () => {
       "sports/pickleball/events.py",
       "sports/pickleball/rules.yaml",
     ]);
-    expect(editableFiles("house_rule", "table_tennis")).toEqual(["sports/table_tennis/rules.yaml"]);
+    // D-43: a house rule also writes the Droid's decision; an interpreter only its rule pack
+    expect(editableFiles("house_rule", "table_tennis")).toEqual(["sports/table_tennis/rules.yaml", "decision.json"]);
+    expect(editableFiles("interpreter", "badminton")).toEqual(["sports/badminton/rules.yaml"]);
+    expect(gateScript("interpreter")).toBe("replay_test");
     expect(editableFiles("retune", "table_tennis")).toEqual([
       "sports/table_tennis/config.yaml",
       "sports/table_tennis/events.py",

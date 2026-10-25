@@ -4,13 +4,17 @@
  *
  *   trophy-droid compile    --sport pickleball --from table_tennis --scene <scene.json> --samples <dir>
  *   trophy-droid house-rule --sport table_tennis --text "a serve that clips the net is a let" --samples <dir> [--rule-version <ulid> --spacetime]
+ *                           [--base-pack <rules.yaml> --session <session.json>]   # the engine's snapshot (D-43)
+ *   trophy-droid interpreter --sport badminton [--fixtures <dir>] [--samples <dir>] [--game-id <g> --spacetime]
+ *                           # D-43: write the sport's let/out/fault rules.yaml, gated on evals/fixtures/annotated/<sport>
  *   trophy-droid retune     --sport table_tennis --reason "ball lost in 45% of frames" --scene <scene.json> --samples <dir>
  *   trophy-droid calibrate  --sport table_tennis --field <field.json> --samples <dir> [--checks <dir>] [--session <id>]
  *   trophy-droid new-check  --sport table_tennis --name ball_speed --question "how fast was that" --hint "..."
  *                           --session-track <track3d.jsonl> --session-field <field.json> --query '{"t0":1,"t1":4}'
  *                           # the referee's request_check: write one check, gate it on the session's own track
  *                                                        # D-36: specialise sports/<sport>/checks to this calibration
- *   trophy-droid watch      [--ws ws://127.0.0.1:3000]   # subscribe to pending house rules and compile each one
+ *   trophy-droid watch      [--ws ws://127.0.0.1:3000]   # the Droid's triggers: pending house rules and queued
+ *                                                        # interpreter requests (droid_run); every run -> droid_run
  *   trophy-droid approve    <run_id> [--by judge] [--session <id>]
  *                           # module runs: promote to data/local/modules/<sport>/v<n>
  *                           # calibrate runs: install the checks in data/local/sessions/<session|run_id>/checks
@@ -29,8 +33,15 @@ import { ConfigError, loadConfig, REPO_ROOT } from "./config.ts";
 import { droidAgentFactory } from "./droidAgent.ts";
 import { runJob } from "./runner.ts";
 import type { Job } from "./sandbox.ts";
-import { ConsoleSink, HouseRuleSpacetimeSink, JsonlSink, MultiSink, type RunSink } from "./sink.ts";
-import { reducerCaller, watchPendingHouseRules } from "./spacetime.ts";
+import {
+  ConsoleSink,
+  DroidRunSpacetimeSink,
+  HouseRuleSpacetimeSink,
+  JsonlSink,
+  MultiSink,
+  type RunSink,
+} from "./sink.ts";
+import { reducerCaller, watchDroidTriggers } from "./spacetime.ts";
 
 function usage(): never {
   process.stderr.write(
@@ -62,6 +73,7 @@ async function runOne(job: Job, extra: RunSink[] = []): Promise<DroidRun> {
         workspace: run.workspace,
         error: run.error,
         blocked: run.blocked,
+        decision: run.decision,
       },
       null,
       1,
@@ -109,6 +121,8 @@ async function main(argv: string[]): Promise<number> {
       query: { type: "string", default: "{}" },
       checks: { type: "string" },
       session: { type: "string" },
+      fixtures: { type: "string" },
+      "base-pack": { type: "string" },
     },
   });
   const samplesFor = (sport: string) => values.samples ?? join(REPO_ROOT, "evals/fixtures/synthetic", sport);
@@ -126,13 +140,31 @@ async function main(argv: string[]): Promise<number> {
       });
       return run.status === "ready" ? 0 : 1;
     }
+    case "interpreter": {
+      if (!values.sport) usage();
+      const extra: RunSink[] = values.spacetime ? [new DroidRunSpacetimeSink(reducerCaller(loadConfig()))] : [];
+      const run = await runOne(
+        {
+          kind: "interpreter",
+          sport: values.sport,
+          samplesDir: samplesFor(values.sport),
+          fixturesDir: values.fixtures,
+          gameId: values["game-id"],
+          triggerSource: "cli",
+          text: values.text,
+        },
+        extra,
+      );
+      return run.status === "ready" ? 0 : 1;
+    }
     case "house-rule": {
       if (!values.sport || !values.text) usage();
       const extra: RunSink[] = [];
       if (values.spacetime) {
         if (!values["rule-version"])
           throw new ConfigError("--spacetime needs --rule-version (the house_rule row to update)");
-        extra.push(new HouseRuleSpacetimeSink(reducerCaller(loadConfig()), values["rule-version"]));
+        const call = reducerCaller(loadConfig());
+        extra.push(new HouseRuleSpacetimeSink(call, values["rule-version"]), new DroidRunSpacetimeSink(call));
       }
       const run = await runOne(
         {
@@ -142,6 +174,8 @@ async function main(argv: string[]): Promise<number> {
           samplesDir: samplesFor(values.sport),
           ruleVersion: values["rule-version"],
           gameId: values["game-id"],
+          basePack: values["base-pack"],
+          session: values.session,
         },
         extra,
       );
@@ -203,24 +237,49 @@ async function main(argv: string[]): Promise<number> {
       const config = loadConfig();
       const call = reducerCaller(config);
       const seen = new Set<string>();
-      const watcher = await watchPendingHouseRules(values.ws, config.spacetimeModule, (h: HouseRule) => {
-        if (seen.has(h.rule_version)) return;
-        seen.add(h.rule_version);
-        process.stderr.write(`house_rule ${h.rule_version} (${h.sport}): ${h.text}\n`);
-        void runOne(
-          {
-            kind: "house_rule",
-            sport: h.sport,
-            text: h.text,
-            samplesDir: samplesFor(h.sport),
-            ruleVersion: h.rule_version,
-            gameId: h.game_id,
-          },
-          [new HouseRuleSpacetimeSink(call, h.rule_version)],
-        ).catch((e) => process.stderr.write(`run failed: ${(e as Error).message}\n`));
+      const fail = (e: unknown) => process.stderr.write(`run failed: ${(e as Error).message}\n`);
+      const watcher = await watchDroidTriggers(values.ws, config.spacetimeModule, {
+        houseRule: (h: HouseRule) => {
+          if (seen.has(h.rule_version)) return;
+          seen.add(h.rule_version);
+          process.stderr.write(`house_rule ${h.rule_version} (${h.sport}): ${h.text}\n`);
+          void runOne(
+            {
+              kind: "house_rule",
+              sport: h.sport,
+              text: h.text,
+              samplesDir: samplesFor(h.sport),
+              ruleVersion: h.rule_version,
+              gameId: h.game_id,
+              // D-43: start from the pack in force (rules stack) and gate against this game's own events
+              basePack: h.base_pack_path ?? undefined,
+              session: h.session_path ?? undefined,
+            },
+            [new HouseRuleSpacetimeSink(call, h.rule_version), new DroidRunSpacetimeSink(call)],
+          ).catch(fail);
+        },
+        runRequest: (r: DroidRun) => {
+          if (seen.has(r.run_id)) return;
+          seen.add(r.run_id);
+          process.stderr.write(
+            `droid_run ${r.run_id} (${r.kind} ${r.sport}, ${r.trigger.source}): ${r.trigger.text ?? ""}\n`,
+          );
+          void runOne(
+            {
+              kind: "interpreter",
+              sport: r.sport,
+              samplesDir: samplesFor(r.sport),
+              gameId: r.game_id ?? undefined,
+              runId: r.run_id,
+              triggerSource: r.trigger.source === "user" ? "user" : "sport_module",
+              text: r.trigger.text,
+            },
+            [new DroidRunSpacetimeSink(call)],
+          ).catch(fail);
+        },
       });
       process.stderr.write(
-        `watching ${values.ws} ${config.spacetimeModule} for pending house rules (ctrl-c to stop)\n`,
+        `watching ${values.ws} ${config.spacetimeModule} for pending house rules and interpreter requests (ctrl-c to stop)\n`,
       );
       await new Promise<void>((resolve) =>
         process.once("SIGINT", () => {

@@ -6,12 +6,13 @@
  * run row goes to the sink immediately so a dashboard can render it live.
  */
 import { randomBytes } from "node:crypto";
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { DroidRun, DroidRunStep } from "@trophy/contracts";
+import type { DroidRun, DroidRunDecision, DroidRunStep } from "@trophy/contracts";
 
 import type { Agent, AgentEvent, AgentFactory } from "./agent.ts";
+import { DECISION_FILE } from "./allowlist.ts";
 import type { CompilerConfig } from "./config.ts";
 import { formatTestTable, runGate } from "./gate.ts";
 import { changedFiles, commitSandbox, createSandbox, type Job, sandboxDiff } from "./sandbox.ts";
@@ -45,6 +46,16 @@ function triggerOf(job: Job): DroidRun["trigger"] {
     // a question asked during the session; the evidence is the session's own track
     return { source: "session", text: job.newCheck?.question, samples: [job.newCheck?.sessionTrack ?? ""] };
   }
+  if (job.kind === "interpreter") {
+    // an event (a game started for a sport with no interpreter), a judge's "Regenerate", or the CLI
+    const source = job.triggerSource ?? "cli";
+    return {
+      source,
+      text: job.text ?? `write the ${job.sport} let/out/fault interpreter`,
+      samples: [job.fixturesDir ?? `evals/fixtures/annotated/${job.sport}`],
+      ...(source === "cli" ? {} : { requested_by: "engine" }),
+    };
+  }
   if (job.kind === "calibrate_checks") {
     // a calibration belongs to a session (D-36); the field and samples it was built from are the evidence
     return {
@@ -58,13 +69,32 @@ function triggerOf(job: Job): DroidRun["trigger"] {
     rule_version: job.ruleVersion,
     text: job.text,
     scene: job.scene,
+    ...(job.session ? { samples: [job.session] } : {}),
   };
+}
+
+/** house_rule: the Droid's decision.json, validated. */
+export function readDecision(dir: string): { decision?: DroidRunDecision; error?: string } {
+  const p = join(dir, DECISION_FILE);
+  if (!existsSync(p)) return { error: `${DECISION_FILE} is missing` };
+  let o: unknown;
+  try {
+    o = JSON.parse(readFileSync(p, "utf8"));
+  } catch (e) {
+    return { error: `${DECISION_FILE} is not JSON: ${(e as Error).message}` };
+  }
+  const d = o as Partial<DroidRunDecision> | null;
+  if (!d || typeof d !== "object" || typeof d.applies !== "boolean")
+    return { error: `${DECISION_FILE}: "applies" must be true or false` };
+  if (typeof d.rationale !== "string" || !d.rationale.trim())
+    return { error: `${DECISION_FILE}: "rationale" must be a non-empty string` };
+  return { decision: { applies: d.applies, rationale: d.rationale.trim().slice(0, 600) } };
 }
 
 export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
   const now = deps.now ?? Date.now;
   const t0 = now();
-  const runId = deps.runId ?? newRunId(t0);
+  const runId = deps.runId ?? job.runId ?? newRunId(t0);
   const workspace = join(deps.config.runsDir, runId, "workspace");
   mkdirSync(join(deps.config.runsDir, runId), { recursive: true });
 
@@ -97,6 +127,7 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
     duration_ms: null,
     gate_ms: [],
     token_usage: null,
+    ...(job.kind === "house_rule" ? { decision: null } : {}),
   };
   const emit = async () => {
     run.updated_at_ms = now();
@@ -148,11 +179,15 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
     const gateCmd = `./${sb.gate}`;
     let prompt = `${readFileSync(join(sb.dir, "TASK.md"), "utf8")}\n\nBegin now: plan in 3-5 lines, then edit, then run ${gateCmd}.`;
     let lastTable = "";
+    let repairWhy = "";
     for (let attempt = 1; attempt <= deps.config.maxAttempts; attempt++) {
       run.attempt = attempt;
       if (attempt > 1) {
-        step({ kind: "repair", text: `attempt ${attempt}: repairing after failed checks` });
-        prompt = `${gateCmd} failed. Fix the ${sb.gate === "check_test" ? "checks" : "module"} and run ${gateCmd} again. Only edit: ${sb.allowlist.join(", ")}.\n\n${lastTable}`;
+        step({ kind: "repair", text: `attempt ${attempt}: ${repairWhy || "repairing after failed checks"}` });
+        prompt = repairWhy
+          ? `${repairWhy} Only edit: ${sb.allowlist.join(", ")}. Then run ${gateCmd}.\n\n${lastTable}`
+          : `${gateCmd} failed. Fix the ${sb.gate === "check_test" ? "checks" : "module"} and run ${gateCmd} again. Only edit: ${sb.allowlist.join(", ")}.\n\n${lastTable}`;
+        repairWhy = "";
       }
       await emit();
       let firstMessage = attempt === 1;
@@ -195,6 +230,28 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
         if (!result.success) break;
         continue;
       }
+      if (job.kind === "house_rule") {
+        // D-43: the Droid decides whether the rule applies; the engine acts on it only with a passing gate
+        const { decision, error } = readDecision(sb.dir);
+        const rulesFile = `sports/${job.sport}/rules.yaml`;
+        const why = error
+          ? `${error}. Write ${DECISION_FILE} as {"applies": true|false, "rationale": "<one or two sentences>"}.`
+          : decision!.applies && !touched.includes(rulesFile)
+            ? `${DECISION_FILE} says the rule applies, but ${rulesFile} is unchanged: implement the rule, or decide it does not apply.`
+            : "";
+        run.decision = decision ?? null;
+        if (why) {
+          step({ kind: "error", text: `attempt ${attempt}: ${why}` });
+          repairWhy = why;
+          await emit();
+          if (!result.success) break;
+          continue;
+        }
+        step({
+          kind: "message",
+          text: `decision: ${decision!.applies ? "applies" : "does not apply"}: ${decision!.rationale}`,
+        });
+      }
       step({ kind: "test", text: `runner: ${gateCmd} (attempt ${attempt})` });
       await emit();
       let gate;
@@ -210,7 +267,13 @@ export async function runJob(job: Job, deps: RunDeps): Promise<DroidRun> {
       step({ kind: "test", text: `${gate.results.summary} (${gate.ms} ms)` });
       await emit();
       if (gate.results.passed) {
-        const what = job.text ?? (job.kind === "calibrate_checks" ? "calibrated checks" : "derived module");
+        const what =
+          job.text ??
+          (job.kind === "calibrate_checks"
+            ? "calibrated checks"
+            : job.kind === "interpreter"
+              ? "interpreter"
+              : "derived module");
         run.commit = commitSandbox(sb, `${job.kind} ${job.sport}: ${what} (run ${runId})`);
         clearTimeout(timer);
         return finish("ready");
